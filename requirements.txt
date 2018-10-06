@@ -1,0 +1,4 @@
+jupyter-pip
+matplotlib==2.0.2
+python-tk
+rasterio
