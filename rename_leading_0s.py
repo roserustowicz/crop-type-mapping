@@ -57,8 +57,8 @@ if __name__ == '__main__':
     parser.add_argument('--dir', type=str, default='/home/roserustowicz/data/Ghana/raster_64x64',
         help='Directory in which to replace grid IDs with leading 0''s')
     parser.add_argument('--dry_run', dest='dry_run', action='store_true')
-    parser.add_argument('--num_digits', type=int, default=5,
-        help='Number of digits that ID should contain (default: 5). Given default of "5", ID "34" --> "00034"')
+    parser.add_argument('--num_digits', type=int, default=6,
+        help='Number of digits that ID should contain (default: 6). Given default of "6", ID "34" --> "000034"')
     parser.add_argument('--tif_content', type=str, default='mask', 
         help='Defines what is contained in the tif (options: "mask", "data")')
     args = parser.parse_args()
