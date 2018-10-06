@@ -1,4 +1,8 @@
+# pip install package_name
 jupyter-pip
 matplotlib==2.0.2
-python-tk
 rasterio
+
+# sudo apt-get intall package_name
+python-opencv
+python-tk    
