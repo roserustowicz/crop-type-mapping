@@ -63,7 +63,7 @@ if __name__ == '__main__':
   
     """
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--dir', type=str, default='/home/roserustowicz/data/Ghana/raster_64x64',
+    parser.add_argument('--dir', type=str, default='/home/data/Ghana/s2_64x64',
         help='Directory in which to replace grid IDs with leading 0''s')
     parser.add_argument('--dry_run', dest='dry_run', action='store_true')
     parser.add_argument('--num_digits', type=int, default=6,
