@@ -95,7 +95,7 @@ if __name__ == '__main__':
     #sources = ['s1_64x64', 's2_64x64']
     sources = ['s1_64x64_npy', 's2_64x64_npy']
     verbose = 1
-    dry_run = 0
+    dry_run = 1
     #ext = 'tif'
     ext = 'npy'
 
