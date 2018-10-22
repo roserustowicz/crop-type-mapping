@@ -18,7 +18,7 @@ from sklearn.metrics import classification_report
 np.random.seed(10)
 
 class DL_model:
-    """A model class"""
+    """Class for a keras deep learning model"""
     def __init__(self):
         self.model = None
 
@@ -39,6 +39,17 @@ class DL_model:
         self.y_test = np.ones((2,5))
 
     def load_from_json(self, json_fname, h5_fname):
+        """
+        Loads a pre-trained model from json, h5 files
+
+        Args: 
+          json_fname - (str) the path and filename of the '.json'
+                        file associated with a pre-trained model 
+          h5_fname - (str) the path and filename of the '.h5'
+                      file associated with pre-trained model weights
+        Returns: 
+          loads self.model as the model loaded in from the input files
+        """
         json_file = open(json_fname, 'r')
         json_model = json_file.read()
         json_file.close()
@@ -47,6 +58,14 @@ class DL_model:
         self.model = loaded_model.load_weights(h5_fname)
 
     def evaluate(self, data_split):
+        """ Evaluate the model accuracy
+  
+        Args: 
+          data_split - (str) the data split to use for evaluation 
+                        of options 'train', 'val', or 'test'
+        Returns: 
+          prints the accuracy score
+        """
         self.model.compile(loss = 'categorical_crossentropy', 
                           optimizer='adam', 
                           metrics=['accuracy'])
@@ -60,6 +79,13 @@ class DL_model:
         print('%s: %.2f%%' % (self.model.metrics_names[1], score[1]*100))
 
     def create_cnn(self, num_classes):
+        """ Defines a keras Sequential 1D CNN model 
+    
+        Args: 
+          num_classes - (int) number of classes to predict 
+        Returns: 
+          loads self.model as the defined model
+        """
         model = Sequential()
   
         model.add(Conv1D(32, kernel_size=5, 
@@ -87,6 +113,13 @@ class DL_model:
         self.model = model
 
     def create_nn(self, num_classes):
+        """ Defines a keras Sequential 1D NN model 
+    
+        Args: 
+          num_classes - (int) number of classes to predict 
+        Returns: 
+          loads self.model as the defined model
+        """
         model = Sequential()
   
         model.add(Flatten())
@@ -101,6 +134,8 @@ class DL_model:
         self.model = model
 
     def fit(self):
+        """ Trains the model
+        """
         self.model.fit(self.X_train, 
                        self.y_train, 
                        batch_size=2,
