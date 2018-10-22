@@ -47,8 +47,6 @@ def get_empty_grids(home, countries, sources, verbose, ext):
                 if el in empty_masks and el in grid_numbers:
                     delete_me.append(el)
 
-        delete_me.sort()
-
         if verbose:
             print('valid pixels list: ', len(valid_pixels_list))
             print('empty masks: ', len(empty_masks))
