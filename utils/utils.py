@@ -1,18 +1,10 @@
-import os
 import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
-import rasterio
 import pandas as pd
-import matplotlib.cm as cm
 import time
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import scale
 from sklearn.model_selection import GroupShuffleSplit
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 
 def create_categorical_df_col(df, from_col, to_col):
     """
@@ -98,22 +90,6 @@ def split_with_group(df, group, train_frac, test_frac, data_cols, lbl_cols, rand
 
     return X_train, y_train, X_val, y_val, X_test, y_test
    
-def model_fit(classifier, X, y, save=False):
-    if classifier == 'random_forest':
-        model = RandomForestClassifier(n_jobs=-1, n_estimators=50)
-    elif classifier == 'logistic_regression':  
-        model = LogisticRegression(random_state=0, solver='lbfgs', multi_class='multinomial')
-    else:
-        return print('You must specify a valid model (random_forest, logistic_regression)')
-        
-    model.fit(X, y)
-
-    if save:
-        fname = '_'.join(classifier, time.strftime("%Y%m%d-%H%M%S"), '.pickle')
-        with open(fname, "wb") as f:
-            pickle.dump(model, open(fname, 'wb'))
-    return model 
-
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
                           title='Confusion matrix',
