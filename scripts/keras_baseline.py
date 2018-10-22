@@ -22,21 +22,69 @@ class DL_model:
     def __init__(self):
         self.model = None
 
-    def load_data(self):
+    def load_data(self, dataset_type, use_pca, source):
         """ Load .npy files for train, val, test splits
         
         X --> expand_dims along axis 2
         y --> should be one-hot encoded
+
+        Args: 
+          dataset_type - (str) 'full' or 'small' indicates dataset to use
+          use_pca - (boolean) whether or not to use PCA features. if not, 
+                    raw features (times x bands) are used
+          source - (str) 's1' or 's2' indicates the data source to use
         """
-        # Loading in dummy data right now
-        self.X_train = np.expand_dims(np.ones((10, 30)), axis=2)
-        self.y_train = y_train = np.ones((10,5))
 
-        self.X_val = np.expand_dims(np.ones((4, 30)), axis=2)
-        self.y_val = np.ones((4,5))
+        base_dir = '/home/data/pixel_arrays'
+        if dataset_type == 'small':
+            if source == 's1':
+                if use_pca:
+                    self.X_train = np.load(base_dir + '/small/pca/s1/small_pca_s1_rrrgggbbb_Xtrain_num_PCs23.npy')
+                    self.X_val = np.load(base_dir + '/small/pca/s1/small_pca_s1_rrrgggbbb_Xval_num_PCs23.npy')
+                    self.X_test = np.load(base_dir + '/small/pca/s1/small_pca_s1_rrrgggbbb_Xtest_num_PCs23.npy')
+                else:
+                    self.X_train = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_Xtrain_g72.npy')        
+                    self.X_val = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_Xval_g66.npy')        
+                    self.X_test = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_Xtest_g85.npy') 
+       
+                self.y_train = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_ytrain_g72.npy')
+                self.y_val = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_yval_g66.npy')
+                self.y_test = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_ytest_g85.npy')
+            elif source == 's2':
+                if use_pca:
+                    self.X_train = np.load(base_dir + '/small/pca/s2/small_pca_s2_rrrgggbbb_Xtrain_num_PCs27.npy')
+                    self.X_val = np.load(base_dir + '/small/pca/s2/small_pca_s2_rrrgggbbb_Xval_num_PCs27.npy')
+                    self.X_test = np.load(base_dir + '/small/pca/s2/small_pca_s2_rrrgggbbb_Xtest_num_PCs27.npy')
+                else:
+                    self.X_train = np.load(base_dir + '/small/raw/s2/small_raw_s2_rrrgggbbb_Xtrain_g72.npy')
+                    self.X_val = np.load(base_dir + '/small/raw/s2/small_raw_s2_rrrgggbbb_Xval_g66.npy')
+                    self.X_test = np.load(base_dir + '/small/raw/s2/small_raw_s2_rrrgggbbb_Xtest_g85.npy')
 
-        self.X_test = np.expand_dims(np.ones((2, 30)), axis=2)
-        self.y_test = np.ones((2,5))
+                self.y_train = np.load(base_dir + '/small/raw/s2/small_raw_s2_rrrgggbbb_ytrain_g72.npy')
+                self.y_val = np.load(base_dir + '/small/raw/s2/small_raw_s2_rrrgggbbb_yval_g66.npy')
+                self.y_test = np.load(base_dir + '/small/raw/s2/small_raw_s2_rrrgggbbb_ytest_g85.npy')
+      
+        elif dataset_type == 'full':
+            if source == 's1': 
+                if use_pca:
+                    pass
+                else:
+                    pass
+            elif source == 's2':
+                if use_pca:
+                    pass
+                else:
+                    pass
+        elif dataset_type == 'dummy:':
+
+            self.X_train = np.expand_dims(np.ones((10, 30)), axis=2)
+            self.y_train = y_train = np.ones((10,5))
+
+            self.X_val = np.expand_dims(np.ones((4, 30)), axis=2)
+            self.y_val = np.ones((4,5))
+
+            self.X_test = np.expand_dims(np.ones((2, 30)), axis=2)
+            self.y_test = np.ones((2,5))
 
     def load_from_json(self, json_fname, h5_fname):
         """
