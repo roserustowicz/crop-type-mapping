@@ -1,9 +1,0 @@
-# pip install package_name
-imageio
-jupyter-pip
-matplotlib==2.0.2
-rasterio
-
-# sudo apt-get intall package_name
-python-opencv
-python-tk    
