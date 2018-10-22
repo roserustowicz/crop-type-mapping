@@ -1,19 +1,20 @@
 import numpy as np
 import os
 import itertools
+import sys
 
 import matplotlib.pyplot as plt
 
-from keras.models import Sequential
 from keras.models import model_from_json
-from keras.layers import Activation, BatchNormalization, Flatten, Dropout
-from keras.layers import Dense, Conv1D, MaxPooling1D
-
 from keras import regularizers
 from keras.utils import np_utils
 
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
+
+# Set path so that functions can be imported from the utils script
+sys.path.insert(0, '../')
+from models.keras_models import make_1d_nn_model, make_1d_cnn_model
 
 np.random.seed(10)
 
@@ -85,6 +86,11 @@ class DL_model:
 
             self.X_test = np.expand_dims(np.ones((2, 30)), axis=2)
             self.y_test = np.ones((2,5))
+      
+        self.X_train = np.expand_dims(self.X_train, axis=2)
+        self.X_val = np.expand_dims(self.X_val, axis=2)
+        self.X_test = np.expand_dims(self.X_test, axis=2)
+        print(set(self.y_test))
 
     def load_from_json(self, json_fname, h5_fname):
         """
@@ -126,64 +132,14 @@ class DL_model:
             score = self.model.evaluate(self.X_val, self.y_val)
         print('%s: %.2f%%' % (self.model.metrics_names[1], score[1]*100))
 
-    def create_cnn(self, num_classes):
-        """ Defines a keras Sequential 1D CNN model 
-    
-        Args: 
-          num_classes - (int) number of classes to predict 
-        Returns: 
-          loads self.model as the defined model
-        """
-        model = Sequential()
-  
-        model.add(Conv1D(32, kernel_size=5, 
-                  strides=1, activation='relu', 
-                  input_shape=(self.X_train.shape[1], 1)))
-        model.add(Dropout(0.5))
-        model.add(MaxPooling1D(pool_size=2, strides=2))
-
-        model.add(Conv1D(64, 5, activation='relu'))
-        model.add(Dropout(0.5))
-        model.add(MaxPooling1D(pool_size=2, strides=2))
-
-        model.add(Conv1D(128, 5, activation='relu'))
-        model.add(Dropout(0.5))
-        model.add(MaxPooling1D(pool_size=2, strides=2))
-        
-        model.add(Flatten())
-        model.add(Dense(1000, activation='relu'))
-        model.add(Dense(num_classes, activation='softmax'))
-        
-        model.compile(loss = 'categorical_crossentropy',
-                      optimizer = 'adam', 
-                      metrics = ['accuracy'])
-
-        self.model = model
-
-    def create_nn(self, num_classes):
-        """ Defines a keras Sequential 1D NN model 
-    
-        Args: 
-          num_classes - (int) number of classes to predict 
-        Returns: 
-          loads self.model as the defined model
-        """
-        model = Sequential()
-  
-        model.add(Flatten())
-        model.add(Dense(units=256, activation='relu', input_shape=(self.X_train.shape[1], 1)))
-        model.add(Dropout(0.5))
-        model.add(Dense(num_classes, activation='softmax'))
-        
-        model.compile(loss = 'categorical_crossentropy',
-                      optimizer = 'adam', 
-                      metrics = ['accuracy'])
-
-        self.model = model
-
     def fit(self):
         """ Trains the model
         """
+        # Compile model
+        self.model.compile(loss = 'categorical_crossentropy',
+                      optimizer = 'adam',
+                      metrics = ['accuracy'])
+        # Fit model
         self.model.fit(self.X_train, 
                        self.y_train, 
                        batch_size=2,
@@ -196,9 +152,10 @@ def main():
     # Define NN model
     keras_1d_NN = DL_model()
     # Load data into model
-    keras_1d_NN.load_data()
+    keras_1d_NN.load_data('small', 1, 's1')
     # Define model 
-    keras_1d_NN.create_nn(num_classes=5)
+    keras_1d_NN.model = make_1d_nn_model(num_classes=5, 
+                         num_input_feats=keras_1d_NN.X_train.shape[1])
     # Fit model
     keras_1d_NN.fit()
     # Evaluate
@@ -209,9 +166,10 @@ def main():
     # Define CNN model
     keras_1d_CNN = DL_model()
     # Load data into model
-    keras_1d_CNN.load_data()
+    keras_1d_CNN.load_data('small', 1, 's1')
     # Define model 
-    keras_1d_CNN.create_nn(num_classes=5)
+    keras_1d_CNN.model = make_1d_cnn_model(num_classes=5,
+                           num_input_feats=keras_1d_CNN.X_train.shape[1])
     # Fit model
     keras_1d_CNN.fit()
     # Evaluate
