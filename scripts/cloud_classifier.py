@@ -31,13 +31,13 @@ def main_cloud_classifier(data_dir, data_fname):
 
     # Read in all labeled pixels into dataframe
     df = pd.read_csv(data_path)
-    df_sub = df[['poly_id', 'pixel_id', 'class', 'blue', 'green', 'red', 
+    df = df[['poly_id', 'pixel_id', 'class', 'blue', 'green', 'red', 
                  'rded1', 'rded2', 'rded3', 'nir', 'rded4', 'swir1', 'swir2']]
 
     # Add in categorical representation of class type
-    df_sub = create_categorical_df_col(df_sub, 'class', 'class_num')
+    df = create_categorical_df_col(df, 'class', 'class_num')
 
-    X_train, y_train, X_val, y_val, X_test, y_test = split_with_group(df_sub, 'poly_id', 
+    X_train, y_train, X_val, y_val, X_test, y_test = split_with_group(df, 'poly_id', 
              0.8, 0.1, slice(3,-1), -1, random_seed=1234, shuffle=True)
 
     model = model_fit('random_forest', X_train, y_train)
