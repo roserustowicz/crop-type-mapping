@@ -16,8 +16,12 @@ def make_1d_nn_model(num_classes, num_input_feats):
     model = Sequential()
 
     model.add(Flatten())
-    model.add(Dense(units=256, activation='relu', input_shape=(num_input_feats, 1)))
-    model.add(Dropout(0.5))
+    model.add(Dense(units=32, activation='relu', input_shape=(num_input_feats, 1)))
+    #model.add(Dropout(0.5))
+    model.add(BatchNormalization())
+    model.add(Dense(units=32, activation='relu'))
+    #model.add(Dropout(0.5))
+    model.add(BatchNormalization())
     model.add(Dense(num_classes, activation='softmax'))
 
     return model
@@ -32,18 +36,41 @@ def make_1d_cnn_model(num_classes, num_input_feats):
     """
     model = Sequential()
 
-    model.add(Conv1D(32, kernel_size=5,
-              strides=1, activation='relu',
+    model.add(Conv1D(32, kernel_size=3,
+              strides=1, activation='relu', padding='same',
               input_shape=(num_input_feats, 1)))
-    model.add(Dropout(0.5))
+    #model.add(Dropout(0.5))
+    model.add(BatchNormalization())
+    #model.add(Conv1D(32, kernel_size=3,
+    #          strides=1, activation='relu', padding='same'))
+    #model.add(Dropout(0.5))
+    #model.add(BatchNormalization())
+    #model.add(Conv1D(32, kernel_size=3,
+    #          strides=1, activation='relu', padding='same'))
+    #model.add(Dropout(0.5))
+    #model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
-    model.add(Conv1D(64, 5, activation='relu'))     
-    model.add(Dropout(0.5))
+    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))     
+    #model.add(Dropout(0.5))
+    model.add(BatchNormalization())
+    #model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))     
+    #model.add(Dropout(0.5))
+    #model.add(BatchNormalization())
+    #model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))     
+    #model.add(Dropout(0.5))
+    #model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
-    model.add(Conv1D(128, 5, activation='relu'))
-    model.add(Dropout(0.5))
+    model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
+    #model.add(Dropout(0.5))
+    model.add(BatchNormalization())
+    #model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
+    #model.add(Dropout(0.5))
+    #model.add(BatchNormalization())
+    #model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
+    #model.add(Dropout(0.5))
+    #model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
     model.add(Flatten())
@@ -64,19 +91,19 @@ def make_bidirectional_clstm_model():
     shared_CLSTM = ConvLSTM2D(filters=256,
                               kernel_size=3,
                               padding='same',
-                              activatio='relu'))
+                              activation='relu')
 
     fwd_features = shared_CLSTM(fwd_seq)
     rev_features = shared_CLSTM(rev_seq)
 
-    concat_feats = concatenate([fwd_features, rev_features], axis=) 
+    concat_feats = concatenate([fwd_features, rev_features], axis=0) # change axis 
 
     predictions = Conv2D(filters=num_crops, 
                          kernel_size=3, 
                          padding='same', 
                          activation='softmax')
 
-    model = Model(inputs=[fwd_seq, reverse(fwd_seq, axes=)], 
+    model = Model(inputs=[fwd_seq, reverse(fwd_seq, axes=0)], # change axes 
                   outputs=predictions)
 
     return model

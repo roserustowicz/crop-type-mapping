@@ -119,7 +119,7 @@ def save_cloud_masks(s2_data_dir, model, verbose):
             # save prediction for this timestamp into cube
             mask_arr[:, :, timestamp] = cur_pred
 
-        out_fname = os.path.join(mask_dir, fname.split('/')[-1].split('.')[0] + '_mask.npy')
+        out_fname = os.path.join(mask_dir, fname.split('/')[-1].split('.')[0] + '_cloudmask.npy')
         if verbose:
             print("Mask for {} saved to {}".format(fname, out_fname))
         np.save(out_fname, mask_arr)
