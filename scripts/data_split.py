@@ -441,8 +441,8 @@ if __name__ == '__main__':
     if args.verbose:
         check_pixel_counts(mask_dir, country, csv, even_grid_splits)
     if args.copy:
-        cp_files(even_grid_splits, prefix="s1_ghana_", source="/home/data/Ghana/s1_64x64_npy", dest="/home/data/small", suffix="s1")
-        cp_files(even_grid_splits, prefix="s2_ghana_", source="/home/data/Ghana/s2_64x64_npy", dest="/home/data/small", suffix="s2")
+        cp_files(even_grid_splits, prefix="s1_ghana_", source=npy_dir, dest="/home/data/small", suffix="s1")
+        cp_files(even_grid_splits, prefix="s2_ghana_", source=npy_dir, dest="/home/data/small", suffix="s2")
 
     dist_targets = create_dist_split_targets(csv, clusters)
     dist_cluster_splits = dist_split(16, clusters, dist_targets, verbose=args.verbose)
@@ -451,6 +451,6 @@ if __name__ == '__main__':
     if args.verbose:
         check_pixel_counts(mask_dir, country, csv, dist_grid_splits)
     if args.copy:
-        cp_files(dist_grid_splits, prefix="s1_ghana_", source="/home/data/Ghana/s1_64x64_npy", dest="/home/data/full", suffix="s1")
-        cp_files(dist_grid_splits, prefix="s2_ghana_", source="/home/data/Ghana/s2_64x64_npy", dest="/home/data/full", suffix="s2")
+        cp_files(dist_grid_splits, prefix="s1_ghana_", source=npy_dir, dest="/home/data/full", suffix="s1")
+        cp_files(dist_grid_splits, prefix="s2_ghana_", source=npy_dir, dest="/home/data/full", suffix="s2")
 
