@@ -17,10 +17,8 @@ def make_1d_nn_model(num_classes, num_input_feats):
 
     model.add(Flatten())
     model.add(Dense(units=32, activation='relu', input_shape=(num_input_feats, 1)))
-    #model.add(Dropout(0.5))
     model.add(BatchNormalization())
     model.add(Dense(units=32, activation='relu'))
-    #model.add(Dropout(0.5))
     model.add(BatchNormalization())
     model.add(Dense(num_classes, activation='softmax'))
 
@@ -39,38 +37,29 @@ def make_1d_cnn_model(num_classes, num_input_feats):
     model.add(Conv1D(32, kernel_size=3,
               strides=1, activation='relu', padding='same',
               input_shape=(num_input_feats, 1)))
-    #model.add(Dropout(0.5))
     model.add(BatchNormalization())
-    #model.add(Conv1D(32, kernel_size=3,
-    #          strides=1, activation='relu', padding='same'))
-    #model.add(Dropout(0.5))
-    #model.add(BatchNormalization())
-    #model.add(Conv1D(32, kernel_size=3,
-    #          strides=1, activation='relu', padding='same'))
-    #model.add(Dropout(0.5))
-    #model.add(BatchNormalization())
+    model.add(Conv1D(32, kernel_size=3,
+              strides=1, activation='relu', padding='same'))
+    model.add(BatchNormalization())
+    model.add(Conv1D(32, kernel_size=3,
+              strides=1, activation='relu', padding='same'))
+    model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
     model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))     
-    #model.add(Dropout(0.5))
     model.add(BatchNormalization())
-    #model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))     
-    #model.add(Dropout(0.5))
-    #model.add(BatchNormalization())
-    #model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))     
-    #model.add(Dropout(0.5))
-    #model.add(BatchNormalization())
+    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))     
+    model.add(BatchNormalization())
+    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))     
+    model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
     model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
-    #model.add(Dropout(0.5))
     model.add(BatchNormalization())
-    #model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
-    #model.add(Dropout(0.5))
-    #model.add(BatchNormalization())
-    #model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
-    #model.add(Dropout(0.5))
-    #model.add(BatchNormalization())
+    model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
+    model.add(BatchNormalization())
+    model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
+    model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
     model.add(Flatten())
@@ -78,9 +67,6 @@ def make_1d_cnn_model(num_classes, num_input_feats):
     model.add(Dense(num_classes, activation='softmax'))
 
     return model
-
-def make_1d_resnet_model():
-    pass
 
 def make_bidirectional_clstm_model():
     """
