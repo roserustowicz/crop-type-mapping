@@ -55,7 +55,7 @@ def sample_timeseries(img_stack, num_samples, cloud_stack=None, remap_clouds=Tru
         scores = np.ones((timestamps,))
 
     if reverse:
-        scores = 4 - scores
+        scores = 3 - scores
 
     # Compute probabilities of scores with softmax
     probabilities = softmax(scores) 
