@@ -62,9 +62,10 @@ def sample_timeseries(img_stack, num_samples, cloud_stack=None, remap_clouds=Tru
 
     # Sample from timestamp indices according to probabilities
     samples = np.random.choice(timestamps, size=num_samples, replace=False, p=probabilities)
+    # Sort samples to maintain sequential ordering
     samples.sort()
    
-    # Use sample indices to sample image and cloud stacks 
+    # Use sampled indices to sample image and cloud stacks 
     sampled_img_stack = img_stack[:, :, :, samples]
    
     if isinstance(cloud_stack, np.ndarray):
