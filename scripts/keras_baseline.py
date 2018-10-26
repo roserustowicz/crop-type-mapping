@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 
 # Set path so that functions can be imported from the utils script
 sys.path.insert(0, '../')
-from models.keras_models import make_1d_nn_model, make_1d_cnn_model
+from models import make_1d_nn_model, make_1d_cnn_model
 
 np.random.seed(10)
 
@@ -37,7 +37,7 @@ class DL_model:
           source - (str) 's1' or 's2' indicates the data source to use
         """
 
-        base_dir = '/home/data/pixel_arrays'
+        base_dir = '/home/data/ghana/pixel_arrays'
         if dataset_type == 'small':
             if source == 's1':
                 if use_pca:
