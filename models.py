@@ -19,11 +19,45 @@ from keras.backend import reverse
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
-def make_randomforest_model(random_state, n_jobs, n_estimators):
+def make_rf_model(random_state, n_jobs, n_estimators):
+    """ 
+    Defines a sklearn random forest model. See sci-kit learn 
+    documentation of sklearn.ensemble.RandomForestClassifier 
+    for more information and other possible parameters
+
+    Args: 
+      random_state - (int) random seed
+      n_jobs - (int or None) the number of jobs to run in parallel
+                for both fit and predict. None means 1, -1 means 
+                using all processors
+      n_estimators - (int) number of trees in the forest
+
+    Returns: 
+      model - a sklearn random forest model
+    """
     model = RandomForestClassifier(random_state=random_state, n_jobs=n_jobs, n_estimators=n_estimators)
     return model
 
-def make_logisticregression_model(random_state=None, solver='lbfgs', multi_class='multinomial'):
+def make_logreg_model(random_state=None, solver='lbfgs', multi_class='multinomial'):
+    """
+    Defines a skearn logistic regression model. See ski-kit learn 
+    documentation of sklearn.linear_model.LogisticRegression for
+    more information or other possible parameters
+
+    Args: 
+      random_state - (int) random seed used to shuffle data
+      solver - (str) {'newton-cg', 'lbfgs', 'linlinear', 'sag', 'saga'}
+               for multiclass problems, only 'newton-cg', 'sag', 'saga', 
+               and 'lbfgs' handle multinomial loss. See docs for more info
+      multiclass - (str) {'ovr', 'multinomial', 'auto'} for 'ovr', a 
+                   binary problem is fit for each label. For 'multinomial', 
+                   the minimized loss is the multinomial loss fit across
+                   the entire probability distribution, even when binary. 
+                   See sci-kit learn docs for more information.
+
+    Returns: 
+      model - a sklearn logistic regression model
+    """
     model = LogisticRegression(random_state, solver, multi_class)
     return model
 
@@ -118,7 +152,7 @@ def make_bidirectional_clstm_model():
 
 def get_model(model_name, **kwargs):
     if model_name == 'random_forest':
-        model = make_randomforest_model(random_state=kwargs.get('random_state', None), 
+        model = make_rf_model(random_state=kwargs.get('random_state', None), 
                                         n_jobs=kwargs.get('n_jobs', -1), 
                                         n_estimators=kwargs.get('n_estimators', 50))
 
