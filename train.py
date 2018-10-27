@@ -23,15 +23,18 @@ def evaluate(model, inputs, labels, loss_fn):
 
     return -1
 
-def train(args,):
+def train(model, X, y, model_name=None):
     """ Trains the model on the inputs"""
+    if model_name in ['random_forest', 'logistic_regression']:
+        model.fit(X, y)
 
-    return -1
+    return model
 
 def get_loss_fn(args):
     return -1
 
 if __name__ == "__main__":
+    pass
     # parse args
 
     # load in data generator
@@ -41,8 +44,8 @@ if __name__ == "__main__":
     # load in model
 
     # train model
-
+    
     # evaluate model
 
     # save model
-
+    

@@ -19,21 +19,47 @@ from keras.backend import reverse
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
-def model_fit(classifier, X, y, save=False, random_state=0):
-    if classifier == 'random_forest':
-        model = RandomForestClassifier(random_state=random_state, n_jobs=-1, n_estimators=50)
-    elif classifier == 'logistic_regression':  
-        model = LogisticRegression(random_state=random_state, solver='lbfgs', multi_class='multinomial')
-    else:
-        return print('You must specify a valid model (random_forest, logistic_regression)')
-        
-    model.fit(X, y)
+def make_rf_model(random_state, n_jobs, n_estimators):
+    """ 
+    Defines a sklearn random forest model. See sci-kit learn 
+    documentation of sklearn.ensemble.RandomForestClassifier 
+    for more information and other possible parameters
 
-    if save:
-        fname = '_'.join(classifier, time.strftime("%Y%m%d-%H%M%S"), '.pickle')
-        with open(fname, "wb") as f:
-            pickle.dump(model, open(fname, 'wb'))
-    return model 
+    Args: 
+      random_state - (int) random seed
+      n_jobs - (int or None) the number of jobs to run in parallel
+                for both fit and predict. None means 1, -1 means 
+                using all processors
+      n_estimators - (int) number of trees in the forest
+
+    Returns: 
+      model - a sklearn random forest model
+    """
+    model = RandomForestClassifier(random_state=random_state, n_jobs=n_jobs, n_estimators=n_estimators)
+    return model
+
+def make_logreg_model(random_state=None, solver='lbfgs', multi_class='multinomial'):
+    """
+    Defines a skearn logistic regression model. See ski-kit learn 
+    documentation of sklearn.linear_model.LogisticRegression for
+    more information or other possible parameters
+
+    Args: 
+      random_state - (int) random seed used to shuffle data
+      solver - (str) {'newton-cg', 'lbfgs', 'linlinear', 'sag', 'saga'}
+               for multiclass problems, only 'newton-cg', 'sag', 'saga', 
+               and 'lbfgs' handle multinomial loss. See docs for more info
+      multiclass - (str) {'ovr', 'multinomial', 'auto'} for 'ovr', a 
+                   binary problem is fit for each label. For 'multinomial', 
+                   the minimized loss is the multinomial loss fit across
+                   the entire probability distribution, even when binary. 
+                   See sci-kit learn docs for more information.
+
+    Returns: 
+      model - a sklearn logistic regression model
+    """
+    model = LogisticRegression(random_state, solver, multi_class)
+    return model
 
 def make_1d_nn_model(num_classes, num_input_feats):
     """ Defines a keras Sequential 1D NN model 
@@ -124,3 +150,10 @@ def make_bidirectional_clstm_model():
 
     return model
 
+def get_model(model_name, **kwargs):
+    if model_name == 'random_forest':
+        model = make_rf_model(random_state=kwargs.get('random_state', None), 
+                                        n_jobs=kwargs.get('n_jobs', -1), 
+                                        n_estimators=kwargs.get('n_estimators', 50))
+
+    return model
