@@ -5,10 +5,10 @@ import pandas as pd
 import sys
 from sklearn.metrics import confusion_matrix, f1_score
 
-# Set path so that functions can be imported from the utils script
-sys.path.insert(0, '../')
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from util import create_categorical_df_col, split_with_group, plot_confusion_matrix 
-from models import model_fit 
+from train import train
+from models import get_model
 
 def main_cloud_classifier(data_dir, data_fname):
     """
@@ -40,7 +40,9 @@ def main_cloud_classifier(data_dir, data_fname):
     X_train, y_train, X_val, y_val, X_test, y_test = split_with_group(df, 'poly_id', 
              0.8, 0.1, slice(3,-1), -1, random_seed=1234, shuffle=True)
 
-    model = model_fit('random_forest', X_train, y_train)
+    model_name = 'random_forest'
+    model = get_model(model_name, random_state=None, n_jobs=-1, n_estimators=50)
+    model = train(model, X_train, y_train, model_name)
 
     # Get the predictions from the model
     train_pred_lbls = model.predict(X_train)
