@@ -7,8 +7,8 @@ from sklearn.metrics import confusion_matrix, f1_score
 
 # Set path so that functions can be imported from the utils script
 sys.path.insert(0, '../')
-from utils.utils import create_categorical_df_col, split_with_group, plot_confusion_matrix 
-from models.sklearn import model_fit 
+from util import create_categorical_df_col, split_with_group, plot_confusion_matrix 
+from models import model_fit 
 
 def main_cloud_classifier(data_dir, data_fname):
     """
@@ -119,7 +119,7 @@ def save_cloud_masks(s2_data_dir, model, verbose):
             # save prediction for this timestamp into cube
             mask_arr[:, :, timestamp] = cur_pred
 
-        out_fname = os.path.join(mask_dir, fname.split('/')[-1].split('.')[0] + '_mask.npy')
+        out_fname = os.path.join(mask_dir, fname.split('/')[-1].split('.')[0] + '_cloudmask.npy')
         if verbose:
             print("Mask for {} saved to {}".format(fname, out_fname))
         np.save(out_fname, mask_arr)
@@ -129,8 +129,11 @@ if __name__ == '__main__':
     data_fname = 'clean_samples.csv'
     s2_data_dir = '/home/data/full/train/s2'
     verbose = 1
+    save = 0
 
     # Train cloud classificatio model
     model = main_cloud_classifier(data_dir, data_fname)
-    # Use model to save out cloud masks
-    save_cloud_masks(s2_data_dir, model, verbose)
+    
+    if save:
+        # Use model to save out cloud masks
+        save_cloud_masks(s2_data_dir, model, verbose)
