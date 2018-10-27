@@ -9,6 +9,7 @@ import random
 from collections import defaultdict
 from shutil import copyfile
 import argparse
+import pickle
 from queue import Queue
 
 # constants used throughout
@@ -368,6 +369,21 @@ def create_grid_splits(cluster_splits):
 
     return grid_splits
 
+def save_grid_splits(grid_splits, out_dir, prefix):
+    """ Saves the grid_splits as a pickle object.
+
+    Args:
+        grid_splits - (dict of set of ints) mapping between a split and all grids in that split
+        out_dir - (string) output directory
+        prefix - (string) what to prepend the filename with (e.g "ghana_full_")
+    """
+
+    for split in grid_splits:
+        with open(os.path.join(out_dir, prefix + split), "wb") as outfile:
+            pickle.dump(grid_splits[split], outfile)
+
+
+
 
 def check_pixel_counts(mask_dir, country, csv, grid_splits):
     """ For each class, prints the number of pixels in each split.
@@ -383,7 +399,7 @@ def check_pixel_counts(mask_dir, country, csv, grid_splits):
         pixel_counts = defaultdict(float)
         for grid in grid_splits[split]:
             # look up mask for this grid number
-            mask_name = country + "_64x64_" + grid + ".npy"
+            mask_name = country + "_64x64_" + grid + "_label.npy"
             mask = np.load(os.path.join(mask_dir, mask_name))
             # need to separate the mask from the data
             crops, counts = np.unique(mask, return_counts=True)
@@ -400,22 +416,25 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--raster_dir', type=str,
                         help='Path to directory containing rasters.',
-                        default='/home/data/Ghana/raster_64x64/')
+                        default='/home/data/ghana/raster_64x64/')
     parser.add_argument('--mask_dir', type=str,
                         help='Path to directory containing npy mask.',
-                        default='/home/data/Ghana/raster_64x64_npy/')
+                        default='/home/data/ghana/raster_64x64_npy/')
     parser.add_argument('--npy_dir', type=str,
                         help='Path to directory containing numpy volumes of grids.',
-                        default='/home/data/Ghana/s1_64x64_npy/')
+                        default='/home/data/ghana/s1_64x64_npy/')
     parser.add_argument('--country', type=str,
                         help='Country to use',
                         default='ghana')
     parser.add_argument('--verbose', type=bool,
                         help='error-checking on?',
                         default=False)
-    parser.add_argument('--copy', type=bool,
-                        help='actually copy files?',
+    parser.add_argument('--save', type=bool,
+                        help='actually save files?',
                         default=False)
+    parser.add_argument('--out_dir', type=str,
+                        help='Path to directory outputs should be stored in.',
+                        default='/home/data/')
 
 
     args = parser.parse_args()
@@ -424,13 +443,14 @@ if __name__ == '__main__':
     raster_dir = args.raster_dir
     npy_dir = args.npy_dir
     country = args.country
+    out_dir = args.out_dir
 
     # create maps
     field_to_grids, grid_to_fields = get_field_grid_mappings(raster_dir, npy_dir, country)
     # gets valid fields
     valid_fields = field_to_grids.keys()
     crop_labels  = ['maize','groundnut', 'rice', 'soya bean', 'yam', 'other'] # should be stored in constants.py eventually
-    csvname = f'/home/data/{country}_crop.csv'
+    csvname = f'/home/data/{country}/{country}_crop.csv'
     # prepares csv for splits
     csv = load_csv_for_split(csvname, crop_labels, valid_fields)
     # creates clusters
@@ -440,9 +460,8 @@ if __name__ == '__main__':
 
     if args.verbose:
         check_pixel_counts(mask_dir, country, csv, even_grid_splits)
-    if args.copy:
-        cp_files(even_grid_splits, prefix="s1_ghana_", source=npy_dir, dest="/home/data/small", suffix="s1")
-        cp_files(even_grid_splits, prefix="s2_ghana_", source=npy_dir, dest="/home/data/small", suffix="s2")
+    if args.save:
+        save_grid_splits(even_grid_splits, out_dir=out_dir, prefix=f"{country}_small_")
 
     dist_targets = create_dist_split_targets(csv, clusters)
     dist_cluster_splits = dist_split(16, clusters, dist_targets, verbose=args.verbose)
@@ -450,7 +469,6 @@ if __name__ == '__main__':
     dist_grid_splits = create_grid_splits(dist_cluster_splits)
     if args.verbose:
         check_pixel_counts(mask_dir, country, csv, dist_grid_splits)
-    if args.copy:
-        cp_files(dist_grid_splits, prefix="s1_ghana_", source=npy_dir, dest="/home/data/full", suffix="s1")
-        cp_files(dist_grid_splits, prefix="s2_ghana_", source=npy_dir, dest="/home/data/full", suffix="s2")
+    if args.save:
+        save_grid_splits(dist_grid_splits, out_dir=out_dir, prefix=f"{country}_full_")
 
