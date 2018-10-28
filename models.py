@@ -156,4 +156,8 @@ def get_model(model_name, **kwargs):
                                         n_jobs=kwargs.get('n_jobs', -1),
                                         n_estimators=kwargs.get('n_estimators', 50))
 
+
+    if model_name == 'bidirectional_clstm':
+        model = make_bidirectional_clstm_model()
+
     return model

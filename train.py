@@ -85,8 +85,7 @@ if __name__ == "__main__":
     # TODO: make more general to allow for simpler baseline models
 
     # load in model
-    model_gen_fn = models.__dict__[f'make_{args.model_name}_model']
-    model = model_gen_fn(**vars(args))
+    model = models.get_model(args.model_name)
     # train model
     train(model, model_name, args, datagens=datagens)
     # evaluate model
