@@ -19,6 +19,7 @@ from keras.backend import reverse
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
+<<<<<<< HEAD
 def make_rf_model(random_state, n_jobs, n_estimators):
     """
     Defines a sklearn random forest model. See sci-kit learn
