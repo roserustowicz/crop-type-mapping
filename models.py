@@ -20,19 +20,19 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
 def make_rf_model(random_state, n_jobs, n_estimators):
-    """ 
-    Defines a sklearn random forest model. See sci-kit learn 
-    documentation of sklearn.ensemble.RandomForestClassifier 
+    """
+    Defines a sklearn random forest model. See sci-kit learn
+    documentation of sklearn.ensemble.RandomForestClassifier
     for more information and other possible parameters
 
-    Args: 
+    Args:
       random_state - (int) random seed
       n_jobs - (int or None) the number of jobs to run in parallel
-                for both fit and predict. None means 1, -1 means 
+                for both fit and predict. None means 1, -1 means
                 using all processors
       n_estimators - (int) number of trees in the forest
 
-    Returns: 
+    Returns:
       model - a sklearn random forest model
     """
     model = RandomForestClassifier(random_state=random_state, n_jobs=n_jobs, n_estimators=n_estimators)
@@ -40,33 +40,33 @@ def make_rf_model(random_state, n_jobs, n_estimators):
 
 def make_logreg_model(random_state=None, solver='lbfgs', multi_class='multinomial'):
     """
-    Defines a skearn logistic regression model. See ski-kit learn 
+    Defines a skearn logistic regression model. See ski-kit learn
     documentation of sklearn.linear_model.LogisticRegression for
     more information or other possible parameters
 
-    Args: 
+    Args:
       random_state - (int) random seed used to shuffle data
       solver - (str) {'newton-cg', 'lbfgs', 'linlinear', 'sag', 'saga'}
-               for multiclass problems, only 'newton-cg', 'sag', 'saga', 
+               for multiclass problems, only 'newton-cg', 'sag', 'saga',
                and 'lbfgs' handle multinomial loss. See docs for more info
-      multiclass - (str) {'ovr', 'multinomial', 'auto'} for 'ovr', a 
-                   binary problem is fit for each label. For 'multinomial', 
+      multiclass - (str) {'ovr', 'multinomial', 'auto'} for 'ovr', a
+                   binary problem is fit for each label. For 'multinomial',
                    the minimized loss is the multinomial loss fit across
-                   the entire probability distribution, even when binary. 
+                   the entire probability distribution, even when binary.
                    See sci-kit learn docs for more information.
 
-    Returns: 
+    Returns:
       model - a sklearn logistic regression model
     """
     model = LogisticRegression(random_state, solver, multi_class)
     return model
 
 def make_1d_nn_model(num_classes, num_input_feats):
-    """ Defines a keras Sequential 1D NN model 
-    
-    Args: 
-      num_classes - (int) number of classes to predict 
-    Returns: 
+    """ Defines a keras Sequential 1D NN model
+
+    Args:
+      num_classes - (int) number of classes to predict
+    Returns:
       loads self.model as the defined model
     """
     model = Sequential()
@@ -81,11 +81,11 @@ def make_1d_nn_model(num_classes, num_input_feats):
     return model
 
 def make_1d_cnn_model(num_classes, num_input_feats):
-    """ Defines a keras Sequential 1D CNN model 
-    
-    Args: 
-      num_classes - (int) number of classes to predict 
-    Returns: 
+    """ Defines a keras Sequential 1D CNN model
+
+    Args:
+      num_classes - (int) number of classes to predict
+    Returns:
       loads self.model as the defined model
     """
     model = Sequential()
@@ -102,11 +102,11 @@ def make_1d_cnn_model(num_classes, num_input_feats):
     model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
-    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))     
+    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))
     model.add(BatchNormalization())
-    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))     
+    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))
     model.add(BatchNormalization())
-    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))     
+    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))
     model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
@@ -129,7 +129,7 @@ def make_bidirectional_clstm_model():
     """
     fwd_seq = Input(shape=(X.shape[1:])) # bands, rows, cols, time
     rev_seq = Input(shape=(X.shape[1:])) # bands, rows, cols, time
-    
+
     shared_CLSTM = ConvLSTM2D(filters=256,
                               kernel_size=3,
                               padding='same',
@@ -138,22 +138,22 @@ def make_bidirectional_clstm_model():
     fwd_features = shared_CLSTM(fwd_seq)
     rev_features = shared_CLSTM(rev_seq)
 
-    concat_feats = concatenate([fwd_features, rev_features], axis=0) # change axis 
+    concat_feats = concatenate([fwd_features, rev_features], axis=0) # change axis
 
-    predictions = Conv2D(filters=num_crops, 
-                         kernel_size=3, 
-                         padding='same', 
+    predictions = Conv2D(filters=num_crops,
+                         kernel_size=3,
+                         padding='same',
                          activation='softmax')
 
-    model = Model(inputs=[fwd_seq, reverse(fwd_seq, axes=0)], # change axes 
+    model = Model(inputs=[fwd_seq, reverse(fwd_seq, axes=0)], # change axes
                   outputs=predictions)
 
     return model
 
 def get_model(model_name, **kwargs):
     if model_name == 'random_forest':
-        model = make_rf_model(random_state=kwargs.get('random_state', None), 
-                                        n_jobs=kwargs.get('n_jobs', -1), 
+        model = make_rf_model(random_state=kwargs.get('random_state', None),
+                                        n_jobs=kwargs.get('n_jobs', -1),
                                         n_estimators=kwargs.get('n_estimators', 50))
 
     return model
