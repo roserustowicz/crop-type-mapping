@@ -7,6 +7,7 @@ Consider this essentially a util library specifically for data manipulation.
 """
 import numpy as np
 from util import *
+
 def onehot_mask(mask, num_classes):
     """
     Return a one-hot version of the mask for a grid
@@ -156,12 +157,15 @@ def concat_s1_s2(s1, s2):
     return np.concatenate((s1, s2), axis=0)
 
 
-def sample_timeseries(img_stack, num_samples, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, save=False, verbose=False):
+def sample_timeseries(img_stack, num_samples, dates, cloud_stack=None, remap_clouds=True,
+                      reverse=False, seed=None):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
       num_samples - (int) number of samples to sample from the img_stack (and cloud_stack)
                      and must be <= the number of timestamps
+      dates - (list) list of dates that correspond to the timestamps in the img_stack and
+                     cloud_stack
       cloud_stack - (numpy array) [rows x cols x timestamps], temporal stack of cloud masks
       reverse - (boolean) take 1 - probabilities, encourages cloudy images to be sampled
       seed - (int) a random seed for sampling
@@ -169,8 +173,23 @@ def sample_timeseries(img_stack, num_samples, cloud_stack=None, remap_clouds=Tru
     Returns:
       sampled_img_stack - (numpy array) [bands x rows x cols x num_samples], temporal stack
                           of sampled images
+      sampled_dates - (list) [num_samples], list of dates associated with the samples
       sampled_cloud_stack - (numpy array) [rows x cols x num_samples], temporal stack of
-                            sampled cloud masks
+                            sampled cloud masks, only returned if cloud_stack was an input
+
+    To read in img_stack from npy file for input img_stack:
+
+       img_stack = np.load('/home/data/ghana/s2_64x64_npy/s2_ghana_004622.npy')
+    
+    To read in cloud_stack from npy file for input cloud_stack:
+
+       cloud_stack = np.load('/home/data/ghana/s2_64x64_npy/s2_ghana_004622_mask.npy')
+    
+    To read in dates from json file for input dates:
+       
+       with open('/home/data/ghana/s2_64x64_npy/s2_ghana_004622.json') as f:
+           dates = json.load(f)['dates']
+
     """
     timestamps = img_stack.shape[3]
     np.random.seed(seed)
@@ -205,12 +224,15 @@ def sample_timeseries(img_stack, num_samples, cloud_stack=None, remap_clouds=Tru
 
     # Use sampled indices to sample image and cloud stacks
     sampled_img_stack = img_stack[:, :, :, samples]
+    
+    samples_list = list(samples)
+    sampled_dates = [dates[i] for i in samples_list]
 
     if isinstance(cloud_stack, np.ndarray):
         if remap_clouds:
             sampled_cloud_stack = remap_cloud_stack[:, :, samples]
         else:
             sampled_cloud_stack = cloud_stack[:, :, samples]
-        return sampled_img_stack, sampled_cloud_stack
+        return sampled_img_stack, sampled_dates, sampled_cloud_stack
     else:
-        return sampled_img_stack, None
+        return sampled_img_stack, sampled_dates, None   
