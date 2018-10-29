@@ -123,3 +123,151 @@ def sample_timeseries(img_stack, num_samples, cloud_stack=None, remap_clouds=Tru
         return sampled_img_stack, sampled_cloud_stack
     else:
         return sampled_img_stack, None
+
+
+def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'byband', cloud_mask_sample = True, num_timestamp = 25, reverse = False, seed = 0):
+    """
+    Save pixel arrays  # pixels * # features for raw
+    
+    Args:
+      home - (str) the base directory of data
+
+      country - (str) string for the country 'ghana', 'tanzania', 'southsudan'
+
+      data_set - (str) balanced 'small' or unbalanced 'full' dataset
+
+      satellite - (str) satellite to use 's1' 's2' 's1_s2'
+
+      ylabel_dir - (str) dir to load ylabel
+
+      band_order - (str) band order: 'byband', 'bytime'
+      
+      cloud_mask_sample - (boolean) use cloud sampling or not
+      
+      num_timestamp - (int) number of timestamp you would like to keep
+      
+      reverse - (boolean) take 1 - probabilities, encourages cloudy images to be sampled
+      
+      seed - (int) a random seed for sampling 
+
+    Output: 
+
+    saved in HOME/pixel_arrays
+
+    """
+
+    satellite_original = str(np.copy(satellite))
+
+    X_total3types = {}
+    y_total3types = {}
+
+    for data_type in ['train','val','test']:
+
+        if satellite_original == 's1':
+            num_band = 2
+            satellite_list = ['s1']
+        elif satellite_original == 's2':
+            num_band = 10
+            satellite_list = ['s2']
+        elif satellite_original == 's1_s2':
+            num_band = [2, 10]
+            satellite_list = ['s1', 's2']
+
+        X_total = {}
+
+        for satellite in satellite_list:
+            #X: # of pixels * # of features
+            gridded_dir = os.path.join(home, country, satellite+'_64x64_npy')
+            gridded_IDs = sorted(np.load(os.path.join(home, country, country+'_'+data_set+'_'+data_type)))
+            gridded_fnames = [satellite+'_'+country+'_'+gridded_ID+'.npy' for gridded_ID in gridded_IDs]
+
+            # Time json
+            time_fnames = [satellite+'_'+country+'_'+gridded_ID+'.json' for gridded_ID in gridded_IDs]
+            time_json = [json.loads(open(os.path.join(gridded_dir,f),'r').read())['dates'] for f in time_fnames]
+            time_length = np.array([len(time) for time in time_json])
+            time_keep = np.int64(np.where(time_length>24))[0]
+
+            if cloud_mask_sample == True:
+                # cloud mask
+                cloud_mask_fnames = [satellite+'_'+country+'_'+gridded_ID+'_mask.npy' for gridded_ID in gridded_IDs]
+                cloud_mask_fnames = [cloud_mask_fnames[keep_idx] for keep_idx in time_keep]  
+                num_band = num_band + 1
+
+            # keep num of timestamps >=25
+            gridded_IDs = [gridded_IDs[keep_idx] for keep_idx in time_keep]
+            gridded_fnames = [gridded_fnames[keep_idx] for keep_idx in time_keep]
+            time_json = [time_json[keep_idx] for keep_idx in time_keep]
+            time_fnames = [time_fnames[keep_idx] for keep_idx in time_keep]
+
+
+            Xtemp = np.load(os.path.join(gridded_dir,gridded_fnames[0]))
+
+            grid_size_a = Xtemp.shape[1]
+            grid_size_b = Xtemp.shape[2]
+
+            X = np.zeros((grid_size_a*grid_size_b*len(gridded_fnames),num_band*num_timestamp))
+            X[:] = np.nan
+
+            for i in range(len(gridded_fnames)):
+
+                X_one = np.load(os.path.join(gridded_dir,gridded_fnames[i]))[0:num_band,:,:]
+                Xtemp = np.zeros((num_band, grid_size_a, grid_size_b, num_timestamp))
+                Xtemp[:] = np.nan
+
+                if cloud_mask_sample == True:
+                    cloud_stack = np.load(os.path.join(gridded_dir,cloud_mask_fnames[i]))
+                    [sampled_img_stack, sampled_cloud_stack] = sample_timeseries(X_one, num_samples = num_timestamp, cloud_stack=cloud_stack, reverse = reverse, seed = seed)
+                    Xtemp = np.copy(np.vstack((sampled_img_stack,np.expand_dims(sampled_cloud_stack, axis=0))))
+
+                else:
+                    time_idx = np.array([np.int64(time.split('-')[1]) for time in time_json[i]])
+
+                    # Take median in each bucket
+                    for j in np.arange(12)+1:
+                        Xtemp[:,:,:,j-1] = np.nanmedian(X_one[:,:,:,np.where(time_idx==j)][:,:,:,0,:],axis = 3)
+
+                Xtemp = Xtemp.reshape(Xtemp.shape[0],-1,Xtemp.shape[3])
+                if band_order == 'byband':
+                    Xtemp = np.swapaxes(Xtemp, 0, 1).reshape(Xtemp.shape[1],-1)
+                elif band_order == 'bytime':
+                    Xtemp = np.swapaxes(Xtemp, 0, 1)
+                    Xtemp = np.swapaxes(Xtemp, 1, 2).reshape(Xtemp.shape[0],-1)
+
+                X[(i*Xtemp.shape[0]):((i+1)*Xtemp.shape[0]), :] = Xtemp
+
+            #y: # of pixels
+            y_mask = get_y_label(home, country, data_set, data_type, ylabel_dir)
+            y_mask = y_mask[time_keep,:,:]
+            y = y_mask.reshape(-1)   
+            crop_id = crop_ind(y)
+
+            X_noNA = fill_NA(X[crop_id,:][0,:,:])
+            y = y[crop_id]
+
+            X_total[satellite] = X_noNA
+
+        if len(satellite_list)<2:
+            X_total3types[data_type] = np.copy(X_total[satellite_original])
+        else:
+            X_total3types[data_type] = np.hstack((X_total['s1'], X_total['s2']))
+
+        y_total3types[data_type] = np.copy(y)
+
+        
+        #Save the file
+        if cloud_mask_sample == True:
+            output_fname = "_".join([data_set, 'raw', satellite_original, 'cloud_mask','reverse'+str(reverse), band_order, 'X'+data_type, 'g'+str(len(gridded_fnames))+'.npy'])
+            np.save(os.path.join(home, country, 'pixel_arrays', data_set, 'raw', 'cloud_s2', 'reverse_'+str(reverse).lower(), output_fname), X_total3types[data_type])
+
+            output_fname = "_".join([data_set, 'raw', satellite_original, 'cloud_mask','reverse'+str(reverse), band_order, 'y'+data_type, 'g'+str(len(gridded_fnames))+'.npy'])
+            np.save(os.path.join(home, country, 'pixel_arrays', data_set, 'raw', 'cloud_s2', 'reverse_'+str(reverse).lower(), output_fname), y_total3types[data_type])
+            
+        else: 
+            output_fname = "_".join([data_set, 'raw', satellite_original, band_order, 'X'+data_type, 'g'+str(len(gridded_fnames))+'.npy'])
+            np.save(os.path.join(home, country, 'pixel_arrays', data_set, 'raw', satellite_original, output_fname), X_total3types[data_type])
+
+            output_fname = "_".join([data_set, 'raw', satellite_original, band_order, 'y'+data_type, 'g'+str(len(gridded_fnames))+'.npy'])
+            np.save(os.path.join(home, country, 'pixel_arrays', data_set, 'raw', satellite_original, output_fname), y_total3types[data_type])
+            
+   
+    return [X_total3types, y_total3types]
