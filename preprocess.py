@@ -6,6 +6,27 @@ Consider this essentially a util library specifically for data manipulation.
 
 """
 
+def onehot_mask(mask, num_classes):
+    """
+    Return a one-hot version of the mask for a grid
+
+    Args: 
+      mask - (np array) mask for grid that contains crop labels according 
+             to '/home/data/crop_dict.npy'
+      num_classes - (int) number of classes to be encoded into the one-hot
+                    mask, as all classes in crop_dict are in the original 
+                    mask. This must include other as one of the classes. For 
+                    example, if the 5 main crop types + other are used, 
+                    then num_classes = 6.
+
+    Returns: 
+      Returns a mask of size [64 x 64 x num_classes]. If a pixel was unlabeled, 
+      it has 0's in all channels of the one hot mask at that pixel location.
+    """
+
+    mask[mask >= num_classes] = num_classes
+    return np.eye(num_classes+1)[mask][:, :, 1:] 
+    
 def retrieve_mask(grid_name):
     """ Return the mask of the grid specified by grid_name.
 
