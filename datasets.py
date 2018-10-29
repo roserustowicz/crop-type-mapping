@@ -26,7 +26,7 @@ class CropTypeSequence(Sequence):
         self.use_s2 = use_s2
 
     def __len__(self):
-        return self.num_grids / self.batch_size
+        return int(self.num_grids / self.batch_size)
 
     def __getitem__(self, idx):
         grid_nums = self.grid_list[idx:idx + self.batch_size]

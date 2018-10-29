@@ -9,12 +9,12 @@ given by:
 
 """
 
-from keras.models import Sequential
+from keras.models import Sequential, Model
 from keras.layers import InputLayer, Activation, BatchNormalization, Flatten, Dropout
-from keras.layers import Dense, Conv1D, MaxPooling1D
-from keras.layers import Dense, Conv2D, MaxPooling2D
+from keras.layers import Dense, Conv2D, MaxPooling2D, ConvLSTM2D, Lambda
 from keras.layers import Bidirectional, TimeDistributed, concatenate
 from keras.backend import reverse
+from keras.engine.input_layer import Input
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -124,33 +124,29 @@ def make_1d_cnn_model(num_classes, num_input_feats):
 
     return model
 
-def make_bidir_clstm_model(data_shape):
+def make_bidir_clstm_model(data_shape, num_crops=5):
     """
     """
-    fwd_seq = Input(shape=(data_shape)) # bands, rows, cols, time
-    rev_seq = Input(shape=(data_shape)) # bands, rows, cols, time
+    input_ = Input(shape=data_shape) # time, bands, rows, cols
 
-    shared_CLSTM = ConvLSTM2D(filters=256,
-                              kernel_size=3,
-                              padding='same',
-                              activation='relu')
+    shared_CLSTM = Bidirectional(ConvLSTM2D(filters=256,
+                                 kernel_size=3,
+                                 padding='same',
+                                 activation='relu'))
 
-    fwd_features = shared_CLSTM(fwd_seq)
-    rev_features = shared_CLSTM(rev_seq)
-
-    concat_feats = concatenate([fwd_features, rev_features], axis=0) # change axis
+    features = shared_CLSTM(input_)
 
     predictions = Conv2D(filters=num_crops,
                          kernel_size=3,
                          padding='same',
-                         activation='softmax')
+                         activation='softmax')(features)
 
-    model = Model(inputs=[fwd_seq, reverse(fwd_seq, axes=0)], # change axes
-                  outputs=predictions)
+    model = Model(inputs=input_, outputs=predictions)
 
     return model
 
 def get_model(model_name, **kwargs):
+    model = None
     if model_name == 'random_forest':
         model = make_rf_model(random_state=kwargs.get('random_state', None),
                                         n_jobs=kwargs.get('n_jobs', -1),
@@ -158,6 +154,6 @@ def get_model(model_name, **kwargs):
 
 
     if model_name == 'bidir_clstm':
-        model = make_bidir_clstm_model(data_shape=kwargs.get('data_shape'))
+        model = make_bidir_clstm_model(data_shape=(None, 5, 64, 64))
 
     return model

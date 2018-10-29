@@ -7,7 +7,7 @@ import os
 import argparse
 import h5py
 from datasets import *
-from loss_fns import *
+import loss_fns
 import models
 
 
@@ -31,8 +31,9 @@ def train(model, model_name, args=None, datagens=None, X=None, y=None):
     """ Trains the model on the inputs"""
     if model_name in ['random_forest', 'logistic_regression']:
         model.fit(X, y)
-    else if model_name in ['bidir_clstm']:
+    elif model_name in ['bidir_clstm']:
         assert datagens != None, "DATA GENERATOR IS NONE"
+        print(datagens)
         history = model.fit_generator(generator=datagens['train'], epochs=args.epochs, validation_data=datagens['val'], workers=8, use_multiprocessing=True, shuffle=args.shuffle)
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
@@ -43,7 +44,8 @@ if __name__ == "__main__":
     # parse args
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_name', type=str,
-                        help="model's name")
+                        help="model's name",
+                        required=True)
     parser.add_argument('--hdf5_filepath', type=str,
                         help="full path to hdf5 data file",
                         default="/home/data/ghana/data.hdf5")
@@ -70,7 +72,7 @@ if __name__ == "__main__":
     parser.add_argument('--momentum', type=float,
                         help="Momentum to use when training",
                         default=.9)
-    parser.add-argument('--lrdecay', type=float,
+    parser.add_argument('--lrdecay', type=float,
                         help="Learning rate decay per **batch**",
                         default=1)
     parser.add_argument('--shuffle', type=bool,
@@ -92,14 +94,14 @@ if __name__ == "__main__":
 
     # load in model
     model = models.get_model(args.model_name)
-    if model_name not in ["random_forest", "logreg"]:
+    if args.model_name not in ["random_forest", "logreg"]:
         # load in loss function / optimizer
         loss_fn = loss_fns.get_loss_fn(args.model_name)
         optimizer = loss_fns.get_optimizer(args.optimizer, args.lr, args.momentum, args.lrdecay)
         model.compile(optimizer=optimizer, loss=loss_fn)
 
     # train model
-    train(model, model_name, args, datagens=datagens)
+    train(model, args.model_name, args, datagens=datagens)
     # evaluate model
 
     # save model
