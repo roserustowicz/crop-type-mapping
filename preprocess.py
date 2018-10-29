@@ -18,6 +18,10 @@ def onehot_mask(mask, num_classes):
                     mask. This must include other as one of the classes. For 
                     example, if the 5 main crop types + other are used, 
                     then num_classes = 6.
+
+    Returns: 
+      Returns a mask of size [64 x 64 x num_classes]. If a pixel was unlabeled, 
+      it has 0's in all channels of the one hot mask at that pixel location.
     """
 
     mask[mask >= num_classes] = num_classes
