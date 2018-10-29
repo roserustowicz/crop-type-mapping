@@ -39,7 +39,7 @@ def preprocess_grid(grid, model_name):
 
     """
 
-    if model_name == "bidirectional_clstm":
+    if model_name == "bidir_clstm":
         return preprocessForCLSTM(grid)
 
 def preprocessForCLSTM(grid):

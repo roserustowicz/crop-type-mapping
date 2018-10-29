@@ -19,7 +19,6 @@ from keras.backend import reverse
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
-<<<<<<< HEAD
 def make_rf_model(random_state, n_jobs, n_estimators):
     """
     Defines a sklearn random forest model. See sci-kit learn
@@ -125,11 +124,11 @@ def make_1d_cnn_model(num_classes, num_input_feats):
 
     return model
 
-def make_bidirectional_clstm_model():
+def make_bidir_clstm_model(data_shape):
     """
     """
-    fwd_seq = Input(shape=(X.shape[1:])) # bands, rows, cols, time
-    rev_seq = Input(shape=(X.shape[1:])) # bands, rows, cols, time
+    fwd_seq = Input(shape=(data_shape)) # bands, rows, cols, time
+    rev_seq = Input(shape=(data_shape)) # bands, rows, cols, time
 
     shared_CLSTM = ConvLSTM2D(filters=256,
                               kernel_size=3,
@@ -158,7 +157,7 @@ def get_model(model_name, **kwargs):
                                         n_estimators=kwargs.get('n_estimators', 50))
 
 
-    if model_name == 'bidirectional_clstm':
-        model = make_bidirectional_clstm_model()
+    if model_name == 'bidir_clstm':
+        model = make_bidir_clstm_model(data_shape=kwargs.get('data_shape'))
 
     return model
