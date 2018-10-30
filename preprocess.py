@@ -70,12 +70,13 @@ def preprocess_label(label, model_name, num_classes=None):
     """ Returns a preprocess version of the label based on the model.
 
     Usually this just means converting to a one hot representation and 
-    shifting the channel dimension of the mask to be the first dimension.
+    shifting the classes dimension of the mask to be the first dimension.
 
     Args:
         label - (npy arr) categorical labels for each pixel
         model_name - (str) name of the model
-
+    Returns:
+        (npy arr) [num_classes x 64 x 64]
     """
     if model_name == "bidir_clstm":
         assert not num_classes is None

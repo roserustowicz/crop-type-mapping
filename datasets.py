@@ -40,7 +40,7 @@ class CropTypeSequence(Sequence):
                 s1 = None
                 s2 = None
                 if self.use_s1:
-                    s1 = data['s1'][grid_num][()]
+                    s1 = data['s1'][grid_num][:2, :, :]
                 if self.use_s2:
                     s2 = data['s2'][grid_num][()]
                 
@@ -50,7 +50,7 @@ class CropTypeSequence(Sequence):
                 label = data['labels'][grid_num][()]
                 label = preprocess_label(label, self.model_name, self.num_classes) 
                 batch_Y.append(label)
-
+        
         batch_X = padToEqualLength(batch_X)
         return np.array(batch_X), np.array(batch_Y)
 

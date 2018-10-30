@@ -3,3 +3,5 @@ CROP_LABELS = ['maize','groundnut', 'rice', 'soya bean', 'sorghum', 'yam', 'sesa
 SPLITS = ['train', 'val', 'test']
 NON_DL_MODELS = ['logreg', 'random_forest']
 DL_MODELS = ['bidir_clstm']
+S1_NUM_BANDS = 2
+GRID_SIZE = 64

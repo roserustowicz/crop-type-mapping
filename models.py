@@ -19,6 +19,8 @@ from keras.engine.input_layer import Input
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
+from constants import *
+
 def make_rf_model(random_state, n_jobs, n_estimators):
     """
     Defines a sklearn random forest model. See sci-kit learn
@@ -142,10 +144,10 @@ def make_bidir_clstm_model(data_shape, num_crops=5):
     """
     input_ = Input(shape=data_shape) # time, bands, rows, cols
     shared_CLSTM = ConvLSTM2D(filters=256,
-                              kernel_size=3,
-                              padding='same',
-                              activation='relu',
-                              data_format='channels_first')
+                                            kernel_size=3,
+                                            padding='same',
+                                            activation='relu',
+                                            data_format='channels_first')
 
     features = shared_CLSTM(input_)
 
@@ -168,6 +170,6 @@ def get_model(model_name, **kwargs):
 
     # TODO: don't make hard coded shape
     if model_name == 'bidir_clstm':
-        model = make_bidir_clstm_model(data_shape=(None, kwargs.get('num_classes'), 64, 64))
+        model = make_bidir_clstm_model(data_shape=(None, S1_NUM_BANDS, 64, 64))
 
     return model

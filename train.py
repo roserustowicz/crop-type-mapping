@@ -11,6 +11,7 @@ import loss_fns
 import models
 from constants import *
 from util import *
+import keras
 
 def evaluate(model, inputs, labels, loss_fn):
     """ Evalautes the model on the inputs using the labels and loss fn.
@@ -36,7 +37,8 @@ def train(model, model_name, args=None, datagens=None, X=None, y=None):
         model.fit(X, y)
     elif model_name in DL_MODELS:
         if datagens is None: raise ValueError("DATA GENERATOR IS NONE")
-        history = model.fit_generator(generator=datagens['train'], epochs=args.epochs, validation_data=datagens['val'], workers=8, use_multiprocessing=True, shuffle=args.shuffle)
+        tb_callback = keras.callbacks.TensorBoard(log_dir='./logs')
+        history = model.fit_generator(generator=datagens['train'], epochs=args.epochs, validation_data=datagens['val'], workers=8, use_multiprocessing=True, shuffle=args.shuffle, callbacks=[tb_callback])
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
 
@@ -102,7 +104,7 @@ if __name__ == "__main__":
         # load in loss function / optimizer
         loss_fn = loss_fns.get_loss_fn(args.model_name)
         optimizer = loss_fns.get_optimizer(args.optimizer, args.lr, args.momentum, args.lrdecay)
-        model.compile(optimizer=optimizer, loss=loss_fn)
+        model.compile(optimizer=optimizer, metrics=['accuracy'], loss=loss_fn)
 
     # train model
     train(model, args.model_name, args, datagens=datagens)
