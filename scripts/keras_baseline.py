@@ -24,7 +24,7 @@ class DL_model:
     def __init__(self):
         self.model = None
 
-    def load_data(self, dataset_type, use_pca, source, ordering, reverse_clouds):
+    def load_data(self, dataset_type, use_pca, source, ordering, reverse_clouds, verbose):
         """ Load .npy files for train, val, test splits
         
         X --> expand_dims along axis 2
@@ -271,12 +271,13 @@ class DL_model:
         self.y_val = to_categorical(self.y_val.astype(int)-1,num_classes=5)
         self.y_test = to_categorical(self.y_test.astype(int)-1,num_classes=5)
 
-        print('X train: ', self.X_train.shape) #, self.X_train)
-        print('X val: ', self.X_val.shape)
-        print('X test: ', self.X_test.shape)
-        print('y train: ', self.y_train.shape)
-        print('y val: ', self.y_val.shape)
-        print('y test: ', self.y_test.shape)
+        if verbose:
+            print('X train: ', self.X_train.shape) #, self.X_train)
+            print('X val: ', self.X_val.shape)
+            print('X test: ', self.X_test.shape)
+            print('y train: ', self.y_train.shape)
+            print('y val: ', self.y_val.shape)
+            print('y test: ', self.y_test.shape)
 
     def load_from_json(self, json_fname, h5_fname):
         """
@@ -326,9 +327,7 @@ class DL_model:
         if f:
             f.write('%s: %.2f%% \n' % (self.model.metrics_names[1], score[1]*100))
             f.write('Confusion Matrix:\n {}\n'.format(cm)) 
-            #print('%s: %.2f%%' % (self.model.metrics_names[1], score[1]*100), file=f)
-            #print('Confusion Matrix: ', cm, file=f) 
-        else:
+        if verbose:
             print('%s: %.2f%%' % (self.model.metrics_names[1], score[1]*100))
             print('Confusion Matrix: ', cm) 
 
@@ -358,8 +357,9 @@ def main():
     use_pca = 0
     ordering = 'bytime'
     reverse_clouds = 0
+    verbose = 1
     
-    for source in ['s2']: #['s1', 's2', 's1_s2']:
+    for source in ['s1', 's2', 's1_s2']:
 
         f = open(filename,'a+')
             
@@ -369,23 +369,26 @@ def main():
 
         f.close()
 
-        #print('--------------------------------------- \n', file=f)
-        #print('{} model, {} dataset, {} pca, {} source, {} ordering, {} clouds_reverse \n'.format(
-        #      model_type, dataset_type, use_pca, source, ordering, reverse_clouds), file=f)
+        if verbose:
+            print('--------------------------------------- \n')
+            print('{} model, {} dataset, {} pca, {} source, {} ordering, {} clouds_reverse \n'.format(
+                model_type, dataset_type, use_pca, source, ordering, reverse_clouds))
 
-        for units in [512]: #[32, 64, 128, 256, 512, 1024]:
-            for reg_strength in [0.1]: #[0.01, 0.05, 0.1, 0.3, 0.5]:
+        for units in [[32, 64, 128, 256, 512, 1024]:
+            for reg_strength in [[0.01, 0.05, 0.1, 0.3, 0.5]:
                 f = open(filename, 'a+')
 
                 f.write('--------- \n')
                 f.write('{} units, {} regularization \n'.format(units, reg_strength))
-                #print('--------- \n', file=f)
-                #print('{} units, {} regularization \n'.format(units, reg_strength), file=f)
+            
+                if verbose:
+                    print('--------- \n')
+                    print('{} units, {} regularization \n'.format(units, reg_strength))
  
                 # Define NN model
                 keras_model = DL_model()
                 # Load data into model
-                keras_model.load_data(dataset_type, use_pca, source, ordering, reverse_clouds)
+                keras_model.load_data(dataset_type, use_pca, source, ordering, reverse_clouds, verbose)
     
                 # Define model 
                 if model_type == 'nn':

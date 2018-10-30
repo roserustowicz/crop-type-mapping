@@ -157,8 +157,7 @@ def concat_s1_s2(s1, s2):
     return np.concatenate((s1, s2), axis=0)
 
 
-def sample_timeseries(img_stack, num_samples, dates, cloud_stack=None, remap_clouds=True,
-                      reverse=False, seed=None):
+def sample_timeseries(img_stack, num_samples, dates, cloud_stack=None, remap_clouds=True, reverse=False, seed=None):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
