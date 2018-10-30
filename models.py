@@ -19,6 +19,8 @@ from keras.engine.input_layer import Input
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
+from constants import *
+
 def make_rf_model(random_state, n_jobs, n_estimators):
     """
     Defines a sklearn random forest model. See sci-kit learn
@@ -126,23 +128,37 @@ def make_1d_cnn_model(num_classes, num_input_feats):
 
 def make_bidir_clstm_model(data_shape, num_crops=5):
     """
+    model = Sequential()
+    model.add(ConvLSTM2D(filters=256,
+                         kernel_size=3,
+                         padding='same',
+                         activation='relu',
+                         data_format='channels_first',
+                         input_shape=data_shape))
+    model.add(Conv2D(filters=num_crops,
+                     kernel_size=3,
+                     padding='same',
+                     activation='softmax',
+                     data_format='channels_first'))
+    return model
     """
     input_ = Input(shape=data_shape) # time, bands, rows, cols
-
-    shared_CLSTM = Bidirectional(ConvLSTM2D(filters=256,
-                                 kernel_size=3,
-                                 padding='same',
-                                 activation='relu'))
+    shared_CLSTM = ConvLSTM2D(filters=256,
+                                            kernel_size=3,
+                                            padding='same',
+                                            activation='relu',
+                                            data_format='channels_first')
 
     features = shared_CLSTM(input_)
 
     predictions = Conv2D(filters=num_crops,
                          kernel_size=3,
                          padding='same',
-                         activation='softmax')(features)
+                         activation='softmax',
+                         data_format='channels_first')(features)
+
 
     model = Model(inputs=input_, outputs=predictions)
-
     return model
 
 def get_model(model_name, **kwargs):
@@ -152,8 +168,8 @@ def get_model(model_name, **kwargs):
                                         n_jobs=kwargs.get('n_jobs', -1),
                                         n_estimators=kwargs.get('n_estimators', 50))
 
-
+    # TODO: don't make hard coded shape
     if model_name == 'bidir_clstm':
-        model = make_bidir_clstm_model(data_shape=(None, 5, 64, 64))
+        model = make_bidir_clstm_model(data_shape=(None, S1_NUM_BANDS, 64, 64))
 
     return model

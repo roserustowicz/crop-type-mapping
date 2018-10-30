@@ -9,7 +9,9 @@ import h5py
 from datasets import *
 import loss_fns
 import models
-
+from constants import *
+from util import *
+import keras
 
 def evaluate(model, inputs, labels, loss_fn):
     """ Evalautes the model on the inputs using the labels and loss fn.
@@ -29,12 +31,14 @@ def evaluate(model, inputs, labels, loss_fn):
 
 def train(model, model_name, args=None, datagens=None, X=None, y=None):
     """ Trains the model on the inputs"""
-    if model_name in ['random_forest', 'logistic_regression']:
+    if model_name in NON_DL_MODELS:
+        if X is None: raise ValueError("X not provided!")
+        if  y is None: raise ValueError("y nor provided!")
         model.fit(X, y)
-    elif model_name in ['bidir_clstm']:
-        assert datagens != None, "DATA GENERATOR IS NONE"
-        print(datagens)
-        history = model.fit_generator(generator=datagens['train'], epochs=args.epochs, validation_data=datagens['val'], workers=8, use_multiprocessing=True, shuffle=args.shuffle)
+    elif model_name in DL_MODELS:
+        if datagens is None: raise ValueError("DATA GENERATOR IS NONE")
+        tb_callback = keras.callbacks.TensorBoard(log_dir='./logs')
+        history = model.fit_generator(generator=datagens['train'], epochs=args.epochs, validation_data=datagens['val'], workers=8, use_multiprocessing=True, shuffle=args.shuffle, callbacks=[tb_callback])
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
 
@@ -75,30 +79,32 @@ if __name__ == "__main__":
     parser.add_argument('--lrdecay', type=float,
                         help="Learning rate decay per **batch**",
                         default=1)
-    parser.add_argument('--shuffle', type=bool,
+    parser.add_argument('--shuffle', type=str2bool,
                         help="shuffle dataset between epochs?",
                         default=True)
-    parser.add_argument('--use_s1', type=bool,
+    parser.add_argument('--use_s1', type=str2bool,
                         help="use s1 data?",
                         default=True)
-    parser.add_argument('--use_s2', type=bool,
+    parser.add_argument('--use_s2', type=str2bool,
                         help="use s2 data?",
                         default=True)
+    parser.add_argument('--num_classes', type=int,
+                        help="Number of crops to predict over",
+                        default=5)
     args = parser.parse_args()
-
     # load in data generator
     datagens = {}
-    for split in ['train', 'val', 'test']:
+    for split in SPLITS:
         grid_path = os.path.join(args.grid_dir, f"{args.country}_{args.dataset}_{split}")
-        datagens[split] = CropTypeSequence(args.model_name, args.hdf5_filepath, grid_path, args.batch_size, args.use_s1, args.use_s2)
+        datagens[split] = CropTypeSequence(args.model_name, args.hdf5_filepath, grid_path, args.batch_size, args.use_s1, args.use_s2, args.num_classes)
 
     # load in model
-    model = models.get_model(args.model_name)
-    if args.model_name not in ["random_forest", "logreg"]:
+    model = models.get_model(**vars(args))
+    if args.model_name in DL_MODELS:
         # load in loss function / optimizer
         loss_fn = loss_fns.get_loss_fn(args.model_name)
         optimizer = loss_fns.get_optimizer(args.optimizer, args.lr, args.momentum, args.lrdecay)
-        model.compile(optimizer=optimizer, loss=loss_fn)
+        model.compile(optimizer=optimizer, metrics=['accuracy'], loss=loss_fn)
 
     # train model
     train(model, args.model_name, args, datagens=datagens)
