@@ -65,7 +65,7 @@ def make_logreg_model(random_state=None, solver='lbfgs', multi_class='multinomia
     model = LogisticRegression(random_state, solver, multi_class)
     return model
 
-def make_1d_1layer_nn_model(num_classes, num_input_feats, units, reg_strength):
+def make_1d_nn_model(num_classes, num_input_feats, units, reg_strength):
     """ Defines a keras Sequential 1D NN model
 
     Args:
