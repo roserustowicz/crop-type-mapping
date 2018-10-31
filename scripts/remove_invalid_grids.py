@@ -5,7 +5,7 @@ import rasterio
 from collections import Counter
 import json
 
-def get_empty_grids(home, countries, sources, verbose, ext):
+def get_empty_grids(home, countries, sources, verbose, ext, lbl_dir):
     """
     Provides data from input .tif files depending on function input parameters. 
     
@@ -13,16 +13,21 @@ def get_empty_grids(home, countries, sources, verbose, ext):
       home - (str) the base directory of data
 
       countries - (list of str) list of strings that point to the directory names
-                  of the different countries (i.e. ['Ghana', 'Tanzania', 'SouthSudan'])
+                  of the different countries (i.e. ['ghana', 'tanzania', 'southsudan'])
+
+      sources - 
 
       verbose - (boolean) prints outputs from function
 
+      ext - 
+   
+      lbl_dir - 
     """
 
     valid_pixels_list = []
     empty_masks = []
     for country in countries:
-        mask_fnames = [os.path.join(home, country, 'raster_64x64', f) for f in os.listdir(os.path.join(home, country, 'raster_64x64')) if f.endswith('.tif')]
+        mask_fnames = [os.path.join(home, country, lbl_dir, f) for f in os.listdir(os.path.join(home, country, lbl_dir)) if f.endswith('.tif')]
         mask_ids = [f.split('_')[-1].replace('.tif', '') for f in mask_fnames]
 
         mask_fnames.sort()
@@ -60,7 +65,10 @@ def get_grid_nums(home, country, source, ext):
     if ext == 'tif':
         files = [os.path.join(cur_path, f) for f in os.listdir(cur_path) if f.endswith('.tif')]
         files.sort()
-        grid_numbers = [f.split('_')[-2] for f in files]
+        if country == 'ghana':
+            grid_numbers = [f.split('_')[-2] for f in files]
+        elif country == 'tanzania':
+            grid_numbers = [f.split('_')[-3] for f in files]
     elif ext == 'npy':
         files = [os.path.join(cur_path, f) for f in os.listdir(cur_path) if f.endswith('.npy') or f.endswith('.json')]
         files.sort()
@@ -89,14 +97,16 @@ def remove_irrelevant_files(home, countries, sources, delete_list, dry_run, ext)
 if __name__ == '__main__':
 
     home = '/home/data'
-    countries = ['Ghana']
-    #sources = ['s1_64x64', 's2_64x64']
-    sources = ['s1_64x64_npy', 's2_64x64_npy']
+    countries = ['tanzania']
+    sources = ['s1', 's2']
+    #sources = ['s1_64x64_npy', 's2_64x64_npy']
+    lbl_dir = 'raster'
+    #lbl_dir = 'raster_64x64'
     verbose = 1
     dry_run = 1
-    #ext = 'tif'
-    ext = 'npy'
+    ext = 'tif'
+    #ext = 'npy'
 
-    grids_to_delete = get_empty_grids(home, countries, sources, verbose, ext)
+    grids_to_delete = get_empty_grids(home, countries, sources, verbose, ext, lbl_dir)
     remove_irrelevant_files(home, countries, sources, grids_to_delete, dry_run, ext)
 

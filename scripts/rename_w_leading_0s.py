@@ -2,7 +2,7 @@ import os
 import argparse
 
 
-def rename(old_fname, tif_content, num_digits, dry_run, ftype):
+def rename(old_fname, tif_content, num_digits, dry_run, ftype, country):
     """
     This function assumes that old_fname of tif_content 
       'mask' ends with path/COUNTRY_DIMxDIM_###.tif 
@@ -23,8 +23,12 @@ def rename(old_fname, tif_content, num_digits, dry_run, ftype):
             elif '.json' in fname_split[-1]:
                 fname_split[-1] = fname_split[-1].replace('.json', '').zfill(num_digits) + '.json'
     elif tif_content == 'data':
-        assert fname_split[-2].isdigit()
-        fname_split[-2] = fname_split[-2].zfill(num_digits)
+        if country == 'tanzania':
+            assert fname_split[-3].isdigit()
+            fname_split[-3] = fname_split[-3].zfill(num_digits)
+        elif country == 'ghana':
+            assert fname_split[-2].isdigit()
+            fname_split[-2] = fname_split[-2].zfill(num_digits)
 
     new_fname = '_'.join(fname_split)
     if dry_run:
@@ -45,10 +49,10 @@ def get_fnames(directory, ftype):
     elif ftype == 'npy':
         return [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.npy') or f.endswith('.json')]
 
-def main(directory, tif_content, num_digits, dry_run, ftype):
+def main(directory, tif_content, num_digits, dry_run, ftype, country):
     fnames = get_fnames(directory, ftype)
     for f in fnames:
-        rename(f, tif_content, num_digits, dry_run, ftype)    
+        rename(f, tif_content, num_digits, dry_run, ftype, country)    
 
 
 if __name__ == '__main__':
@@ -72,7 +76,9 @@ if __name__ == '__main__':
         help='Defines what is contained in the tif (options: "mask", "data")')
     parser.add_argument('--ftype', type=str, default='tif',
         help='Defines type of data you want to rename (options: "tif", "npy")')
+    parser.add_argument('--country', type=str, default='tanzania',
+        help='Country data is from (options: "tanzania", "ghana", "southsudan)')
     args = parser.parse_args()
 
-    main(args.dir, args.tif_content, args.num_digits, args.dry_run, args.ftype)
+    main(args.dir, args.tif_content, args.num_digits, args.dry_run, args.ftype, args.country)
 
