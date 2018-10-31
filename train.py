@@ -13,6 +13,7 @@ import datetime
 from constants import *
 from util import *
 from datasets import *
+from tensorboardX import SummaryWriter
 
 def evaluate(model, inputs, labels, loss_fn):
     """ Evalautes the model on the inputs using the labels and loss fn.
@@ -43,8 +44,12 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
         loss_fn = loss_fns.get_loss_fn(args.model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.lrdecay)
+        writer = SummaryWriter()
+
+            
         for split in ['train', 'val']:
             dl = dataloaders[split]
+            batch_num = 0
             for inputs, targets in dl:
 
                 with torch.set_grad_enabled(True):
@@ -57,7 +62,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     loss.backward()
                     optimizer.step()
 
-            # TODO: add tensorboardX support
+                writer.add_scalar('/{split}/loss', loss, batch_num)
+                batch_num += 1
+
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
@@ -121,7 +128,7 @@ if __name__ == "__main__":
     parser.add_argument('--save_dir', type=str,
                         help="Directory to save the models in. If unspecified, saves the model to ./models.",
                         default='./models')
-    parser.add_argument('--name', type=str
+    parser.add_argument('--name', type=str,
                         help="Name of experiment. Used to uniquely save the model. Defaults to current time + model name if not set.")
 
     args = parser.parse_args()
@@ -146,7 +153,7 @@ if __name__ == "__main__":
 
     if args.model_name in DL_MODELS:
         if args.name is None:
-            args.name = str(datetime.datetime.now()) + "_" args.model_name
+            args.name = str(datetime.datetime.now()) + "_" + args.model_name
         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name))
         print("MODEL SAVED")
      
