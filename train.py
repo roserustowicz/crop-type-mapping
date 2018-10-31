@@ -6,11 +6,13 @@ Script for training and evaluating a model
 import os
 import argparse
 import h5py
-from datasets import *
 import loss_fns
 import models
+import datetime
+
 from constants import *
 from util import *
+from datasets import *
 
 def evaluate(model, inputs, labels, loss_fn):
     """ Evalautes the model on the inputs using the labels and loss fn.
@@ -46,7 +48,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             for inputs, targets in dl:
 
                 with torch.set_grad_enabled(True):
-
                     inputs.to(args.device)
                     targets.to(args.device)
                     preds = model.forward(inputs)
@@ -115,7 +116,13 @@ if __name__ == "__main__":
                         default=8)
     # TODO: find correct string name
     parser.add_argument('--device', type=str,
-                        help="Cuda or CPU")
+                        help="Cuda or CPU",
+                        default='cuda')
+    parser.add_argument('--save_dir', type=str,
+                        help="Directory to save the models in. If unspecified, saves the model to ./models.",
+                        default='./models')
+    parser.add_argument('--name', type=str
+                        help="Name of experiment. Used to uniquely save the model. Defaults to current time + model name if not set.")
 
     args = parser.parse_args()
     # load in data generator
@@ -126,12 +133,20 @@ if __name__ == "__main__":
 
     # load in model
     model = models.get_model(**vars(args))
-    if args.model_name in DL_MODELS:
-        # load in loss function / optimizer
+    if args.model_name in DL_MODELS and args.device == 'cuda' and torch.cuda.is_available():
         model.to(args.device)
+    
     # train model
     train(model, args.model_name, args, dataloaders=dataloaders)
     # evaluate model
 
     # save model
- 
+    if not os.path.exists(args.save_dir):
+        os.mkdir(args.save_dir)
+
+    if args.model_name in DL_MODELS:
+        if args.name is None:
+            args.name = str(datetime.datetime.now()) + "_" args.model_name
+        torch.save(model.state_dict(), os.path.join(args.save_dir, args.name))
+        print("MODEL SAVED")
+     
