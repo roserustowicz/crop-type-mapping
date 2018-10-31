@@ -5,7 +5,7 @@ File that houses the dataset wrappers we have.
 """
 
 import torch
-import torch.utils.data import Dataset, Dataloader
+from torch.utils.data import Dataset, DataLoader
 from random import shuffle
 import pickle
 import h5py
@@ -34,16 +34,16 @@ class CropTypeDS(Dataset):
             s1 = None
             s2 = None
             if self.use_s1:
-                s1 = data['s1'][grid_num][:2, :, :]
+                s1 = data['s1'][self.grid_list[idx]][:2, :, :]
             if self.use_s2:
-                s2 = data['s2'][grid_num][()]
+                s2 = data['s2'][self.grid_list[idx]][()]
             
             grid = concat_s1_s2(s1, s2)
             grid = preprocess_grid(grid, self.model_name)
-            label = data['labels'][grid_num][()]
+            label = data['labels'][self.grid_list[idx]][()]
             label = preprocess_label(label, self.model_name, self.num_classes) 
     
-        return grid, label
+        return torch.tensor(grid, dtype=torch.float32), torch.tensor(label, dtype=torch.float32)
 
 class GridDataLoader(DataLoader):
 

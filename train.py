@@ -11,7 +11,6 @@ import loss_fns
 import models
 from constants import *
 from util import *
-import keras
 
 def evaluate(model, inputs, labels, loss_fn):
     """ Evalautes the model on the inputs using the labels and loss fn.
@@ -41,7 +40,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         if args is None: raise ValueError("Args is NONE")
 
         loss_fn = loss_fns.get_loss_fn(args.model_name)
-        optimizer = loss_fns.get_optimizer(args.optimizer, args.lr, args.momentum, args.lrdecay)
+        optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.lrdecay)
         for split in ['train', 'val']:
             dl = dataloaders[split]
             for inputs, targets in dl:
@@ -51,7 +50,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     inputs.to(args.device)
                     targets.to(args.device)
                     preds = model.forward(inputs)
-                    loss = loss_fn(preds, targets)
+                    loss = loss_fn(targets, preds)
                     
                     optimizer.zero_grad()
                     loss.backward()
@@ -111,6 +110,9 @@ if __name__ == "__main__":
     parser.add_argument('--num_classes', type=int,
                         help="Number of crops to predict over",
                         default=5)
+    parser.add_argument('--num_workers', type=int,
+                        help="Number of workers to use for pulling data",
+                        default=8)
     # TODO: find correct string name
     parser.add_argument('--device', type=str,
                         help="Cuda or CPU")
@@ -126,8 +128,6 @@ if __name__ == "__main__":
     model = models.get_model(**vars(args))
     if args.model_name in DL_MODELS:
         # load in loss function / optimizer
-        loss_fn = loss_fns.get_loss_fn(args.model_name)
-        optimizer = loss_fns.get_optimizer(args.optimizer, args.lr, args.momentum, args.lrdecay)
         model.to(args.device)
     # train model
     train(model, args.model_name, args, dataloaders=dataloaders)

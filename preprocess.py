@@ -125,11 +125,10 @@ def padToEqualLength(batch):
     """
     batch_X = [item[0] for item in batch]
     batch_y = [item[1] for item in batch]
-    batch_X.sort(key=lambda x: x.shape[0])
+    batch_X.sort(key=lambda x: x.shape[0], reverse=True)
     lengths = [x.shape[0] for x in batch_X]
-    lengths = torch.tensor(lengths, dtype=torch.float32)) 
+    lengths = torch.tensor(lengths, dtype=torch.float32)
     batch_X = rnn.pad_sequence(batch_X, batch_first=True)
-
     return [batch_X, batch_y]
 
 
@@ -150,13 +149,13 @@ def concat_s1_s2(s1, s2):
     if s2 is None:
         return s1
     if s1.shape[-1] > s2.shape[-1]:
-        s1, _ = sample_timeseries(s1, s2.shape[-1])
+        s1, _, _ = sample_timeseries(s1, s2.shape[-1])
     else:
-        s2, _ = sample_timeseries(s2, s1.shape[-1])
+        s2, _, _ = sample_timeseries(s2, s1.shape[-1])
     return np.concatenate((s1, s2), axis=0)
 
 
-def sample_timeseries(img_stack, num_samples, dates, cloud_stack=None, remap_clouds=True, reverse=False, seed=None):
+def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
@@ -224,7 +223,10 @@ def sample_timeseries(img_stack, num_samples, dates, cloud_stack=None, remap_clo
     sampled_img_stack = img_stack[:, :, :, samples]
     
     samples_list = list(samples)
-    sampled_dates = [dates[i] for i in samples_list]
+    sampled_dates = None
+    
+    if not dates is None:
+        sampled_dates = [dates[i] for i in samples_list]
 
     if isinstance(cloud_stack, np.ndarray):
         if remap_clouds:
