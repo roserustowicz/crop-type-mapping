@@ -187,6 +187,16 @@ def get_model(model_name, **kwargs):
 
     # TODO: don't make hard coded shape
     if model_name == 'bidir_clstm':
-        model = make_bidir_clstm_model(data_shape=(None, S1_NUM_BANDS, 64, 64))
+        num_bands = -1
+        if kwargs.get('use_s1') and kwargs.get('use_s2'):
+            num_bands = S1_NUM_BANDS + S2_NUM_BANDS
+        elif kwargs.get('use_s1'):
+            num_bands = S1_NUM_BANDS
+        elif kwargs.get('use_s2'):
+            num_bands = S2_NUM_BANDS
+        else:
+            raise ValueError("S1 / S2 usage not specified in args!")
+
+        model = make_bidir_clstm_model(data_shape=(None, num_bands, 64, 64))
 
     return model
