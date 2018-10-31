@@ -32,7 +32,16 @@ def evaluate(model, inputs, labels, loss_fn):
     return -1
 
 def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
-    """ Trains the model on the inputs"""
+    """ Trains the model on the inputs
+    
+    Args:
+        model - trainable model
+        model_name - (str) name of the model
+        args - (argparse object) args parsed in from main; used only for DL models
+        dataloaders - (dict of dataloaders) used only for DL models
+        X - (npy arr) data for non-dl models
+        y - (npy arr) labels for non-dl models
+    """
     if model_name in NON_DL_MODELS:
         if X is None: raise ValueError("X not provided!")
         if  y is None: raise ValueError("y nor provided!")
