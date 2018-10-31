@@ -5,6 +5,8 @@ File that houses all functions used to format, preprocess, or manipulate the dat
 Consider this essentially a util library specifically for data manipulation.
 
 """
+import torch
+import torch.nn.utils.rnn as rnn
 import numpy as np
 from util import *
 
@@ -109,7 +111,7 @@ def preprocessForCLSTM(grid):
     grid = moveTimeToStart(grid)
     return grid
 
-def padToEqualLength(batch_X):
+def padToEqualLength(batch):
     """ Pads all sequences to same length.
 
     Specifically, pads sequences to max length sequence with 0s.
@@ -121,17 +123,14 @@ def padToEqualLength(batch_X):
     Returns:
         batch_X - (list of npy arrs) padded versions of each grid
     """
-        
-    max_length = -1 
-    for grid in batch_X:
-        max_length = max(grid.shape[0], max_length)
+    batch_X = [item[0] for item in batch]
+    batch_y = [item[1] for item in batch]
+    batch_X.sort(key=lambda x: x.shape[0])
+    lengths = [x.shape[0] for x in batch_X]
+    lengths = torch.tensor(lengths, dtype=torch.float32)) 
+    batch_X = rnn.pad_sequence(batch_X, batch_first=True)
 
-    for i, grid in enumerate(batch_X):
-        padded = np.zeros((max_length, grid.shape[1], grid.shape[2], grid.shape[3]))
-        padded[:grid.shape[0], :, :, :] = grid
-        batch_X[i] = padded
-
-    return batch_X
+    return [batch_X, batch_y]
 
 
 def concat_s1_s2(s1, s2):

@@ -29,16 +29,36 @@ def evaluate(model, inputs, labels, loss_fn):
 
     return -1
 
-def train(model, model_name, args=None, datagens=None, X=None, y=None):
+def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """ Trains the model on the inputs"""
     if model_name in NON_DL_MODELS:
         if X is None: raise ValueError("X not provided!")
         if  y is None: raise ValueError("y nor provided!")
         model.fit(X, y)
+
     elif model_name in DL_MODELS:
-        if datagens is None: raise ValueError("DATA GENERATOR IS NONE")
-        tb_callback = keras.callbacks.TensorBoard(log_dir='./logs')
-        history = model.fit_generator(generator=datagens['train'], epochs=args.epochs, validation_data=datagens['val'], workers=8, use_multiprocessing=True, shuffle=args.shuffle, callbacks=[tb_callback])
+        if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
+        if args is None: raise ValueError("Args is NONE")
+
+        loss_fn = loss_fns.get_loss_fn(args.model_name)
+        optimizer = loss_fns.get_optimizer(args.optimizer, args.lr, args.momentum, args.lrdecay)
+        for split in ['train', 'val']:
+            dl = dataloaders[split]
+            for inputs, targets in dl:
+
+                with torch.set_grad_enabled(True):
+
+                    inputs.to(args.device)
+                    targets.to(args.device)
+                    preds = model.forward(inputs)
+                    loss = loss_fn(preds, targets)
+                    
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+
+            # TODO: add tensorboardX support
+
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
 
@@ -91,12 +111,16 @@ if __name__ == "__main__":
     parser.add_argument('--num_classes', type=int,
                         help="Number of crops to predict over",
                         default=5)
+    # TODO: find correct string name
+    parser.add_argument('--device', type=str,
+                        help="Cuda or CPU")
+
     args = parser.parse_args()
     # load in data generator
-    datagens = {}
+    dataloaders = {}
     for split in SPLITS:
         grid_path = os.path.join(args.grid_dir, f"{args.country}_{args.dataset}_{split}")
-        datagens[split] = CropTypeSequence(args.model_name, args.hdf5_filepath, grid_path, args.batch_size, args.use_s1, args.use_s2, args.num_classes)
+        dataloaders[split] = GridDataLoader(args, grid_path)
 
     # load in model
     model = models.get_model(**vars(args))
@@ -104,10 +128,9 @@ if __name__ == "__main__":
         # load in loss function / optimizer
         loss_fn = loss_fns.get_loss_fn(args.model_name)
         optimizer = loss_fns.get_optimizer(args.optimizer, args.lr, args.momentum, args.lrdecay)
-        model.compile(optimizer=optimizer, metrics=['accuracy'], loss=loss_fn)
-
+        model.to(args.device)
     # train model
-    train(model, args.model_name, args, datagens=datagens)
+    train(model, args.model_name, args, dataloaders=dataloaders)
     # evaluate model
 
     # save model
