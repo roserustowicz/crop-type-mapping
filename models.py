@@ -65,7 +65,7 @@ def make_logreg_model(random_state=None, solver='lbfgs', multi_class='multinomia
     model = LogisticRegression(random_state, solver, multi_class)
     return model
 
-def make_1d_nn_model(num_classes, num_input_feats, units, reg_strength):
+def make_1d_1layer_nn_model(num_classes, num_input_feats, units, reg_strength):
     """ Defines a keras Sequential 1D NN model
 
     Args:
@@ -82,9 +82,32 @@ def make_1d_nn_model(num_classes, num_input_feats, units, reg_strength):
               bias_regularizer=reg, input_shape=(num_input_feats, 1)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
-    #model.add(Dense(units=32, activation='relu', kernel_regularizer=reg,
-    #          bias_regularizer=reg))
-    #model.add(BatchNormalization())
+    model.add(Dense(num_classes, activation='softmax', 
+              kernel_regularizer=reg, bias_regularizer=reg))
+
+    return model
+
+def make_1d_2layer_nn_model(num_classes, num_input_feats, units, reg_strength):
+    """ Defines a keras Sequential 1D NN model
+
+    Args:
+      num_classes - (int) number of classes to predict
+    Returns:
+      loads self.model as the defined model
+    """
+    reg = regularizers.l2(reg_strength)
+
+    model = Sequential()
+
+    model.add(Flatten())
+    model.add(Dense(units=units, kernel_regularizer=reg, 
+              bias_regularizer=reg, input_shape=(num_input_feats, 1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Dense(units=units, kernel_regularizer=reg,
+              bias_regularizer=reg))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
     model.add(Dense(num_classes, activation='softmax', 
               kernel_regularizer=reg, bias_regularizer=reg))
 
@@ -103,39 +126,19 @@ def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength):
     model = Sequential()
 
     model.add(Conv1D(units, kernel_size=11,
-              strides=1, padding='same',
+              strides=11, padding='same',
               kernel_regularizer=reg,
               bias_regularizer=reg,
               input_shape=(num_input_feats, 1)))
-    model.add(BatchNormalization())
     model.add(Activation('relu'))
-    #model.add(Conv1D(32, kernel_size=3,
-    #          strides=1, activation='relu', padding='same'))
-    #model.add(BatchNormalization())
-    #model.add(Conv1D(32, kernel_size=3,
-    #          strides=1, activation='relu', padding='same'))
-    #model.add(BatchNormalization())
+    model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
     model.add(Conv1D(units*2, kernel_size=3, padding='same',
               kernel_regularizer=reg, bias_regularizer=reg))
-    model.add(BatchNormalization())
     model.add(Activation('relu'))
-    #model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))
-    #model.add(BatchNormalization())
-    #model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))
-    #model.add(BatchNormalization())
+    model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
-
-    #model.add(Conv1D(128, kernel_size=3, padding='same',
-    #          kernel_regularizer=reg, bias_regularizer=reg))
-    #model.add(BatchNormalization())
-    #model.add(Activation('relu'))
-    #model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
-    #model.add(BatchNormalization())
-    #model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
-    #model.add(BatchNormalization())
-    #model.add(MaxPooling1D(pool_size=2, strides=2))
 
     model.add(Flatten())
     model.add(Dense(units*4, activation='relu', 
@@ -144,6 +147,7 @@ def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength):
               kernel_regularizer=reg, bias_regularizer=reg))
 
     return model
+
 
 def make_bidir_clstm_model(data_shape, num_crops=5):
     """
