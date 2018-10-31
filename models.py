@@ -12,12 +12,16 @@ given by:
 from keras.models import Sequential, Model
 from keras.layers import InputLayer, Activation, BatchNormalization, Flatten, Dropout
 from keras.layers import Dense, Conv2D, MaxPooling2D, ConvLSTM2D, Lambda
+from keras.layers import Conv1D, MaxPooling1D
+from keras import regularizers
 from keras.layers import Bidirectional, TimeDistributed, concatenate
 from keras.backend import reverse
 from keras.engine.input_layer import Input
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+
+from constants import *
 
 def make_rf_model(random_state, n_jobs, n_estimators):
     """
@@ -61,7 +65,7 @@ def make_logreg_model(random_state=None, solver='lbfgs', multi_class='multinomia
     model = LogisticRegression(random_state, solver, multi_class)
     return model
 
-def make_1d_nn_model(num_classes, num_input_feats):
+def make_1d_nn_model(num_classes, num_input_feats, units, reg_strength):
     """ Defines a keras Sequential 1D NN model
 
     Args:
@@ -69,18 +73,47 @@ def make_1d_nn_model(num_classes, num_input_feats):
     Returns:
       loads self.model as the defined model
     """
+    reg = regularizers.l2(reg_strength)
+
     model = Sequential()
 
     model.add(Flatten())
-    model.add(Dense(units=32, activation='relu', input_shape=(num_input_feats, 1)))
+    model.add(Dense(units=units, kernel_regularizer=reg, 
+              bias_regularizer=reg, input_shape=(num_input_feats, 1)))
     model.add(BatchNormalization())
-    model.add(Dense(units=32, activation='relu'))
-    model.add(BatchNormalization())
-    model.add(Dense(num_classes, activation='softmax'))
+    model.add(Activation('relu'))
+    model.add(Dense(num_classes, activation='softmax', 
+              kernel_regularizer=reg, bias_regularizer=reg))
 
     return model
 
-def make_1d_cnn_model(num_classes, num_input_feats):
+def make_1d_2layer_nn_model(num_classes, num_input_feats, units, reg_strength):
+    """ Defines a keras Sequential 1D NN model
+
+    Args:
+      num_classes - (int) number of classes to predict
+    Returns:
+      loads self.model as the defined model
+    """
+    reg = regularizers.l2(reg_strength)
+
+    model = Sequential()
+
+    model.add(Flatten())
+    model.add(Dense(units=units, kernel_regularizer=reg, 
+              bias_regularizer=reg, input_shape=(num_input_feats, 1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Dense(units=units, kernel_regularizer=reg,
+              bias_regularizer=reg))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Dense(num_classes, activation='softmax', 
+              kernel_regularizer=reg, bias_regularizer=reg))
+
+    return model
+
+def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength):
     """ Defines a keras Sequential 1D CNN model
 
     Args:
@@ -88,61 +121,67 @@ def make_1d_cnn_model(num_classes, num_input_feats):
     Returns:
       loads self.model as the defined model
     """
+    reg = regularizers.l2(reg_strength)
+    
     model = Sequential()
 
-    model.add(Conv1D(32, kernel_size=3,
-              strides=1, activation='relu', padding='same',
+    model.add(Conv1D(units, kernel_size=11,
+              strides=11, padding='same',
+              kernel_regularizer=reg,
+              bias_regularizer=reg,
               input_shape=(num_input_feats, 1)))
-    model.add(BatchNormalization())
-    model.add(Conv1D(32, kernel_size=3,
-              strides=1, activation='relu', padding='same'))
-    model.add(BatchNormalization())
-    model.add(Conv1D(32, kernel_size=3,
-              strides=1, activation='relu', padding='same'))
+    model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
-    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))
-    model.add(BatchNormalization())
-    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))
-    model.add(BatchNormalization())
-    model.add(Conv1D(64, kernel_size=3, activation='relu', padding='same',))
-    model.add(BatchNormalization())
-    model.add(MaxPooling1D(pool_size=2, strides=2))
-
-    model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
-    model.add(BatchNormalization())
-    model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
-    model.add(BatchNormalization())
-    model.add(Conv1D(128, kernel_size=3, activation='relu', padding='same',))
+    model.add(Conv1D(units*2, kernel_size=3, padding='same',
+              kernel_regularizer=reg, bias_regularizer=reg))
+    model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
     model.add(Flatten())
-    model.add(Dense(1000, activation='relu'))
-    model.add(Dense(num_classes, activation='softmax'))
+    model.add(Dense(units*4, activation='relu', 
+              kernel_regularizer=reg, bias_regularizer=reg))
+    model.add(Dense(num_classes, activation='softmax', 
+              kernel_regularizer=reg, bias_regularizer=reg))
 
     return model
 
+
 def make_bidir_clstm_model(data_shape, num_crops=5):
     """
+    model = Sequential()
+    model.add(ConvLSTM2D(filters=256,
+                         kernel_size=3,
+                         padding='same',
+                         activation='relu',
+                         data_format='channels_first',
+                         input_shape=data_shape))
+    model.add(Conv2D(filters=num_crops,
+                     kernel_size=3,
+                     padding='same',
+                     activation='softmax',
+                     data_format='channels_first'))
+    return model
     """
     input_ = Input(shape=data_shape) # time, bands, rows, cols
-
-    shared_CLSTM = Bidirectional(ConvLSTM2D(filters=256,
-                                 kernel_size=3,
-                                 padding='same',
-                                 activation='relu'))
+    shared_CLSTM = ConvLSTM2D(filters=256,
+                                            kernel_size=3,
+                                            padding='same',
+                                            activation='relu',
+                                            data_format='channels_first')
 
     features = shared_CLSTM(input_)
 
     predictions = Conv2D(filters=num_crops,
                          kernel_size=3,
                          padding='same',
-                         activation='softmax')(features)
+                         activation='softmax',
+                         data_format='channels_first')(features)
+
 
     model = Model(inputs=input_, outputs=predictions)
-
     return model
 
 def get_model(model_name, **kwargs):
@@ -152,8 +191,8 @@ def get_model(model_name, **kwargs):
                                         n_jobs=kwargs.get('n_jobs', -1),
                                         n_estimators=kwargs.get('n_estimators', 50))
 
-
+    # TODO: don't make hard coded shape
     if model_name == 'bidir_clstm':
-        model = make_bidir_clstm_model(data_shape=(None, 5, 64, 64))
+        model = make_bidir_clstm_model(data_shape=(None, S1_NUM_BANDS, 64, 64))
 
     return model

@@ -5,6 +5,8 @@ File that houses all functions used to format, preprocess, or manipulate the dat
 Consider this essentially a util library specifically for data manipulation.
 
 """
+import numpy as np
+from util import *
 
 def onehot_mask(mask, num_classes):
     """
@@ -63,15 +65,106 @@ def preprocess_grid(grid, model_name):
     if model_name == "bidir_clstm":
         return preprocessForCLSTM(grid)
 
+    raise ValueError(f'Model: {model_name} unsupported')
+
+def preprocess_label(label, model_name, num_classes=None):
+    """ Returns a preprocess version of the label based on the model.
+
+    Usually this just means converting to a one hot representation and 
+    shifting the classes dimension of the mask to be the first dimension.
+
+    Args:
+        label - (npy arr) categorical labels for each pixel
+        model_name - (str) name of the model
+    Returns:
+        (npy arr) [num_classes x 64 x 64]
+    """
+    if model_name == "bidir_clstm":
+        assert not num_classes is None
+        return preprocessLabelForCLSTM(label, num_classes)
+
+    raise ValueError(f'Model: {model_name} unsupported')
+
+def preprocessLabelForCLSTM(label, num_classes):
+    """ Converts to onehot encoding and shifts channels to be first dim.
+
+    Args:
+        label - (npy arr) [64x64] categorical labels for each pixel
+        num_classes - (npy arr) number of classes 
+    """
+
+    mask = onehot_mask(label, num_classes)
+    return np.transpose(mask, [2, 0, 1])
+
+
+def moveTimeToStart(arr):
+    """ Moves time axis to the first dim.
+    
+    Args:
+        arr - (npy arr) [bands x rows x cols x timestamps] """
+    
+    return np.transpose(arr, [3, 0, 1, 2])
+
 def preprocessForCLSTM(grid):
+    grid = moveTimeToStart(grid)
     return grid
 
-def sample_timeseries(img_stack, num_samples, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, save=False):
+def padToEqualLength(batch_X):
+    """ Pads all sequences to same length.
+
+    Specifically, pads sequences to max length sequence with 0s.
+
+    Args:
+        batch_X - (list of npy arrs) npy versions of grids where each grid 
+                    is [timestamps x bands x rows x cols]
+
+    Returns:
+        batch_X - (list of npy arrs) padded versions of each grid
+    """
+        
+    max_length = -1 
+    for grid in batch_X:
+        max_length = max(grid.shape[0], max_length)
+
+    for i, grid in enumerate(batch_X):
+        padded = np.zeros((max_length, grid.shape[1], grid.shape[2], grid.shape[3]))
+        padded[:grid.shape[0], :, :, :] = grid
+        batch_X[i] = padded
+
+    return batch_X
+
+
+def concat_s1_s2(s1, s2):
+    """ Returns a concatenation of s1 and s2 data.
+
+    Specifically, returns s1 if s2 is None, s2 if s1 is None, and otherwise downsamples the larger series to size of the smaller one and returns the concatenation on the time axis.
+
+    Args:
+        s1 - (npy array) [bands x rows x cols x timestamps]
+        s2 - (npy array) [bands x rows x cols x timestamps]
+
+    Returns:
+        (npy array) [bands x rows x cols x min(num s1 timestamps, num s2 timestamps) Concatenation of s1 and s2 data
+    """
+    if s1 is None:
+        return s2
+    if s2 is None:
+        return s1
+    if s1.shape[-1] > s2.shape[-1]:
+        s1, _ = sample_timeseries(s1, s2.shape[-1])
+    else:
+        s2, _ = sample_timeseries(s2, s1.shape[-1])
+    return np.concatenate((s1, s2), axis=0)
+
+
+def sample_timeseries(img_stack, num_samples, dates, cloud_stack=None, remap_clouds=True, reverse=False, seed=None):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
       num_samples - (int) number of samples to sample from the img_stack (and cloud_stack)
                      and must be <= the number of timestamps
+      dates - (list) list of dates that correspond to the timestamps in the img_stack and
+                     cloud_stack
       cloud_stack - (numpy array) [rows x cols x timestamps], temporal stack of cloud masks
       reverse - (boolean) take 1 - probabilities, encourages cloudy images to be sampled
       seed - (int) a random seed for sampling
@@ -79,8 +172,23 @@ def sample_timeseries(img_stack, num_samples, cloud_stack=None, remap_clouds=Tru
     Returns:
       sampled_img_stack - (numpy array) [bands x rows x cols x num_samples], temporal stack
                           of sampled images
+      sampled_dates - (list) [num_samples], list of dates associated with the samples
       sampled_cloud_stack - (numpy array) [rows x cols x num_samples], temporal stack of
-                            sampled cloud masks
+                            sampled cloud masks, only returned if cloud_stack was an input
+
+    To read in img_stack from npy file for input img_stack:
+
+       img_stack = np.load('/home/data/ghana/s2_64x64_npy/s2_ghana_004622.npy')
+    
+    To read in cloud_stack from npy file for input cloud_stack:
+
+       cloud_stack = np.load('/home/data/ghana/s2_64x64_npy/s2_ghana_004622_mask.npy')
+    
+    To read in dates from json file for input dates:
+       
+       with open('/home/data/ghana/s2_64x64_npy/s2_ghana_004622.json') as f:
+           dates = json.load(f)['dates']
+
     """
     timestamps = img_stack.shape[3]
     np.random.seed(seed)
@@ -98,7 +206,8 @@ def sample_timeseries(img_stack, num_samples, cloud_stack=None, remap_clouds=Tru
         scores = np.mean(remap_cloud_stack, axis=(0, 1))
 
     else:
-        print('NO INPUT CLOUD MASKS. USING RANDOM SAMPLING!')
+        if verbose:
+            print('NO INPUT CLOUD MASKS. USING RANDOM SAMPLING!')
         scores = np.ones((timestamps,))
 
     if reverse:
@@ -114,15 +223,18 @@ def sample_timeseries(img_stack, num_samples, cloud_stack=None, remap_clouds=Tru
 
     # Use sampled indices to sample image and cloud stacks
     sampled_img_stack = img_stack[:, :, :, samples]
+    
+    samples_list = list(samples)
+    sampled_dates = [dates[i] for i in samples_list]
 
     if isinstance(cloud_stack, np.ndarray):
         if remap_clouds:
             sampled_cloud_stack = remap_cloud_stack[:, :, samples]
         else:
             sampled_cloud_stack = cloud_stack[:, :, samples]
-        return sampled_img_stack, sampled_cloud_stack
+        return sampled_img_stack, sampled_dates, sampled_cloud_stack
     else:
-        return sampled_img_stack, None
+        return sampled_img_stack, sampled_dates, None    
 
     
     
@@ -276,3 +388,4 @@ def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytim
             np.save(os.path.join(home, country, 'pixel_arrays', data_set, 'raw', satellite_original, output_fname), y_total3types[data_type])
    
     return [X_total3types, y_total3types]
+  
