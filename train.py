@@ -50,7 +50,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         for split in ['train', 'val']:
             dl = dataloaders[split]
             batch_num = 0
-            for inputs, targets in dl:
+            # TODO: Currently hardcoded to use padded inputs for an RNN model
+            #       consider generalizing somehow so the training script can be
+            #       more generic
+            for padded_inputs, lengths, targets in dl:
 
                 with torch.set_grad_enabled(True):
                     inputs.to(args.device)

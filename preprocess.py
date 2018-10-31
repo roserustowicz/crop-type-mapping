@@ -129,7 +129,7 @@ def padToEqualLength(batch):
     lengths = [x.shape[0] for x in batch_X]
     lengths = torch.tensor(lengths, dtype=torch.float32)
     batch_X = rnn.pad_sequence(batch_X, batch_first=True)
-    return [batch_X, batch_y]
+    return [batch_X, lengths, batch_y]
 
 
 def concat_s1_s2(s1, s2):

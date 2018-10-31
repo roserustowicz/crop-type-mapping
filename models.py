@@ -12,6 +12,7 @@ given by:
 import torch 
 import torch.nn as nn
 
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
@@ -143,40 +144,17 @@ def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength):
     return model
 
 
-def make_bidir_clstm_model(data_shape, num_crops=5):
-    """
-    model = Sequential()
-    model.add(ConvLSTM2D(filters=256,
-                         kernel_size=3,
-                         padding='same',
-                         activation='relu',
-                         data_format='channels_first',
-                         input_shape=data_shape))
-    model.add(Conv2D(filters=num_crops,
-                     kernel_size=3,
-                     padding='same',
-                     activation='softmax',
-                     data_format='channels_first'))
-    return model
-    """
-    input_ = Input(shape=data_shape) # time, bands, rows, cols
-    shared_CLSTM = ConvLSTM2D(filters=256,
-                                            kernel_size=3,
-                                            padding='same',
-                                            activation='relu',
-                                            data_format='channels_first')
+def make_bidir_clstm_model(num_bands, num_crops=5):
+    
+    pass
 
-    features = shared_CLSTM(input_)
+class Bidirectional_CLSTM(nn.Module):
 
-    predictions = Conv2D(filters=num_crops,
-                         kernel_size=3,
-                         padding='same',
-                         activation='softmax',
-                         data_format='channels_first')(features)
-
-
-    model = Model(inputs=input_, outputs=predictions)
-    return model
+    def forward(self, padded_input, input_lengths):
+        max_length = input_lengths[0] # necessary for data parallelism; see https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
+        packed_input = nn.utils.rnn.pack_padded_sequence(padded_input, input_lengths, batch_first=True)
+        packed_output, _ = self.conv_lstm(packed_input)
+        output, _ = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True, total_length=max_length)
 
 def get_model(model_name, **kwargs):
     model = None
@@ -197,6 +175,6 @@ def get_model(model_name, **kwargs):
         else:
             raise ValueError("S1 / S2 usage not specified in args!")
 
-        model = make_bidir_clstm_model(data_shape=(None, num_bands, 64, 64))
+        model = make_bidir_clstm_model(data_shape=(None, num_bands, GRID_SIZE, GRID_SIZE))
 
     return model
