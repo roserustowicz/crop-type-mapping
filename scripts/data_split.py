@@ -13,7 +13,9 @@ import pickle
 from queue import Queue
 
 # constants used throughout
-CROP_MAPPING = np.load('/home/data/crop_dict.npy').item()
+# TODO: change not to be hard coded
+CROP_MAPPING = np.load('/home/data/tanzania/tanzania_crop_dict.npy').item()
+print(CROP_MAPPING)
 CROP_MAPPING = {v.lower(): k for k, v in CROP_MAPPING.items()}
 UNLABELED = 0
 OTHER_CROP = 6
@@ -148,8 +150,7 @@ def create_clusters(csv, field_to_grids, grid_to_fields, raster_dir, verbose=Fal
             assert all_fields & cluster['fields'] == set(), f"FIELD OVERLAP: {all_fields & cluster['fields']}, {all_fields}"
             all_grids = all_grids | cluster['grids']
             all_fields = all_fields | cluster['fields']
-        print("CLUSTERS MAINTAIN INDEPENDENCE")
-        print(f"NUM MISSING FIELDS: {len(missing)}")
+        print("NUM CLUSTERS:", len(clusters))
 
     return clusters, missing
 
@@ -173,9 +174,10 @@ def load_csv_for_split(csvname, crop_labels, valid_fields):
     csv = csv[csv['crop'] != 'Intercrop'] # remove intercrop
     csv['crop'] = csv['crop'].apply(lambda x: x.lower())
     csv.at[~csv['crop'].isin(crop_labels[:-1]), 'crop'] = 'other'
-    csv = csv[csv['id'].isin(valid_fields)]
+    csv = csv[csv['geom_id'].isin(valid_fields)]
     # shuffle to ensure no bias for earlier fields
     csv = csv.sample(frac=1, random_state=0)
+
     return csv
 
 def split_evenly(seed, clusters, target_area=1e3, verbose=False):
@@ -383,8 +385,6 @@ def save_grid_splits(grid_splits, out_dir, prefix):
             pickle.dump(grid_splits[split], outfile)
 
 
-
-
 def check_pixel_counts(mask_dir, country, csv, grid_splits):
     """ For each class, prints the number of pixels in each split.
 
@@ -407,9 +407,10 @@ def check_pixel_counts(mask_dir, country, csv, grid_splits):
                 if crop == 0: continue
                 crop = min(crop, OTHER_CROP)
                 pixel_counts[crop] += counts[i]
-        print(f"FOR SPLIT {split}: ")
+        idx_to_crop = {v: k for k, v in CROP_MAPPING.items()}
+        print(f"SPLIT: {split}")
         for crop in pixel_counts:
-            print(f"\tCROP: {crop} has {pixel_counts[crop]} pixels ")
+            print(f"\tCROP: {idx_to_crop[int(crop)]} has {pixel_counts[crop]} pixels \n")
 
 
 if __name__ == '__main__':
@@ -449,24 +450,32 @@ if __name__ == '__main__':
     field_to_grids, grid_to_fields = get_field_grid_mappings(raster_dir, npy_dir, country)
     # gets valid fields
     valid_fields = field_to_grids.keys()
-    crop_labels  = ['maize','groundnut', 'rice', 'soya bean', 'yam', 'other'] # should be stored in constants.py eventually
+    #crop_labels  = ['maize','groundnut', 'rice', 'soya bean', 'yam', 'other'] # should be stored in constants.py eventually
+    crop_labels = ['maize', 'beans', 'sunflower', 'chick_peas', 'wheat', 'other']
     csvname = f'/home/data/{country}/{country}_crop.csv'
     # prepares csv for splits
     csv = load_csv_for_split(csvname, crop_labels, valid_fields)
     # creates clusters
     clusters, missing = create_clusters(csv, field_to_grids, grid_to_fields, raster_dir, args.verbose)
-    even_cluster_splits = split_evenly(1, clusters, verbose=args.verbose)
-    even_grid_splits = create_grid_splits(even_cluster_splits)
+    total_area = 0
+    if country == "ghana": total_area = 1e3
+    if country == "tanzania": total_area = 1e2
+    #even_cluster_splits = split_evenly(0, clusters, total_area,  verbose=args.verbose)
+    #even_grid_splits = create_grid_splits(even_cluster_splits)
 
-    if args.verbose:
-        check_pixel_counts(mask_dir, country, csv, even_grid_splits)
-    if args.save:
-        save_grid_splits(even_grid_splits, out_dir=out_dir, prefix=f"{country}_small_")
+    #if args.verbose:
+    #    check_pixel_counts(mask_dir, country, csv, even_grid_splits)
+    #if args.save:
+    #    save_grid_splits(even_grid_splits, out_dir=out_dir, prefix=f"{country}_small_")
 
     dist_targets = create_dist_split_targets(csv, clusters)
-    dist_cluster_splits = dist_split(16, clusters, dist_targets, verbose=args.verbose)
+    for i in range(100):
+        print(i)
+        dist_cluster_splits = dist_split(i, clusters, dist_targets, verbose=args.verbose)
+        dist_grid_splits = create_grid_splits(dist_cluster_splits)
+        check_pixel_counts(mask_dir, country, csv, dist_grid_splits)
+        print("=" * 100)
 
-    dist_grid_splits = create_grid_splits(dist_cluster_splits)
     if args.verbose:
         check_pixel_counts(mask_dir, country, csv, dist_grid_splits)
     if args.save:
