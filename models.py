@@ -210,14 +210,33 @@ class ConvLSTMCell(nn.Module):
 
 class Bidirectional_CLSTM(nn.Module):
 
-    def __init__(self, input_size, hidden_dim, kernel_size, num_layers, batch_first=True, bias=True, return_all_layers=False)
+    def __init__(self, input_size, hidden_dims, kernel_sizes, num_layers, batch_first=True, bias=True, return_all_layers=False):
         """
            Args:
                 input_size - (tuple) should be (time_steps, channels, height, width)
-                hidden_dim - (list of ints) 
+                hidden_dims - (list of ints) number of filters to use per layer
                 kernel_size -
                 num_layers - (int) number of stacks of ConvLSTM units per step
         """
+
+        self.height = input_size[2]
+        self.width = input_size[3]
+        self.start_num_channels = input_size[1]
+        self.kernel_sizes = kernel_sizes
+        self.num_layers = num_layers
+        self.bias = bias
+        
+        cell_list = []
+        for i in range(self.num_layers):
+            cur_input = self.start_num_channels if i == 0 else hidden_dims[i-1]
+
+            cell_list.append(ConvLSTMCell(input_size=(self.height, self.width),
+                                          input_dim = cur_input_dim,
+                                          hidden_dim = self.hidden_dims[i],
+                                          kernel_size = self.kernel_sizes[i],
+                                          bias=self.bias))
+
+        self.cell_list = nn.ModuleList(cell_list)
 
         # THOUGHTS:
         # Since we're using variable length sequences, we should run the model iteratively?
@@ -228,6 +247,9 @@ class Bidirectional_CLSTM(nn.Module):
 
 
     def forward(self, padded_input, input_lengths):
+
+        
+
         max_length = input_lengths[0] # necessary for data parallelism; see https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
         packed_input = nn.utils.rnn.pack_padded_sequence(padded_input, input_lengths, batch_first=True)
         packed_output, _ = self.conv_lstm(packed_input)

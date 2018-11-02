@@ -54,5 +54,5 @@ class GridDataLoader(DataLoader):
                                              shuffle=args.shuffle,
                                              num_workers=args.num_workers,
                                              pin_memory=True,
-                                             collate_fn=padToEqualLength)
+                                             collate_fn=truncateToSmallestLength)
 
