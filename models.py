@@ -144,9 +144,11 @@ def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength):
     return model
 
 
-def make_bidir_clstm_model(num_bands, num_crops=5):
-    
-    pass
+def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
+
+    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
+
+    return clstm_segmenter
 
 
 class ConvLSTMCell(nn.Module):
@@ -208,7 +210,11 @@ class ConvLSTMCell(nn.Module):
         
         return h_next, c_next
 
-class Bidirectional_CLSTM(nn.Module):
+    def init_hidden(self, batch_size):
+        return (torch.zeros(batch_size, self.hidden_dim, self.height, self.width).cuda(),
+                torch.zeros(batch_size, self.hidden_dim, self.height, self.width).cuda())
+
+class CLSTM(nn.Module):
 
     def __init__(self, input_size, hidden_dims, kernel_sizes, num_layers, batch_first=True, bias=True, return_all_layers=False):
         """
@@ -238,22 +244,59 @@ class Bidirectional_CLSTM(nn.Module):
 
         self.cell_list = nn.ModuleList(cell_list)
 
-        # THOUGHTS:
-        # Since we're using variable length sequences, we should run the model iteratively?
-        # Not sure what pack_padded_sequence does / how you can call one lstm on the packed input to get the output? (see link in comment below)
-        # Implementation in the github seems to define a new ConvLSTM cell for each time step, but doesn't that mean you learn a new set
-        # Not sure how lstm is implemented in pytorch, but may manually have to tell the model to stop predicting on certain examples based on length (need to look into this)
+    def forward(self, input_tensor, hidden_state=None):
 
+        # figure out what this is doing
+        hidden_state = self._init_hidden(batch_size=input_tensor.size(0))
 
+        layer_outputs = []
+        last_states = []
 
-    def forward(self, padded_input, input_lengths):
+        seq_len = input_tensor.size(1)
+        cur_layer_input = input_tensor
 
-        
+        for layer_idx in range(self.num_layers):
 
-        max_length = input_lengths[0] # necessary for data parallelism; see https://pytorch.org/docs/stable/notes/faq.html#pack-rnn-unpack-with-data-parallelism
-        packed_input = nn.utils.rnn.pack_padded_sequence(padded_input, input_lengths, batch_first=True)
-        packed_output, _ = self.conv_lstm(packed_input)
-        output, _ = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True, total_length=max_length)
+            h, c = hidden_state[layer_idx]
+            output_inner_layers = []
+            
+            for t in range(seq_len):
+                h, c = self.cell_list[layer_idx](input_tensor=cur_layer_input[:, t, :, :, :],
+                                                 cur_state=[h, c])
+
+                output_inner_layers.append(h)
+
+            layer_output = torch.stack(output_inner_layers, dim=1)
+            cur_layer_input = layer_output
+            
+            layer_output_list.append(layer_output)
+            last_state_list.append([h, c])
+
+        layer_output_list = layer_output_list[-1:]
+        last_state_list = last_state_list[-1:]
+
+        return layer_output_list, last_state_list
+
+    def _init_hidden(self, batch_size):
+        init_states = []
+        for i in range(self.num_layers):
+            init_states.append(self.cell_list[i].init_hidden(batch_size))
+        return init_states
+
+class CLSTMSegmenter(nn.Module):
+    """ CLSTM followed by conv for segmentation output
+    """
+
+    def __init__(self, input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, num_layers, num_classes):
+
+        self.clstm = CLSTM(input_size, hidden_dims, kernel_sizes, num_layers)
+        self.conv = nn.Conv2D(hidden_dims[-1], num_classes, conv_kernel_size, padding=(conv_kernel_size - 1) / 2)
+        self.softmax = nn.Softmax2d
+
+    def forward(self, inputs):
+        layer_output_list, last_state_list = self.clstm(inputs)
+        preds = self.softmax(self.conv(layer_output_list))
+        return preds
 
 def get_model(model_name, **kwargs):
     model = None
@@ -272,7 +315,8 @@ def get_model(model_name, **kwargs):
             num_bands = S2_NUM_BANDS
         else:
             raise ValueError("S1 / S2 usage not specified in args!")
-
-        model = make_bidir_clstm_model(data_shape=(None, num_bands, GRID_SIZE, GRID_SIZE))
-
+        
+        # TODO: change the timestamps passed in to be more flexible (i.e allow specify variable length / fixed / truncuate / pad)
+        # TODO: don't hardcode values
+        model = make_bidir_clstm_model(input_size=(MIN_TIMESTAMPS, num_bands, GRID_SIZE, GRID_SIZE), kwargs.get(hidden_dims), kwargs.get(lstm_kernel_sizes), kwargs.get(conv_kernel_size), kwargs.get(lstm_num_layers), kwargs.get(num_classes))
     return model
