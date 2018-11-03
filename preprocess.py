@@ -5,7 +5,10 @@ File that houses all functions used to format, preprocess, or manipulate the dat
 Consider this essentially a util library specifically for data manipulation.
 
 """
+import torch
+import torch.nn.utils.rnn as rnn
 import numpy as np
+from constants import *
 from util import *
 
 def onehot_mask(mask, num_classes):
@@ -109,29 +112,39 @@ def preprocessForCLSTM(grid):
     grid = moveTimeToStart(grid)
     return grid
 
-def padToEqualLength(batch_X):
-    """ Pads all sequences to same length.
+def truncateToSmallestLength(batch):
+    """ Truncates len of all sequences to MIN_TIMESTAMPS.
+
+    Args:
+        batch - (tuple of list of npy arrs) batch[0] is a list containing the torch versions of grids where each grid is [timestamps x bands x rows x cols]; batch[1] is a list containing the torch version of the labels
+
+    """
+    batch_X = [item[0] for item in batch]
+    batch_y = [item[1] for item in batch]
+
+    for i in range(len(batch_X)):
+        batch_X[i], _, _ = sample_timeseries(batch_X[i], MIN_TIMESTAMPS, timestamps_first=True)
+        
+    return [torch.stack(batch_X), torch.stack(batch_y)]
+
+def padToVariableLength(batch):
+    """ Pads all sequences to same length (variable per batch).
 
     Specifically, pads sequences to max length sequence with 0s.
 
     Args:
-        batch_X - (list of npy arrs) npy versions of grids where each grid 
-                    is [timestamps x bands x rows x cols]
+        batch - (tuple of list of npy arrs) batch[0] is a list containing the torch versions of grids where each grid is [timestamps x bands x rows x cols]; batch[1] is a list containing the torch version of the labels
 
     Returns:
-        batch_X - (list of npy arrs) padded versions of each grid
+        batch_X - (list of torch arrs) padded versions of each grid
     """
-        
-    max_length = -1 
-    for grid in batch_X:
-        max_length = max(grid.shape[0], max_length)
-
-    for i, grid in enumerate(batch_X):
-        padded = np.zeros((max_length, grid.shape[1], grid.shape[2], grid.shape[3]))
-        padded[:grid.shape[0], :, :, :] = grid
-        batch_X[i] = padded
-
-    return batch_X
+    batch_X = [item[0] for item in batch]
+    batch_y = [item[1] for item in batch]
+    batch_X.sort(key=lambda x: x.shape[0], reverse=True)
+    lengths = [x.shape[0] for x in batch_X]
+    lengths = torch.tensor(lengths, dtype=torch.float32)
+    batch_X = rnn.pad_sequence(batch_X, batch_first=True)
+    return [batch_X, lengths, batch_y]
 
 
 def concat_s1_s2(s1, s2):
@@ -151,13 +164,13 @@ def concat_s1_s2(s1, s2):
     if s2 is None:
         return s1
     if s1.shape[-1] > s2.shape[-1]:
-        s1, _ = sample_timeseries(s1, s2.shape[-1])
+        s1, _, _ = sample_timeseries(s1, s2.shape[-1])
     else:
-        s2, _ = sample_timeseries(s2, s1.shape[-1])
+        s2, _, _ = sample_timeseries(s2, s1.shape[-1])
     return np.concatenate((s1, s2), axis=0)
 
 
-def sample_timeseries(img_stack, num_samples, dates, cloud_stack=None, remap_clouds=True, reverse=False, seed=None):
+def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
@@ -190,7 +203,10 @@ def sample_timeseries(img_stack, num_samples, dates, cloud_stack=None, remap_clo
            dates = json.load(f)['dates']
 
     """
-    timestamps = img_stack.shape[3]
+    if timestamps_first:
+        timestamps = img_stack.shape[0]
+    else:
+        timestamps = img_stack.shape[3]
     np.random.seed(seed)
 
     # Given a stack of cloud masks, remap it and use to compute scores
@@ -222,10 +238,16 @@ def sample_timeseries(img_stack, num_samples, dates, cloud_stack=None, remap_clo
     samples.sort()
 
     # Use sampled indices to sample image and cloud stacks
-    sampled_img_stack = img_stack[:, :, :, samples]
+    if timestamps_first:
+        sampled_img_stack = img_stack[samples, :, :, :]
+    else:
+        sampled_img_stack = img_stack[:, :, :, samples]
     
     samples_list = list(samples)
-    sampled_dates = [dates[i] for i in samples_list]
+    sampled_dates = None
+    
+    if not dates is None:
+        sampled_dates = [dates[i] for i in samples_list]
 
     if isinstance(cloud_stack, np.ndarray):
         if remap_clouds:

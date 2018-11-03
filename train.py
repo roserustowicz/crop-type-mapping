@@ -6,12 +6,14 @@ Script for training and evaluating a model
 import os
 import argparse
 import h5py
-from datasets import *
 import loss_fns
 import models
+import datetime
+
 from constants import *
 from util import *
-import keras
+from datasets import *
+from tensorboardX import SummaryWriter
 
 def evaluate(model, inputs, labels, loss_fn):
     """ Evalautes the model on the inputs using the labels and loss fn.
@@ -29,16 +31,53 @@ def evaluate(model, inputs, labels, loss_fn):
 
     return -1
 
-def train(model, model_name, args=None, datagens=None, X=None, y=None):
-    """ Trains the model on the inputs"""
+def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
+    """ Trains the model on the inputs
+    
+    Args:
+        model - trainable model
+        model_name - (str) name of the model
+        args - (argparse object) args parsed in from main; used only for DL models
+        dataloaders - (dict of dataloaders) used only for DL models
+        X - (npy arr) data for non-dl models
+        y - (npy arr) labels for non-dl models
+    """
     if model_name in NON_DL_MODELS:
         if X is None: raise ValueError("X not provided!")
         if  y is None: raise ValueError("y nor provided!")
         model.fit(X, y)
+
     elif model_name in DL_MODELS:
-        if datagens is None: raise ValueError("DATA GENERATOR IS NONE")
-        tb_callback = keras.callbacks.TensorBoard(log_dir='./logs')
-        history = model.fit_generator(generator=datagens['train'], epochs=args.epochs, validation_data=datagens['val'], workers=8, use_multiprocessing=True, shuffle=args.shuffle, callbacks=[tb_callback])
+        if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
+        if args is None: raise ValueError("Args is NONE")
+
+        loss_fn = loss_fns.get_loss_fn(args.model_name)
+        optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.lrdecay)
+        writer = SummaryWriter()
+
+            
+        for split in ['train', 'val']:
+            dl = dataloaders[split]
+            batch_num = 0
+            # TODO: Currently hardcoded to use padded inputs for an RNN model
+            #       consider generalizing somehow so the training script can be
+            #       more generic
+            for padded_inputs, lengths, targets in dl:
+
+                with torch.set_grad_enabled(True):
+                    inputs.to(args.device)
+                    targets.to(args.device)
+                    preds = model.forward(inputs)
+                    loss = loss_fn(targets, preds)
+                    
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+
+                writer.add_scalar('/{split}/loss', loss, batch_num)
+                batch_num += 1
+
+
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
 
@@ -91,24 +130,42 @@ if __name__ == "__main__":
     parser.add_argument('--num_classes', type=int,
                         help="Number of crops to predict over",
                         default=5)
+    parser.add_argument('--num_workers', type=int,
+                        help="Number of workers to use for pulling data",
+                        default=8)
+    # TODO: find correct string name
+    parser.add_argument('--device', type=str,
+                        help="Cuda or CPU",
+                        default='cuda')
+    parser.add_argument('--save_dir', type=str,
+                        help="Directory to save the models in. If unspecified, saves the model to ./models.",
+                        default='./models')
+    parser.add_argument('--name', type=str,
+                        help="Name of experiment. Used to uniquely save the model. Defaults to current time + model name if not set.")
+
     args = parser.parse_args()
     # load in data generator
-    datagens = {}
+    dataloaders = {}
     for split in SPLITS:
         grid_path = os.path.join(args.grid_dir, f"{args.country}_{args.dataset}_{split}")
-        datagens[split] = CropTypeSequence(args.model_name, args.hdf5_filepath, grid_path, args.batch_size, args.use_s1, args.use_s2, args.num_classes)
+        dataloaders[split] = GridDataLoader(args, grid_path)
 
     # load in model
     model = models.get_model(**vars(args))
-    if args.model_name in DL_MODELS:
-        # load in loss function / optimizer
-        loss_fn = loss_fns.get_loss_fn(args.model_name)
-        optimizer = loss_fns.get_optimizer(args.optimizer, args.lr, args.momentum, args.lrdecay)
-        model.compile(optimizer=optimizer, metrics=['accuracy'], loss=loss_fn)
-
+    if args.model_name in DL_MODELS and args.device == 'cuda' and torch.cuda.is_available():
+        model.to(args.device)
+    
     # train model
-    train(model, args.model_name, args, datagens=datagens)
+    train(model, args.model_name, args, dataloaders=dataloaders)
     # evaluate model
 
     # save model
- 
+    if not os.path.exists(args.save_dir):
+        os.mkdir(args.save_dir)
+
+    if args.model_name in DL_MODELS:
+        if args.name is None:
+            args.name = str(datetime.datetime.now()) + "_" + args.model_name
+        torch.save(model.state_dict(), os.path.join(args.save_dir, args.name))
+        print("MODEL SAVED")
+     
