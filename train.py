@@ -9,10 +9,13 @@ import h5py
 import loss_fns
 import models
 import datetime
+import torch
+
+import datasets
 
 from constants import *
 from util import *
-from datasets import *
+#from datasets import *
 from tensorboardX import SummaryWriter
 
 def evaluate(model, inputs, labels, loss_fn):
@@ -62,7 +65,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             # TODO: Currently hardcoded to use padded inputs for an RNN model
             #       consider generalizing somehow so the training script can be
             #       more generic
-            for padded_inputs, lengths, targets in dl:
+            #for padded_inputs, lengths, targets in dl:
+            for inputs, targets in dl:
 
                 with torch.set_grad_enabled(True):
                     inputs.to(args.device)
@@ -142,13 +146,26 @@ if __name__ == "__main__":
                         default='./models')
     parser.add_argument('--name', type=str,
                         help="Name of experiment. Used to uniquely save the model. Defaults to current time + model name if not set.")
+    # Args for CLSTM model
+    parser.add_argument('--hidden_dims', type=int, 
+                        help="Number of channels in hidden state used in convolutional RNN",
+                        default=4)
+    parser.add_argument('--crnn_kernel_sizes', type=int,
+                        help="Convolutional kernel size used within a recurrent cell",
+                        default=3)
+    parser.add_argument('--conv_kernel_size', type=int,
+                        help="Convolutional kernel size used within a convolutional layer",
+                        default=3)
+    parser.add_argument('--crnn_num_layers', type=int,
+                        help="Number of convolutional RNN cells to stack",
+                        default=1)
 
     args = parser.parse_args()
     # load in data generator
     dataloaders = {}
     for split in SPLITS:
         grid_path = os.path.join(args.grid_dir, f"{args.country}_{args.dataset}_{split}")
-        dataloaders[split] = GridDataLoader(args, grid_path)
+        dataloaders[split] = datasets.GridDataLoader(args, grid_path)
 
     # load in model
     model = models.get_model(**vars(args))

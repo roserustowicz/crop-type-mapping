@@ -195,8 +195,8 @@ class ConvLSTMCell(nn.Module):
     def forward(self, input_tensor, cur_state):
         
         h_cur, c_cur = cur_state
-        
-        combined = torch.cat([input_tensor, h_cur], dim=1)  # concatenate along channel axis
+
+        combined = torch.cat([input_tensor.cuda(), h_cur], dim=1)  # concatenate along channel axis
         
         combined_conv = self.conv(combined)
         cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1) 
@@ -216,25 +216,36 @@ class ConvLSTMCell(nn.Module):
 
 class CLSTM(nn.Module):
 
-    def __init__(self, input_size, hidden_dims, kernel_sizes, num_layers, batch_first=True, bias=True, return_all_layers=False):
+    def __init__(self, input_size, hidden_dims, kernel_sizes, lstm_num_layers, batch_first=True, bias=True, return_all_layers=False):
         """
            Args:
                 input_size - (tuple) should be (time_steps, channels, height, width)
                 hidden_dims - (list of ints) number of filters to use per layer
                 kernel_size -
-                num_layers - (int) number of stacks of ConvLSTM units per step
+                lstm_num_layers - (int) number of stacks of ConvLSTM units per step
         """
+
+        super(CLSTM, self).__init__()
 
         self.height = input_size[2]
         self.width = input_size[3]
         self.start_num_channels = input_size[1]
-        self.kernel_sizes = kernel_sizes
-        self.num_layers = num_layers
+        self.lstm_num_layers = lstm_num_layers
         self.bias = bias
+       
+        if isinstance(kernel_sizes, list):
+            self.kernel_sizes = kernel_sizes
+        else:
+            self.kernel_sizes = [kernel_sizes]        
         
+        if isinstance(hidden_dims, list):
+            self.hidden_dims = hidden_dims
+        else:
+            self.hidden_dims = [hidden_dims]        
+
         cell_list = []
-        for i in range(self.num_layers):
-            cur_input = self.start_num_channels if i == 0 else hidden_dims[i-1]
+        for i in range(self.lstm_num_layers):
+            cur_input_dim = self.start_num_channels if i == 0 else hidden_dims[i-1]
 
             cell_list.append(ConvLSTMCell(input_size=(self.height, self.width),
                                           input_dim = cur_input_dim,
@@ -249,13 +260,13 @@ class CLSTM(nn.Module):
         # figure out what this is doing
         hidden_state = self._init_hidden(batch_size=input_tensor.size(0))
 
-        layer_outputs = []
-        last_states = []
+        layer_output_list = []
+        last_state_list = []
 
         seq_len = input_tensor.size(1)
         cur_layer_input = input_tensor
 
-        for layer_idx in range(self.num_layers):
+        for layer_idx in range(self.lstm_num_layers):
 
             h, c = hidden_state[layer_idx]
             output_inner_layers = []
@@ -272,6 +283,7 @@ class CLSTM(nn.Module):
             layer_output_list.append(layer_output)
             last_state_list.append([h, c])
 
+        # Just take last output for prediction
         layer_output_list = layer_output_list[-1:]
         last_state_list = last_state_list[-1:]
 
@@ -279,7 +291,7 @@ class CLSTM(nn.Module):
 
     def _init_hidden(self, batch_size):
         init_states = []
-        for i in range(self.num_layers):
+        for i in range(self.lstm_num_layers):
             init_states.append(self.cell_list[i].init_hidden(batch_size))
         return init_states
 
@@ -287,15 +299,21 @@ class CLSTMSegmenter(nn.Module):
     """ CLSTM followed by conv for segmentation output
     """
 
-    def __init__(self, input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, num_layers, num_classes):
+    def __init__(self, input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
 
-        self.clstm = CLSTM(input_size, hidden_dims, kernel_sizes, num_layers)
-        self.conv = nn.Conv2D(hidden_dims[-1], num_classes, conv_kernel_size, padding=(conv_kernel_size - 1) / 2)
-        self.softmax = nn.Softmax2d
+        super(CLSTMSegmenter, self).__init__()
+
+        if not isinstance(hidden_dims, list):
+            hidden_dims = [hidden_dims]        
+
+        self.clstm = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers)
+
+        self.conv = nn.Conv2d(in_channels=hidden_dims[-1], out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))
+        self.softmax = nn.Softmax2d()
 
     def forward(self, inputs):
         layer_output_list, last_state_list = self.clstm(inputs)
-        preds = self.softmax(self.conv(layer_output_list))
+        preds = self.softmax(self.conv(last_state_list[0][0]))
         return preds
 
 def get_model(model_name, **kwargs):
@@ -318,5 +336,10 @@ def get_model(model_name, **kwargs):
         
         # TODO: change the timestamps passed in to be more flexible (i.e allow specify variable length / fixed / truncuate / pad)
         # TODO: don't hardcode values
-        model = make_bidir_clstm_model(input_size=(MIN_TIMESTAMPS, num_bands, GRID_SIZE, GRID_SIZE), kwargs.get(hidden_dims), kwargs.get(lstm_kernel_sizes), kwargs.get(conv_kernel_size), kwargs.get(lstm_num_layers), kwargs.get(num_classes))
+        model = make_bidir_clstm_model(input_size=(MIN_TIMESTAMPS, num_bands, GRID_SIZE, GRID_SIZE), 
+                                       hidden_dims=kwargs.get('hidden_dims'), 
+                                       lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
+                                       conv_kernel_size=kwargs.get('conv_kernel_size'), 
+                                       lstm_num_layers=kwargs.get('crnn_num_layers'),
+                                       num_classes=kwargs.get('num_classes'))
     return model
