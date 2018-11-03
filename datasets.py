@@ -25,6 +25,8 @@ class CropTypeDS(Dataset):
         self.use_s1 = args.use_s1
         self.use_s2 = args.use_s2
         self.num_classes = args.num_classes
+        ## Timeslice for FCN
+        self.timeslice = args.time_slice
 
     def __len__(self):
         return self.num_grids
@@ -34,12 +36,12 @@ class CropTypeDS(Dataset):
             s1 = None
             s2 = None
             if self.use_s1:
-                s1 = data['s1'][self.grid_list[idx]][:2, :, :]
+                s1 = data['s1'][self.grid_list[idx]][4:, :, :]
             if self.use_s2:
                 s2 = data['s2'][self.grid_list[idx]][()]
             
             grid = concat_s1_s2(s1, s2)
-            grid = preprocess_grid(grid, self.model_name)
+            grid = preprocess_grid(grid, self.model_name, self.timeslice)
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess_label(label, self.model_name, self.num_classes) 
     

@@ -80,8 +80,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
                 writer.add_scalar('/{split}/loss', loss, batch_num)
                 batch_num += 1
-
-
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
 
@@ -159,6 +157,10 @@ if __name__ == "__main__":
     parser.add_argument('--crnn_num_layers', type=int,
                         help="Number of convolutional RNN cells to stack",
                         default=1)
+    
+    parser.add_argument('--time_slice', type=int,
+                        help="which time slice for training FCN",
+                        default=None)    
 
     args = parser.parse_args()
     # load in data generator
@@ -166,7 +168,7 @@ if __name__ == "__main__":
     for split in SPLITS:
         grid_path = os.path.join(args.grid_dir, f"{args.country}_{args.dataset}_{split}")
         dataloaders[split] = datasets.GridDataLoader(args, grid_path)
-
+    
     # load in model
     model = models.get_model(**vars(args))
     if args.model_name in DL_MODELS and args.device == 'cuda' and torch.cuda.is_available():
@@ -186,3 +188,5 @@ if __name__ == "__main__":
         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name))
         print("MODEL SAVED")
      
+    
+    

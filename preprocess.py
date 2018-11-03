@@ -56,19 +56,24 @@ def retrieve_grid(grid_name):
     grid = None
     return grid
 
-def preprocess_grid(grid, model_name):
+def preprocess_grid(grid, model_name, time_slice = None):
     """ Returns a preprocessed version of the grid based on the model.
 
     Args:
         grid - (npy array) concatenation of the s1 and s2 values of the grid
         model_name - (string) type of model (ex: "C-LSTM")
-
+        time_slice - (int) which timestamp to be used in FCN
     """
 
     if model_name == "bidir_clstm":
         return preprocessForCLSTM(grid)
+    
+    if model_name == "fcn":
+        return preprocessForFCN(grid, time_slice)
 
     raise ValueError(f'Model: {model_name} unsupported')
+    
+    
 
 def preprocess_label(label, model_name, num_classes=None):
     """ Returns a preprocess version of the label based on the model.
@@ -85,10 +90,28 @@ def preprocess_label(label, model_name, num_classes=None):
     if model_name == "bidir_clstm":
         assert not num_classes is None
         return preprocessLabelForCLSTM(label, num_classes)
+    
+    if model_name == "fcn":
+        assert not num_classes is None
+        return preprocessLabelForFCN(label, num_classes)
 
     raise ValueError(f'Model: {model_name} unsupported')
+    
+    
 
 def preprocessLabelForCLSTM(label, num_classes):
+    """ Converts to onehot encoding and shifts channels to be first dim.
+
+    Args:
+        label - (npy arr) [64x64] categorical labels for each pixel
+        num_classes - (npy arr) number of classes 
+    """
+
+    mask = onehot_mask(label, num_classes)
+    return np.transpose(mask, [2, 0, 1])
+
+
+def preprocessLabelForFCN(label, num_classes):
     """ Converts to onehot encoding and shifts channels to be first dim.
 
     Args:
@@ -104,13 +127,29 @@ def moveTimeToStart(arr):
     """ Moves time axis to the first dim.
     
     Args:
-        arr - (npy arr) [bands x rows x cols x timestamps] """
+        arr - (npy arr) [bands x rows x cols x timestamps] 
+    """
     
     return np.transpose(arr, [3, 0, 1, 2])
+
+def takeTimeSlice(arr, timeslice):
+    """ Take time slice for fcn input [bands x rows x cols]
+    
+    Args:
+        arr - (npy arr) [bands x rows x cols x timestamps] 
+    """
+    arr = np.transpose(arr, [3, 0, 1, 2])
+    arr_slice = arr[timeslice,:,:,:]
+    return arr_slice
 
 def preprocessForCLSTM(grid):
     grid = moveTimeToStart(grid)
     return grid
+
+def preprocessForFCN(grid, time_slice):
+    grid = takeTimeSlice(grid)
+    return grid
+    
 
 def truncateToSmallestLength(batch):
     """ Truncates len of all sequences to MIN_TIMESTAMPS.
