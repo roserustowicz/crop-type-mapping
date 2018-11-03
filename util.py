@@ -152,6 +152,12 @@ def split_with_group(df, group, train_frac, test_frac, data_cols, lbl_cols, rand
 def crop_ind(y, name_list = [1, 2, 3, 4, 5]):
     """
     Crop row Index for y, just interested in some croptypes
+    Args:
+        y - y_label (croptype) of train/val/test or pixel arrays
+        name_list - what croptypes we are interested in, normally 1-5, just top 5 crops in the country
+
+        Returns:
+        crop_index - the index of array or vector to indicate where are the places for the croptype from 1-5
     """
 
     crop_index = [name in name_list for name in y]
@@ -159,8 +165,7 @@ def crop_ind(y, name_list = [1, 2, 3, 4, 5]):
     return crop_index
 
 
-def get_y_label(home, country, data_set, data_type, ylabel_dir):
-
+def get_y_label(home, country, data_set, data_type, ylabel_dir, raster_npy_dir):
     """
     Get y label for different set small/full, different type train/val/test
     
@@ -174,17 +179,18 @@ def get_y_label(home, country, data_set, data_type, ylabel_dir):
       data_type - (str) 'train'/'val'/'test'
 
       ylabel_dir - (str) dir to save ylabel
+      
+      raster_npy_dir - (str) string for the mask raster dir 'raster_npy' or 'raster_64x64_npy'
 
     Output: 
     ylabel_dir/..
 
-    save as row*col*grid_nums 3D array
-
+    save as grid_nums*row*col 3D array
     """
     gridded_IDs = sorted(np.load(os.path.join(home, country, country+'_'+data_set+'_'+data_type)))
 
     # Match the Mask
-    mask_dir = os.path.join(home, country, 'raster_64x64_npy')
+    mask_dir = os.path.join(home, country, raster_npy_dir)
     mask_fnames = [country+'_64x64_'+gridded_ID+'_label.npy' for gridded_ID in gridded_IDs]
 
     # Geom_ID Mask Array
@@ -202,7 +208,7 @@ def get_y_label(home, country, data_set, data_type, ylabel_dir):
     return mask_array
 
 
-def mask_tif_npy(home, country, csv_source, crop_dict_dir):
+def mask_tif_npy(home, country, csv_source, crop_dict_dir, raster_dir):
     """
     Transfer cropmask from .tif files by field_id to cropmask .npy by crop_id given crop_dict
     
@@ -213,17 +219,19 @@ def mask_tif_npy(home, country, csv_source, crop_dict_dir):
 
       csv_source - (str) string for the csv field id file corresponding with the country
 
-      crop_dict_dir - (str) string for the crop_dict dictionary {0: 'Unlabeled', 1: 'Groundnuts' ...}
+      crop_dict_dir - (str) string for the crop_dict dictionary {0: 'unlabeled', 1: 'groundnuts' ...}
+      
+      raster_dir - (str) string for the mask raster dir 'raster' or 'raster_64x64'
 
     Outputs:
-      ./raster_64X64_npy/..
+      ./raster_npy/..
 
     """
-    fname = os.path.join(home, csv_source)
+    fname = os.path.join(home, country, csv_source)
     crop_csv = pd.read_csv(fname)
 
-    mask_dir = os.path.join(home, country, 'raster_64x64')
-    mask_dir_npy = os.path.join(home, country, 'raster_64x64_npy')
+    mask_dir = os.path.join(home, country, raster_dir)
+    mask_dir_npy = os.path.join(home, country, raster_dir+'_npy')
     mask_fnames = [f for f in os.listdir(mask_dir) if f.endswith('.tif')]
     mask_ids = [f.split('_')[-1].replace('.tif', '') for f in mask_fnames]
     mask_fnames = [mask_fnames[ID] for ID in np.argsort(mask_ids)]
@@ -258,7 +266,3 @@ def fill_NA(X):
     """
     X_noNA = np.where(np.isnan(X), ma.array(X, mask=np.isnan(X)).mean(axis=0), X) 
     return(X_noNA)
-
-   
-
-
