@@ -249,7 +249,7 @@ def mask_tif_npy(home, country, csv_source, crop_dict_dir):
 
 def fill_NA(X):
     """
-    Fill NA values with mean
+    Fill NA values with mean of each band
 
     Args: 
       X - (numpy array) a vector of real values
