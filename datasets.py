@@ -36,7 +36,7 @@ class CropTypeDS(Dataset):
             s1 = None
             s2 = None
             if self.use_s1:
-                s1 = data['s1'][self.grid_list[idx]][4:, :, :]
+                s1 = data['s1'][self.grid_list[idx]][:2, :, :]
             if self.use_s2:
                 s2 = data['s2'][self.grid_list[idx]][()]
             

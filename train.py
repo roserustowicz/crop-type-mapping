@@ -71,8 +71,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 with torch.set_grad_enabled(True):
                     inputs.to(args.device)
                     targets.to(args.device)
-                    preds = model.forward(inputs)
-                    loss = loss_fn(targets, preds)
+                    preds = model.forward(inputs.double())
+                    loss = loss_fn(targets.double(), preds.double())
                     
                     optimizer.zero_grad()
                     loss.backward()

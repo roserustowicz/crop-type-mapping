@@ -147,7 +147,7 @@ def preprocessForCLSTM(grid):
     return grid
 
 def preprocessForFCN(grid, time_slice):
-    grid = takeTimeSlice(grid)
+    grid = takeTimeSlice(grid, time_slice)
     return grid
     
 
@@ -162,7 +162,8 @@ def truncateToSmallestLength(batch):
     batch_y = [item[1] for item in batch]
 
     for i in range(len(batch_X)):
-        batch_X[i], _, _ = sample_timeseries(batch_X[i], MIN_TIMESTAMPS, timestamps_first=True)
+        if len(batch_X[i].shape)>3:
+            batch_X[i], _, _ = sample_timeseries(batch_X[i], MIN_TIMESTAMPS, timestamps_first=True)
         
     return [torch.stack(batch_X), torch.stack(batch_y)]
 
