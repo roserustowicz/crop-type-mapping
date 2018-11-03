@@ -41,7 +41,12 @@ def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_
                      and 'orbits' (only for s1) information. 'dates' gives the acquisition dates for all 
                      images stacked in the array, in sequential order. 'orbits' gives the type of orbit 
                      the image was taken in, either 'asc' for ascending or 'desc' for descending. 
-      lbl_dir - 
+      
+      lbl_dir - (str) the directory name that the raster labels are stored in 
+                      (i.e. 'raster', 'raster_64x64')
+
+      filter_s1 - (boolean) If working with Sentinel-1 data, this will take only the last three bands,
+                   which include `angle`, `vv_gamma`, and `vh_gamma` 
 
     """
 
@@ -149,7 +154,7 @@ if __name__ == '__main__':
 
     home = '/home/data'
     countries = ['tanzania']
-    sources = ['s1']
+    sources = ['s2']
     lbl_dir = 'raster'
     verbose = 1
     out_format = 'npy'

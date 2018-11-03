@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from keras.models import model_from_json
 from keras import regularizers
 from keras.utils import np_utils, to_categorical
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
@@ -24,7 +25,7 @@ class DL_model:
     def __init__(self):
         self.model = None
 
-    def load_data(self, dataset_type, use_pca, source, ordering, reverse_clouds, verbose):
+    def load_data(self, dataset_type, use_pca, source, ordering, reverse_clouds, verbose, full_sampled, reshape_bands):
         """ Load .npy files for train, val, test splits
         
         X --> expand_dims along axis 2
@@ -41,12 +42,7 @@ class DL_model:
         if dataset_type == 'small':
             if source == 's1':
                 if use_pca:
-                    self.X_train = np.load(base_dir + '/small/pca/s1/small_pca_s1_rrrgggbbb_Xtrain_num_PCs23.npy')
-                    self.X_val = np.load(base_dir + '/small/pca/s1/small_pca_s1_rrrgggbbb_Xval_num_PCs23.npy')
-                    self.X_test = np.load(base_dir + '/small/pca/s1/small_pca_s1_rrrgggbbb_Xtest_num_PCs23.npy')
-                    self.y_train = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_ytrain_g49.npy')
-                    self.y_val = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_yval_g57.npy')
-                    self.y_test = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_ytest_g62.npy')
+                    pass
                 else:
                     if ordering == 'byband':
                         self.X_train = np.load(base_dir + '/small/raw/s1/small_raw_s1_byband_Xtrain_g49.npy')        
@@ -66,12 +62,7 @@ class DL_model:
 
             elif source == 's2':
                 if use_pca:
-                    self.X_train = np.load(base_dir + '/small/pca/s2/small_pca_s2_rrrgggbbb_Xtrain_num_PCs19.npy')
-                    self.X_val = np.load(base_dir + '/small/pca/s2/small_pca_s2_rrrgggbbb_Xval_num_PCs19.npy')
-                    self.X_test = np.load(base_dir + '/small/pca/s2/small_pca_s2_rrrgggbbb_Xtest_num_PCs19.npy')
-                    self.y_train = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_ytrain_g49.npy')
-                    self.y_val = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_yval_g57.npy')
-                    self.y_test = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_ytest_g62.npy')
+                    pass
                 else:
                     if reverse_clouds:
                         if ordering == 'bytime':
@@ -105,13 +96,8 @@ class DL_model:
                     self.X_test = scaler.transform(self.X_test)
 
             elif source == 's1_s2':
-                if use_pca: 
-                    self.X_train = np.load(base_dir + '/small/pca/s1_s2/small_pca_s1_s2_rrrgggbbb_Xtrain_num_PCs41.npy') 
-                    self.X_val = np.load(base_dir + '/small/pca/s1_s2/small_pca_s1_s2_rrrgggbbb_Xval_num_PCs41.npy')
-                    self.X_test = np.load(base_dir + '/small/pca/s1_s2/small_pca_s1_s2_rrrgggbbb_Xtest_num_PCs41.npy')
-                    self.y_train = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_ytrain_g49.npy')
-                    self.y_val = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_yval_g57.npy')
-                    self.y_test = np.load(base_dir + '/small/raw/s1/small_raw_s1_rrrgggbbb_ytest_g62.npy')
+                if use_pca:
+                    pass 
                 else: 
                     if ordering == 'bytime':
                         # use np.hstack() to combine       
@@ -137,12 +123,24 @@ class DL_model:
         elif dataset_type == 'full':
             if source == 's1': 
                 if use_pca:
-                    self.X_train = np.load(base_dir + '/full/pca/s1/full_pca_s1_rrrgggbbb_Xtrain_num_PCs23.npy')
-                    self.X_val = np.load(base_dir + '/full/pca/s1/full_pca_s1_rrrgggbbb_Xval_num_PCs23.npy')
-                    self.X_test = np.load(base_dir + '/full/pca/s1/full_pca_s1_rrrgggbbb_Xtest_num_PCs23.npy')
-                    self.y_train = np.load(base_dir + '/full/raw/s1/full_raw_s1_rrrgggbbb_ytrain_g2338.npy')
-                    self.y_val = np.load(base_dir + '/full/raw/s1/full_raw_s1_rrrgggbbb_yval_g305.npy')
-                    self.y_test = np.load(base_dir + '/full/raw/s1/full_raw_s1_rrrgggbbb_ytest_g366.npy')
+                    pass
+                elif full_sampled:
+                    self.X_train = np.load(base_dir + 
+                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xtrain_g2321.npy')
+                    #self.X_val = np.load(base_dir +
+                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xval_g305.npy')
+                    #self.X_test = np.load(base_dir + 
+                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xtest_g364.npy')
+                    self.y_train = np.load(base_dir + 
+                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_ytrain_g2321.npy')
+                    #self.y_val = np.load(base_dir +
+                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_yval_g305.npy')
+                    #self.y_test = np.load(base_dir + 
+                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_ytest_g364.npy')
+                    self.X_val = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xval_g305.npy')
+                    self.X_test = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xtest_g364.npy')
+                    self.y_val = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_yval_g305.npy')
+                    self.y_test = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_ytest_g364.npy')
                 else:
                     if ordering == 'bytime':
                         self.X_train = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xtrain_g2321.npy')
@@ -162,12 +160,28 @@ class DL_model:
 
             elif source == 's2':
                 if use_pca:
-                    self.X_train = np.load(base_dir + '/full/pca/s2/full_pca_s2_rrrgggbbb_Xtrain_num_PCs23.npy')
-                    self.X_val = np.load(base_dir + '/full/pca/s2/full_pca_s2_rrrgggbbb_Xval_num_PCs23.npy')
-                    self.X_test = np.load(base_dir + '/full/pca/s2/full_pca_s2_rrrgggbbb_Xtest_num_PCs23.npy')
-                    self.y_train = np.load(base_dir + '/full/raw/s1/full_raw_s1_rrrgggbbb_ytrain_g2338.npy')
-                    self.y_val = np.load(base_dir + '/full/raw/s1/full_raw_s1_rrrgggbbb_yval_g305.npy')
-                    self.y_test = np.load(base_dir + '/full/raw/s1/full_raw_s1_rrrgggbbb_ytest_g366.npy')
+                    pass
+                elif full_sampled:
+                    self.X_train = np.load(base_dir + 
+                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtrain_g2321.npy')
+                    self.X_val = np.load(base_dir +
+                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_Xval_g305.npy')
+                    self.X_test = np.load(base_dir + 
+                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtest_g364.npy')
+                    self.y_train = np.load(base_dir + 
+                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g2321.npy')
+                    self.y_val = np.load(base_dir +
+                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g305.npy')
+                    self.y_test = np.load(base_dir + 
+                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g364.npy')
+                    #self.X_val = np.load(base_dir + 
+                    #  '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xval_g305.npy')
+                    #self.X_test = np.load(base_dir + 
+                    #  '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtest_g364.npy')
+                    #self.y_val = np.load(base_dir + 
+                    #  '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g305.npy')
+                    #self.y_test = np.load(base_dir + 
+                    #  '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g364.npy')
                 else:
                     if reverse_clouds:
                         if ordering == 'bytime':
@@ -177,6 +191,12 @@ class DL_model:
                               '/full/raw/cloud_s2/reverse_true/full_raw_s2_cloud_mask_reverseTrue_bytime_Xval_g305.npy')
                             self.X_test = np.load(base_dir + 
                               '/full/raw/cloud_s2/reverse_true/full_raw_s2_cloud_mask_reverseTrue_bytime_Xtest_g364.npy')
+                            self.y_train = np.load(base_dir + 
+                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g2321.npy')
+                            self.y_val = np.load(base_dir + 
+                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g305.npy')
+                            self.y_test = np.load(base_dir + 
+                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g364.npy')
                     else:
                         if ordering == 'bytime':
                             self.X_train = np.load(base_dir + 
@@ -185,14 +205,13 @@ class DL_model:
                               '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xval_g305.npy')
                             self.X_test = np.load(base_dir + 
                               '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtest_g364.npy')
+                            self.y_train = np.load(base_dir + 
+                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g2321.npy')
+                            self.y_val = np.load(base_dir + 
+                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g305.npy')
+                            self.y_test = np.load(base_dir + 
+                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g364.npy')
 
-                    self.y_train = np.load(base_dir + 
-                      '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g2321.npy')
-                    self.y_val = np.load(base_dir + 
-                      '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g305.npy')
-                    self.y_test = np.load(base_dir + 
-                      '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g364.npy')
-                    
                     # Normalize by standard scalar
                     scaler = StandardScaler()
                     scaler.fit(self.X_train)
@@ -201,13 +220,8 @@ class DL_model:
                     self.X_test = scaler.transform(self.X_test)
 
             elif source == 's1_s2':
-                if use_pca: 
-                    self.X_train = np.load(base_dir + '/full/pca/s1_s2/full_pca_s1_s2_rrrgggbbb_Xtrain_num_PCs45.npy')
-                    self.X_val = np.load(base_dir + '/full/pca/s1_s2/full_pca_s1_s2_rrrgggbbb_Xval_num_PCs45.npy')
-                    self.X_test = np.load(base_dir + '/full/pca/s1_s2/full_pca_s1_s2_rrrgggbbb_Xtest_num_PCs45.npy')
-                    self.y_train = np.load(base_dir + '/full/raw/s1/full_raw_s1_rrrgggbbb_ytrain_g2338.npy')
-                    self.y_val = np.load(base_dir + '/full/raw/s1/full_raw_s1_rrrgggbbb_yval_g305.npy')
-                    self.y_test = np.load(base_dir + '/full/raw/s1/full_raw_s1_rrrgggbbb_ytest_g366.npy')
+                if use_pca:
+                    pass 
                 else:
                     # use np.hstack() to combine raw s1 and s2
                     if reverse_clouds:  
@@ -262,10 +276,16 @@ class DL_model:
             self.X_test = np.ones((2, 30))
             self.y_test = np.ones((2,5))
     
-  
-        self.X_train = np.expand_dims(self.X_train, axis=2)
-        self.X_val = np.expand_dims(self.X_val, axis=2)
-        self.X_test = np.expand_dims(self.X_test, axis=2)
+        if reshape_bands:
+            if 's1' in source: num_bands = 2
+            elif 's2' in source: num_bands = 11
+            self.X_train = reshape_channels(self.X_train, num_bands, ordering)
+            self.X_val = reshape_channels(self.X_val, num_bands, ordering)
+            self.X_test = reshape_channels(self.X_test, num_bands, ordering)
+        else:
+            self.X_train = np.expand_dims(self.X_train, axis=2)
+            self.X_val = np.expand_dims(self.X_val, axis=2)
+            self.X_test = np.expand_dims(self.X_test, axis=2)
 
         self.y_train = to_categorical(self.y_train.astype(int)-1,num_classes=5)
         self.y_val = to_categorical(self.y_val.astype(int)-1,num_classes=5)
@@ -298,7 +318,7 @@ class DL_model:
         loaded_model = model_from_json(json_model)
         self.model = loaded_model.load_weights(h5_fname)
 
-    def evaluate(self, data_split, f):
+    def evaluate(self, data_split, f, verbose):
         """ Evaluate the model accuracy
   
         Args: 
@@ -310,7 +330,8 @@ class DL_model:
         self.model.compile(loss = 'categorical_crossentropy', 
                           optimizer='adam', 
                           metrics=['accuracy'])
-        
+
+
         if data_split == 'train': 
             score = self.model.evaluate(self.X_train, self.y_train)
             pred = np.argmax(self.model.predict(self.X_train), axis=1)
@@ -331,7 +352,6 @@ class DL_model:
             print('%s: %.2f%%' % (self.model.metrics_names[1], score[1]*100))
             print('Confusion Matrix: ', cm) 
 
-
     def fit(self):
         """ Trains the model
         """
@@ -339,27 +359,71 @@ class DL_model:
         self.model.compile(loss = 'categorical_crossentropy',
                       optimizer = 'adam',
                       metrics = ['accuracy'])
+        
+        #callbacks = [EarlyStopping(monitor='val_loss', min_delta=0, patience=15, verbose=0, mode='auto', 
+        #             baseline=None, restore_best_weights=True), ModelCheckpoint(filepath='best_model.h5',
+        #             monitor='val_loss', save_best_only=True)]
+       
         # Fit model
-        self.model.fit(self.X_train, 
+        history = self.model.fit(self.X_train, 
                        self.y_train, 
                        batch_size=500,
-                       epochs=10,
+                       epochs=200,
                        validation_data=(self.X_val, self.y_val),
-                       verbose=1)
+                       verbose=1) #,
+                       #callbacks=callbacks)
+        return history
 
+def reshape_channels(array, num_bands, ordering):
+    bs = []
+    if ordering == 'bytime':
+        for b in range(num_bands):
+            bs.append(array[:, b::num_bands])
+    elif ordering == 'byband':
+        assert array.shape[1] % num_bands == 0
+        crop_every = int(array.shape[1]/num_bands)
+        for b in range(num_bands):
+            bs.append(vec[:, b*crop_every:(b+1)*crop_every])
+
+    return np.dstack(bs)
+
+def plot(history, model_type, dataset_type, source, ordering, units, reg_strength):
+    plt.figure()
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    fname = 'acc_model{}-data{}{}-ordering{}-units{}-reg{}'.format(
+               model_type, dataset_type, source, ordering, units, reg_strength)
+    plt.title(fname)
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'val'], loc='upper left')
+    plt.savefig('plots/'+fname+'.jpg')
+    
+    plt.figure()
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    fname = 'loss_model{}-data{}{}-ordering{}-units{}-reg{}'.format(
+               model_type, dataset_type, source, ordering, units, reg_strength)
+    plt.title(fname)
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'val'], loc='upper left')
+    plt.savefig('plots/'+fname+'.jpg')
 
 def main():
 
-    filename = 'NN_full_results.txt'
-
-    model_type = 'nn'
+    #filename = 'NN_full_sampled_reshapebands_valtestoriginal_results.txt'
+    filename = 'CNN_full_sampled_reshapebands_nostop_results.txt '
+    model_type = 'cnn'
     dataset_type = 'full'
     use_pca = 0
     ordering = 'bytime'
     reverse_clouds = 0
     verbose = 1
-    
-    for source in ['s1', 's2', 's1_s2']:
+    full_sampled = 1   
+    reshape_bands = 1 
+
+    for source in ['s2']:
 
         f = open(filename,'a+')
             
@@ -374,8 +438,15 @@ def main():
             print('{} model, {} dataset, {} pca, {} source, {} ordering, {} clouds_reverse \n'.format(
                 model_type, dataset_type, use_pca, source, ordering, reverse_clouds))
 
-        for units in [[32, 64, 128, 256, 512, 1024]:
-            for reg_strength in [[0.01, 0.05, 0.1, 0.3, 0.5]:
+        #units = [32, 64, 128, 256]
+        #reg_strength = [0, 0.01, 0.03, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
+        #max_dropout=0.6
+        ##p_units = random.sample(range(0, len(), 3)
+        #for units, reg_strength, dropout in zip([32, 64, 128, 256], [0, 0.01, 0.03, 0.05, 0.1, 0.3, 0.5], np.random.random((5,))*0.6)
+        dropout=0
+        #for units in [32, 64, 128, 256]:
+        for units in [8, 16, 32, 64, 128, 256, 512, 1024]:
+            for reg_strength in [0]: #0.01, 0.03, 0.05, 0.1, 0.3, 0.5]:
                 f = open(filename, 'a+')
 
                 f.write('--------- \n')
@@ -388,30 +459,39 @@ def main():
                 # Define NN model
                 keras_model = DL_model()
                 # Load data into model
-                keras_model.load_data(dataset_type, use_pca, source, ordering, reverse_clouds, verbose)
+                keras_model.load_data(dataset_type, use_pca, source, ordering, reverse_clouds, verbose, full_sampled, reshape_bands)
     
                 # Define model 
                 if model_type == 'nn':
                     keras_model.model = make_1d_nn_model(num_classes=5, 
                                          num_input_feats=keras_model.X_train.shape[1],
-                                         units=32,reg_strength=0.1)
+                                         units=units,reg_strength=reg_strength,
+                                         input_bands=keras_model.X_train.shape[2],
+                                         dropout=dropout)
+                                         
                 elif model_type == 'cnn':
                     keras_model.model = make_1d_cnn_model(num_classes=5, 
                                          num_input_feats=keras_model.X_train.shape[1],
-                                         units=32,reg_strength=0.1)
+                                         units=units,reg_strength=reg_strength,
+                                         input_bands=keras_model.X_train.shape[2],
+                                         dropout=dropout)
                 # Fit model
-                keras_model.fit()
+                history = keras_model.fit()
+
                 # Evaluate
                 f.write('evaluate train: \n')
                 #print('evaluate train: ', file=f)
-                keras_model.evaluate('train', f)
+                keras_model.evaluate('train', f, verbose)
                 f.write('evaluate val: \n')
                 #print('evaluate val: ', file=f)
-                keras_model.evaluate('val', f)
+                keras_model.evaluate('val', f, verbose)
                 f.write('evaluate test: \n')
                 #print('evaluate test: ', file=f)
-                keras_model.evaluate('test', f)
+                keras_model.evaluate('test', f, verbose)
 
+                # Plot
+                plot(history, model_type, dataset_type, source, ordering, units, reg_strength)
+                
                 f.close()
 
 if __name__ == '__main__':

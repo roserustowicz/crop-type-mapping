@@ -15,13 +15,14 @@ def get_empty_grids(home, countries, sources, verbose, ext, lbl_dir):
       countries - (list of str) list of strings that point to the directory names
                   of the different countries (i.e. ['ghana', 'tanzania', 'southsudan'])
 
-      sources - 
+      sources - (list of str) list of directory of satellite sources (i.e. 's1_64x64', 's2') 
 
       verbose - (boolean) prints outputs from function
 
-      ext - 
+      ext - (str) file type that you are working with (i.e. 'tif', 'npy') 
    
-      lbl_dir - 
+      lbl_dir - (str) the directory name that the raster labels are stored in 
+                      (i.e. 'raster', 'raster_64x64')
     """
 
     valid_pixels_list = []
@@ -61,6 +62,8 @@ def get_empty_grids(home, countries, sources, verbose, ext, lbl_dir):
         return set(delete_me)
 
 def get_grid_nums(home, country, source, ext):
+    """
+    """
     cur_path = os.path.join(home, country, source)
     if ext == 'tif':
         files = [os.path.join(cur_path, f) for f in os.listdir(cur_path) if f.endswith('.tif')]
@@ -99,13 +102,10 @@ if __name__ == '__main__':
     home = '/home/data'
     countries = ['tanzania']
     sources = ['s1', 's2']
-    #sources = ['s1_64x64_npy', 's2_64x64_npy']
     lbl_dir = 'raster'
-    #lbl_dir = 'raster_64x64'
     verbose = 1
     dry_run = 1
     ext = 'tif'
-    #ext = 'npy'
 
     grids_to_delete = get_empty_grids(home, countries, sources, verbose, ext, lbl_dir)
     remove_irrelevant_files(home, countries, sources, grids_to_delete, dry_run, ext)
