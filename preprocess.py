@@ -254,6 +254,14 @@ def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytim
       ylabel_dir - (str) dir to load ylabel
 
       band_order - (str) band order: 'byband', 'bytime'
+      
+      random_sample - (boolean) use random sample (True) or take median (False)
+      
+      num_timestamp - (num) minimum num for time stamp
+      
+      reverse - (boolean) use cloud mask reversed softmax probability or not 
+      
+      seed - (int) random sample seed
 
     Output: 
 
@@ -323,11 +331,11 @@ def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytim
 
                 if random_sample == True and satellite == 's2':
                     cloud_stack = np.load(os.path.join(gridded_dir,cloud_mask_fnames[i]))
-                    [sampled_img_stack, sampled_cloud_stack] = sample_timeseries(X_one, num_samples = num_timestamp, cloud_stack=cloud_stack, reverse = reverse, seed = seed)
+                    [sampled_img_stack, _,  sampled_cloud_stack] = sample_timeseries(X_one, num_samples = num_timestamp, cloud_stack=cloud_stack, reverse = reverse, seed = seed)
                     Xtemp = np.copy(np.vstack((sampled_img_stack,np.expand_dims(sampled_cloud_stack, axis=0))))
                 
                 elif random_sample == True and satellite == 's1':
-                    [sampled_img_stack, _] = sample_timeseries(X_one, num_samples = num_timestamp, cloud_stack=None, reverse = reverse, seed = seed)
+                    [sampled_img_stack, _, _] = sample_timeseries(X_one, num_samples = num_timestamp, cloud_stack=None, reverse = reverse, seed = seed)
                     Xtemp = np.copy(sampled_img_stack)
                     
                 else:
