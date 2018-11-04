@@ -27,7 +27,7 @@ def mask_ce_loss(y_true, y_pred):
     y_pred = y_pred.contiguous().view(-1, y_true.shape[-1])
 
     loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
-    loss_mask_repeat = loss_mask.unsqueeze(1).repeat(1,y_pred.shape[1]).type(torch.DoubleTensor).cuda()
+    loss_mask_repeat = loss_mask.unsqueeze(1).repeat(1,y_pred.shape[1]).type(torch.FloatTensor).cuda()
     
     vals, y_true = torch.max(y_true, dim=1)
     
@@ -37,7 +37,7 @@ def mask_ce_loss(y_true, y_pred):
     loss_fn = nn.CrossEntropyLoss(reduction="sum")
     total_loss = loss_fn(y_pred, y_true.type(torch.LongTensor).cuda())
     
-    num_examples = torch.sum(torch.clamp(torch.sum(y_true, dim=0), min=0, max=1)).type(torch.DoubleTensor).cuda()
+    num_examples = torch.sum(torch.clamp(torch.sum(y_true, dim=0), min=0, max=1)).type(torch.FloatTensor).cuda()
     return total_loss / num_examples
 
 # TODO: Incorporate lr decay
