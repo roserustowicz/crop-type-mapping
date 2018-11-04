@@ -1,17 +1,33 @@
 name: null
 channels:
+  - pytorch
   - anaconda
   - conda-forge
   - defaults
 dependencies:
+  - _tflow_1100_select=0.0.1=gpu
+  - blas=1.0=mkl
+  - cudatoolkit=9.2=0
+  - cudnn=7.2.1=cuda9.2_0
+  - cupti=9.2.148=0
+  - intel-openmp=2019.0=118
   - libgcc-ng=8.2.0=hdf63c60_1
+  - libgfortran=3.0.0=1
+  - libgfortran-ng=7.2.0=hdf63c60_3
   - libstdcxx-ng=8.2.0=hdf63c60_1
+  - mkl=2019.0=118
   - numpy=1.15.2=py36h1d66e8a_1
   - numpy-base=1.15.2=py36h81de0dd_1
   - pandas=0.23.4=py36h04863e7_0
+  - poppler-data=0.4.9=0
   - pytz=2018.5=py36_0
   - scikit-learn=0.20.0=py36h4989274_1
   - scipy=1.1.0=py36hfa4b5c9_1
+  - setuptools=40.4.3=py36_0
+  - tensorflow=1.10.0=gpu_py36hcebf108_0
+  - tensorflow-base=1.10.0=gpu_py36had579c0_0
+  - tensorflow-gpu=1.10.0=hf154084_0
+  - wheel=0.32.1=py36_0
   - absl-py=0.5.0=py_0
   - affine=2.2.1=py_0
   - asn1crypto=0.24.0=py36_1003
@@ -80,8 +96,6 @@ dependencies:
   - libedit=3.1.20170329=haf1bffa_1
   - libffi=3.2.1=hfc679d8_5
   - libgdal=2.2.4=hbd6f514_9
-  - libgfortran=3.0.0=1
-  - libgfortran-ng=7.2.0=hdf63c60_3
   - libgpuarray=0.7.6=h470a237_3
   - libiconv=1.15=h470a237_3
   - libkml=1.3.0=hccc92b1_8
@@ -120,7 +134,6 @@ dependencies:
   - pip=18.1=py36_1000
   - pixman=0.34.0=h470a237_3
   - poppler=0.67.0=h4d7e492_3
-  - poppler-data=0.4.9=0
   - postgresql=10.5=h66035e0_0
   - proj4=4.9.3=h470a237_8
   - prometheus_client=0.4.1=py_0
@@ -144,14 +157,12 @@ dependencies:
   - readline=7.0=haf1bffa_1
   - s3transfer=0.1.13=py36_1001
   - send2trash=1.5.0=py_0
-  - setuptools=40.4.3=py36_0
   - simplegeneric=0.8.1=py_1
   - sip=4.18.1=py36hfc679d8_0
   - six=1.11.0=py36_1001
   - snuggs=1.4.1=py_1
   - sqlite=3.25.2=hb1c47c0_0
   - tensorboard=1.10.0=py36_0
-  - tensorflow=1.10.0=py36_0
   - termcolor=1.1.0=py_2
   - terminado=0.8.1=py36_1001
   - testpath=0.4.2=py36_1000
@@ -163,7 +174,6 @@ dependencies:
   - wcwidth=0.1.7=py_1
   - webencodings=0.5.1=py_1
   - werkzeug=0.14.1=py_0
-  - wheel=0.32.1=py36_0
   - xerces-c=3.2.0=h5d6a6da_2
   - xorg-kbproto=1.0.7=h470a237_2
   - xorg-libice=1.0.9=h470a237_4
@@ -180,11 +190,13 @@ dependencies:
   - yaml=0.1.7=h470a237_1
   - zeromq=4.2.5=hfc679d8_6
   - zlib=1.2.11=h470a237_3
-  - blas=1.0=mkl
-  - intel-openmp=2019.0=118
-  - mkl=2019.0=118
+  - ninja=1.8.2=py36h6bb024c_1
+  - olefile=0.46=py36_0
+  - pillow=5.3.0=py36h34e0f95_0
+  - pytorch=0.4.1=py36_py35_py27__9.0.176_7.1.2_2
+  - torchvision=0.2.1=py36_1
   - pip:
-    - nb-conda==2.2.1
-    - python-constraint==1.3.1
+    - tensorboardx==1.4
+    - torch==0.4.1.post2
 prefix: /home/croptype
 
