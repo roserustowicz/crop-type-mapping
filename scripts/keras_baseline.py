@@ -127,20 +127,20 @@ class DL_model:
                 elif full_sampled:
                     self.X_train = np.load(base_dir + 
                         '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xtrain_g2321.npy')
-                    #self.X_val = np.load(base_dir +
-                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xval_g305.npy')
-                    #self.X_test = np.load(base_dir + 
-                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xtest_g364.npy')
+                    self.X_val = np.load(base_dir +
+                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xval_g305.npy')
+                    self.X_test = np.load(base_dir + 
+                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xtest_g364.npy')
                     self.y_train = np.load(base_dir + 
                         '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_ytrain_g2321.npy')
-                    #self.y_val = np.load(base_dir +
-                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_yval_g305.npy')
-                    #self.y_test = np.load(base_dir + 
-                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_ytest_g364.npy')
-                    self.X_val = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xval_g305.npy')
-                    self.X_test = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xtest_g364.npy')
-                    self.y_val = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_yval_g305.npy')
-                    self.y_test = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_ytest_g364.npy')
+                    self.y_val = np.load(base_dir +
+                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_yval_g305.npy')
+                    self.y_test = np.load(base_dir + 
+                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_ytest_g364.npy')
+                    #self.X_val = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xval_g305.npy')
+                    #self.X_test = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xtest_g364.npy')
+                    #self.y_val = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_yval_g305.npy')
+                    #self.y_test = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_ytest_g364.npy')
                 else:
                     if ordering == 'bytime':
                         self.X_train = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xtrain_g2321.npy')
@@ -360,9 +360,9 @@ class DL_model:
                       optimizer = 'adam',
                       metrics = ['accuracy'])
         
-        #callbacks = [EarlyStopping(monitor='val_loss', min_delta=0, patience=15, verbose=0, mode='auto', 
-        #             baseline=None, restore_best_weights=True), ModelCheckpoint(filepath='best_model.h5',
-        #             monitor='val_loss', save_best_only=True)]
+        callbacks = [EarlyStopping(monitor='val_loss', min_delta=0, patience=15, verbose=0, mode='auto', 
+                     baseline=None, restore_best_weights=True), ModelCheckpoint(filepath='best_model.h5',
+                     monitor='val_loss', save_best_only=True)]
        
         # Fit model
         history = self.model.fit(self.X_train, 
@@ -370,8 +370,8 @@ class DL_model:
                        batch_size=500,
                        epochs=200,
                        validation_data=(self.X_val, self.y_val),
-                       verbose=1) #,
-                       #callbacks=callbacks)
+                       verbose=1,
+                       callbacks=callbacks)
         return history
 
 def reshape_channels(array, num_bands, ordering):
@@ -388,7 +388,7 @@ def reshape_channels(array, num_bands, ordering):
     return np.dstack(bs)
 
 def plot(history, model_type, dataset_type, source, ordering, units, reg_strength):
-    plt.figure()
+    #plt.figure()
     plt.plot(history.history['acc'])
     plt.plot(history.history['val_acc'])
     fname = 'acc_model{}-data{}{}-ordering{}-units{}-reg{}'.format(
@@ -399,7 +399,7 @@ def plot(history, model_type, dataset_type, source, ordering, units, reg_strengt
     plt.legend(['train', 'val'], loc='upper left')
     plt.savefig('plots/'+fname+'.jpg')
     
-    plt.figure()
+    #plt.figure()
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     fname = 'loss_model{}-data{}{}-ordering{}-units{}-reg{}'.format(
@@ -413,17 +413,17 @@ def plot(history, model_type, dataset_type, source, ordering, units, reg_strengt
 def main():
 
     #filename = 'NN_full_sampled_reshapebands_valtestoriginal_results.txt'
-    filename = 'CNN_full_sampled_reshapebands_nostop_results.txt '
+    filename = 'CNN_full_reshapebands_results_earlystopping.txt'
     model_type = 'cnn'
     dataset_type = 'full'
     use_pca = 0
     ordering = 'bytime'
     reverse_clouds = 0
     verbose = 1
-    full_sampled = 1   
+    full_sampled = 0 
     reshape_bands = 1 
 
-    for source in ['s2']:
+    for source in ['s1', 's2']:
 
         f = open(filename,'a+')
             
@@ -445,8 +445,8 @@ def main():
         #for units, reg_strength, dropout in zip([32, 64, 128, 256], [0, 0.01, 0.03, 0.05, 0.1, 0.3, 0.5], np.random.random((5,))*0.6)
         dropout=0
         #for units in [32, 64, 128, 256]:
-        for units in [8, 16, 32, 64, 128, 256, 512, 1024]:
-            for reg_strength in [0]: #0.01, 0.03, 0.05, 0.1, 0.3, 0.5]:
+        for units in [16, 32, 64, 128, 256]:
+            for reg_strength in [0, 0.005, 0.01, 0.02, 0.03, 0.05, 0.1, 0.3]:
                 f = open(filename, 'a+')
 
                 f.write('--------- \n')
