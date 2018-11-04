@@ -6,7 +6,7 @@ import sys
 import matplotlib.pyplot as plt
 
 from keras.models import model_from_json
-from keras import regularizers
+from keras import regularizers, optimizers
 from keras.utils import np_utils, to_categorical
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
@@ -25,7 +25,7 @@ class DL_model:
     def __init__(self):
         self.model = None
 
-    def load_data(self, dataset_type, use_pca, source, ordering, reverse_clouds, verbose, full_sampled, reshape_bands):
+    def load_data(self, dataset_type, use_pca, source, ordering, reverse_clouds, verbose, full_sampled, reshape_bands, binary):
         """ Load .npy files for train, val, test splits
         
         X --> expand_dims along axis 2
@@ -287,9 +287,18 @@ class DL_model:
             self.X_val = np.expand_dims(self.X_val, axis=2)
             self.X_test = np.expand_dims(self.X_test, axis=2)
 
-        self.y_train = to_categorical(self.y_train.astype(int)-1,num_classes=5)
-        self.y_val = to_categorical(self.y_val.astype(int)-1,num_classes=5)
-        self.y_test = to_categorical(self.y_test.astype(int)-1,num_classes=5)
+        if binary:
+            self.y_train[self.y_train > 2] = 1
+            self.y_val[self.y_val > 2] = 1
+            self.y_test[self.y_test > 2] = 1
+
+            self.y_train = to_categorical(self.y_train.astype(int)-1,num_classes=2)
+            self.y_val = to_categorical(self.y_val.astype(int)-1,num_classes=2)
+            self.y_test = to_categorical(self.y_test.astype(int)-1,num_classes=2)
+        else:
+            self.y_train = to_categorical(self.y_train.astype(int)-1,num_classes=5)
+            self.y_val = to_categorical(self.y_val.astype(int)-1,num_classes=5)
+            self.y_test = to_categorical(self.y_test.astype(int)-1,num_classes=5)
 
         if verbose:
             print('X train: ', self.X_train.shape) #, self.X_train)
@@ -298,6 +307,7 @@ class DL_model:
             print('y train: ', self.y_train.shape)
             print('y val: ', self.y_val.shape)
             print('y test: ', self.y_test.shape)
+            print('y max: ', np.max(self.y_train))
 
     def load_from_json(self, json_fname, h5_fname):
         """
@@ -327,8 +337,9 @@ class DL_model:
         Returns: 
           prints the accuracy score
         """
+        adam = optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
         self.model.compile(loss = 'categorical_crossentropy', 
-                          optimizer='adam', 
+                          optimizer=adam, 
                           metrics=['accuracy'])
 
 
@@ -387,19 +398,19 @@ def reshape_channels(array, num_bands, ordering):
 
     return np.dstack(bs)
 
-def plot(history, model_type, dataset_type, source, ordering, units, reg_strength):
-    #plt.figure()
+def plot(history, model_type, dataset_type, source, ordering, units, reg_strength, dropout):
+    plt.figure()
     plt.plot(history.history['acc'])
     plt.plot(history.history['val_acc'])
-    fname = 'acc_model{}-data{}{}-ordering{}-units{}-reg{}'.format(
-               model_type, dataset_type, source, ordering, units, reg_strength)
+    fname = 'acc_model{}-data{}{}-ordering{}-units{}-reg{}-dropout{}'.format(
+               model_type, dataset_type, source, ordering, units, reg_strength, dropout)
     plt.title(fname)
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
     plt.legend(['train', 'val'], loc='upper left')
     plt.savefig('plots/'+fname+'.jpg')
     
-    #plt.figure()
+    plt.figure()
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     fname = 'loss_model{}-data{}{}-ordering{}-units{}-reg{}'.format(
@@ -413,7 +424,10 @@ def plot(history, model_type, dataset_type, source, ordering, units, reg_strengt
 def main():
 
     #filename = 'NN_full_sampled_reshapebands_valtestoriginal_results.txt'
-    filename = 'CNN_full_reshapebands_results_earlystopping.txt'
+    #filename = 'CNN_full_reshapebands_results_earlystopping.txt' --> still need to do with 256
+
+    filename = 'CNN_full_reshapebands_results_earlystopping_binary_lr0.0001.txt'
+
     model_type = 'cnn'
     dataset_type = 'full'
     use_pca = 0
@@ -422,6 +436,7 @@ def main():
     verbose = 1
     full_sampled = 0 
     reshape_bands = 1 
+    binary = 1
 
     for source in ['s1', 's2']:
 
@@ -443,56 +458,61 @@ def main():
         #max_dropout=0.6
         ##p_units = random.sample(range(0, len(), 3)
         #for units, reg_strength, dropout in zip([32, 64, 128, 256], [0, 0.01, 0.03, 0.05, 0.1, 0.3, 0.5], np.random.random((5,))*0.6)
-        dropout=0
-        #for units in [32, 64, 128, 256]:
-        for units in [16, 32, 64, 128, 256]:
-            for reg_strength in [0, 0.005, 0.01, 0.02, 0.03, 0.05, 0.1, 0.3]:
-                f = open(filename, 'a+')
+        for dropout in [0, 0.1, 0.2, 0.3, 0.4]:
+            #for units in [32, 64, 128, 256]:
+            for units in [16, 64, 128, 256]:
+                for reg_strength in [0, 0.005, 0.01, 0.02, 0.03, 0.05, 0.1, 0.3]:
 
-                f.write('--------- \n')
-                f.write('{} units, {} regularization \n'.format(units, reg_strength))
+                    f = open(filename, 'a+')
+
+                    f.write('--------- \n')
+                    f.write('{} units, {} regularization, {} dropout \n'.format(units, reg_strength, dropout))
             
-                if verbose:
-                    print('--------- \n')
-                    print('{} units, {} regularization \n'.format(units, reg_strength))
+                    if verbose:
+                        print('--------- \n')
+                        print('{} units, {} regularization, {} dropout \n'.format(units, reg_strength, dropout))
  
-                # Define NN model
-                keras_model = DL_model()
-                # Load data into model
-                keras_model.load_data(dataset_type, use_pca, source, ordering, reverse_clouds, verbose, full_sampled, reshape_bands)
-    
-                # Define model 
-                if model_type == 'nn':
-                    keras_model.model = make_1d_nn_model(num_classes=5, 
-                                         num_input_feats=keras_model.X_train.shape[1],
-                                         units=units,reg_strength=reg_strength,
-                                         input_bands=keras_model.X_train.shape[2],
-                                         dropout=dropout)
+                    # Define NN model
+                    keras_model = DL_model()
+                    # Load data into model
+                    keras_model.load_data(dataset_type, use_pca, source, ordering, reverse_clouds, verbose, full_sampled, reshape_bands, binary)
+        
+                    if binary:
+                        num_classes=2
+                    else:
+                        num_classes=5
+                    # Define model 
+                    if model_type == 'nn':
+                        keras_model.model = make_1d_nn_model(num_classes=num_classes, 
+                                             num_input_feats=keras_model.X_train.shape[1],
+                                             units=units,reg_strength=reg_strength,
+                                             input_bands=keras_model.X_train.shape[2],
+                                             dropout=dropout)
                                          
-                elif model_type == 'cnn':
-                    keras_model.model = make_1d_cnn_model(num_classes=5, 
-                                         num_input_feats=keras_model.X_train.shape[1],
-                                         units=units,reg_strength=reg_strength,
-                                         input_bands=keras_model.X_train.shape[2],
-                                         dropout=dropout)
-                # Fit model
-                history = keras_model.fit()
+                    elif model_type == 'cnn':
+                        keras_model.model = make_1d_cnn_model(num_classes=num_classes, 
+                                             num_input_feats=keras_model.X_train.shape[1],
+                                             units=units,reg_strength=reg_strength,
+                                             input_bands=keras_model.X_train.shape[2],
+                                             dropout=dropout)
+                    # Fit model
+                    history = keras_model.fit()
 
-                # Evaluate
-                f.write('evaluate train: \n')
-                #print('evaluate train: ', file=f)
-                keras_model.evaluate('train', f, verbose)
-                f.write('evaluate val: \n')
-                #print('evaluate val: ', file=f)
-                keras_model.evaluate('val', f, verbose)
-                f.write('evaluate test: \n')
-                #print('evaluate test: ', file=f)
-                keras_model.evaluate('test', f, verbose)
+                    # Evaluate
+                    f.write('evaluate train: \n')
+                    #print('evaluate train: ', file=f)
+                    keras_model.evaluate('train', f, verbose)
+                    f.write('evaluate val: \n')
+                    #print('evaluate val: ', file=f)
+                    keras_model.evaluate('val', f, verbose)
+                    f.write('evaluate test: \n')
+                    #print('evaluate test: ', file=f)
+                    keras_model.evaluate('test', f, verbose)
 
-                # Plot
-                plot(history, model_type, dataset_type, source, ordering, units, reg_strength)
+                    # Plot
+                    plot(history, model_type, dataset_type, source, ordering, units, reg_strength, dropout)
                 
-                f.close()
+                    f.close()
 
 if __name__ == '__main__':
    main()
