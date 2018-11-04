@@ -147,4 +147,122 @@ def split_with_group(df, group, train_frac, test_frac, data_cols, lbl_cols, rand
             pickle.dump((X_train, y_train, X_val, y_val, X_test, y_test), f)
 
     return X_train, y_train, X_val, y_val, X_test, y_test
-   
+
+    
+def crop_ind(y, name_list = [1, 2, 3, 4, 5]):
+    """
+    Crop row Index for y, just interested in some croptypes
+    Args:
+        y - y_label (croptype) of train/val/test or pixel arrays
+        name_list - what croptypes we are interested in, normally 1-5, just top 5 crops in the country
+
+        Returns:
+        crop_index - the index of array or vector to indicate where are the places for the croptype from 1-5
+    """
+
+    crop_index = [name in name_list for name in y]
+    crop_index = np.where(crop_index)
+    return crop_index
+
+
+def get_y_label(home, country, data_set, data_type, ylabel_dir, raster_npy_dir):
+    """
+    Get y label for different set small/full, different type train/val/test
+    
+    Args:
+      home - (str) the base directory of data
+
+      country - (str) string for the country 'Ghana', 'Tanzania', 'SouthSudan'
+
+      data_set - (str) balanced 'small' or unbalanced 'full' dataset
+
+      data_type - (str) 'train'/'val'/'test'
+
+      ylabel_dir - (str) dir to save ylabel
+      
+      raster_npy_dir - (str) string for the mask raster dir 'raster_npy' or 'raster_64x64_npy'
+
+    Output: 
+    ylabel_dir/..
+
+    save as grid_nums*row*col 3D array
+    """
+    gridded_IDs = sorted(np.load(os.path.join(home, country, country+'_'+data_set+'_'+data_type)))
+
+    # Match the Mask
+    mask_dir = os.path.join(home, country, raster_npy_dir)
+    mask_fnames = [country+'_64x64_'+gridded_ID+'_label.npy' for gridded_ID in gridded_IDs]
+
+    # Geom_ID Mask Array
+    mask_array = np.zeros((len(gridded_IDs),64,64))
+
+    for i in range(len(gridded_IDs)): 
+        fname = os.path.join(mask_dir,mask_fnames[i])
+        # Save Mask as one big array
+        mask_array[i,:,:] = np.load(fname)[0:64,0:64]
+
+    output_fname = "_".join([data_set, data_type, 'croptypemask', 'g'+str(len(gridded_IDs)),'r64', 'c64'+'.npy'])
+
+    np.save(os.path.join(ylabel_dir,output_fname), mask_array)
+    
+    return mask_array
+
+
+def mask_tif_npy(home, country, csv_source, crop_dict_dir, raster_dir):
+    """
+    Transfer cropmask from .tif files by field_id to cropmask .npy by crop_id given crop_dict
+    
+    Args:
+      home - (str) the base directory of data
+
+      country - (str) string for the country 'Ghana', 'Tanzania', 'SouthSudan'
+
+      csv_source - (str) string for the csv field id file corresponding with the country
+
+      crop_dict_dir - (str) string for the crop_dict dictionary {0: 'unlabeled', 1: 'groundnuts' ...}
+      
+      raster_dir - (str) string for the mask raster dir 'raster' or 'raster_64x64'
+
+    Outputs:
+      ./raster_npy/..
+
+    """
+    fname = os.path.join(home, country, csv_source)
+    crop_csv = pd.read_csv(fname)
+
+    mask_dir = os.path.join(home, country, raster_dir)
+    mask_dir_npy = os.path.join(home, country, raster_dir+'_npy')
+    mask_fnames = [f for f in os.listdir(mask_dir) if f.endswith('.tif')]
+    mask_ids = [f.split('_')[-1].replace('.tif', '') for f in mask_fnames]
+    mask_fnames = [mask_fnames[ID] for ID in np.argsort(mask_ids)]
+    mask_ids = np.array([mask_ids[ID] for ID in np.argsort(mask_ids)])
+
+    crop_dict = np.load(os.path.join(home, crop_dict_dir))
+    clustered_geom_id = [np.array(crop_csv['geom_id'][crop_csv['crop']==crop_name]) for crop_name in crop_dict.item().values()]
+
+    for mask_fname in mask_fnames: 
+        with rasterio.open(os.path.join(mask_dir,mask_fname)) as src:
+            mask_array = src.read()[0,:,:]
+            mask_array_geom_id = np.unique(mask_array)
+            mask_array_crop_id = np.zeros(mask_array.shape)
+            mask_array_crop_id[:] = np.nan
+            for geom_id in mask_array_geom_id:
+                if geom_id>0:
+                    crop_num = np.where([geom_id in clustered_geom_id[i] for i in np.arange(len(clustered_geom_id))])[0][0]
+                    mask_array_crop_id[mask_array==geom_id] = crop_num
+                elif geom_id == 0:
+                    mask_array_crop_id[mask_array==geom_id] = 0
+            np.save(os.path.join(mask_dir_npy,mask_fname.replace('.tif', '.npy')), mask_array_crop_id)
+
+
+def fill_NA(X):
+    """
+    Fill NA values with mean of each band
+
+    Args: 
+      X - (numpy array) a vector of real values
+
+    Returns: numpy array the same dimensions as x, no NAs
+    """
+    X_noNA = np.where(np.isnan(X), ma.array(X, mask=np.isnan(X)).mean(axis=0), X) 
+    return(X_noNA)
