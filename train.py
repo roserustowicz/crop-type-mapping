@@ -10,12 +10,10 @@ import loss_fns
 import models
 import datetime
 import torch
-
 import datasets
 
 from constants import *
 from util import *
-#from datasets import *
 from tensorboardX import SummaryWriter
 
 def evaluate(model, inputs, labels, loss_fn):
