@@ -176,7 +176,6 @@ def make_fcn_model(n_class, n_channel):
     fcn8s_pretrained_model=torch.load(torchfcn.models.FCN8s.download())
     fcn8s = FCN8s_croptype(n_class, n_channel)
     fcn8s.load_state_dict(fcn8s_pretrained_model,strict=False)
-    fcn8s = fcn8s.double()
     
     ## Freeze the parameter you do not want to tune
     for param in fcn8s.parameters():
