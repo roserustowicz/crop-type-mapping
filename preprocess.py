@@ -11,6 +11,7 @@ import numpy as np
 from constants import *
 from util import *
 import os
+import random
 
 def onehot_mask(mask, num_classes):
     """
@@ -32,6 +33,32 @@ def onehot_mask(mask, num_classes):
 
     mask[mask >= num_classes] = num_classes
     return np.eye(num_classes+1)[mask][:, :, 1:] 
+
+def visualize_rgb(argmax_array, num_classes, class_colors=None): 
+    mask = []
+    final = np.zeros((argmax_array.shape[0], 
+
+    if class_colors == None:
+        rgbs = [ [255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 255, 255], [0, 0, 255] ]
+
+    print('rgbs: ', rgbs)
+
+    for cur_class in range(0, num_classes):
+        tmp = np.asarray([argmax_array == cur_class+1])[0]
+
+        mask_cat = np.concatenate((tmp, tmp, tmp), axis=1)
+
+        class_vals = np.concatenate((np.ones_like(tmp)*rgbs[cur_class][0],
+                                     np.ones_like(tmp)*rgbs[cur_class][1],
+                                     np.ones_like(tmp)*rgbs[cur_class][2]), axis=1) 
+
+        final += (mask_cat * class_vals)
+        print('mask cat: ', mask_cat.shape)
+        print('class vals: ', class_vals.shape)
+        print('final: ', final.shape)
+
+argmax_array = np.random.randint(low=0, high=4, size=(2, 1, 5, 5)) 
+visualize_rgb(argmax_array, num_classes=5)
     
 def retrieve_label(grid_name, country):
     """ Return the label of the grid specified by grid_name.
