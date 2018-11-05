@@ -30,6 +30,7 @@ def mask_ce_loss(y_true, y_pred):
       the first dimension to get the largest class values from the one-hot encoding
 
     """
+    batch, classes, rows, cols = y_true.shape
 
     # [batch x classes x rows x cols] --> [batch x rows x cols x classes]
     y_true = y_true.permute(0, 2, 3, 1)
@@ -48,13 +49,15 @@ def mask_ce_loss(y_true, y_pred):
     vals, y_true = torch.max(y_true, dim=1)
     
     y_true = y_true * loss_mask
+    ytruenpy = y_true.cpu().numpy()
+
     y_pred = y_pred * loss_mask_repeat
 
     loss_fn = nn.CrossEntropyLoss(reduction="sum")
     total_loss = loss_fn(y_pred, y_true.type(torch.LongTensor).cuda())
     
-    num_examples = torch.sum(torch.clamp(torch.sum(y_true, dim=0), min=0, max=1)).type(torch.FloatTensor).cuda()
-    return total_loss / num_examples
+    num_examples = int(sum(ytruenpy > 0))
+    return total_loss / num_examples / batch
 
 # TODO: Incorporate lr decay
 def get_optimizer(params, optimizer_name, lr, momentum, lrdecay):

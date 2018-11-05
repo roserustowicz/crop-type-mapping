@@ -4,7 +4,7 @@ File for visualizing model performance.
 
 """
 
-from preprocess import *
+import preprocess
 
 def visualize_model_preds(model, grid_name, save=False):
     """ Outputs a visualization of model predictions for one grid.
@@ -13,15 +13,15 @@ def visualize_model_preds(model, grid_name, save=False):
         model - (ML model) model to be evaluated
         grid_name - (string) name of the grid to evaluate
     """
-
-
     # assuming there is some way to store the model's name in the model itself
-
     # assuming these functions exists somewhere in preprocess
 
-    mask = retrieve_mask(grid_name) # get the mask given a grid's name (ex: "004232")
-    grid = retrieve_grid(grid_name) # get the actual grid data given a grid's name
-    grid = preprocess_grid(grid, model.name) # preprocess the grid in a model specific way
+    label = preprocess.retrieve_label(grid_name, country) # get the mask given a grid's name (ex: "004232")
+    best_grid = preprocess.retrieve_best_s2_grid(grid_name, country) # get the actual grid data given a grid's name
+    
+    print(label.shape)
+    print(best_grid.shape)
+    grid = preprocess.preprocess_grid(grid, model.name) # preprocess the grid in a model specific way
 
     preds = model.predict(grid) # get model predictions
 
