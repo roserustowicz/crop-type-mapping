@@ -362,7 +362,7 @@ class ConvLSTMCell(nn.Module):
         self.kernel_size = kernel_size
         self.padding     = kernel_size[0] // 2, kernel_size[1] // 2
         self.bias        = bias
-        
+
         self.conv = nn.Conv2d(in_channels=self.input_dim + self.hidden_dim,
                               out_channels=4 * self.hidden_dim,
                               kernel_size=self.kernel_size,
@@ -409,7 +409,8 @@ class CLSTM(nn.Module):
         self.start_num_channels = input_size[1]
         self.lstm_num_layers = lstm_num_layers
         self.bias = bias
-       
+      
+
         if isinstance(kernel_sizes, list):
             self.kernel_sizes = kernel_sizes
         else:
@@ -484,7 +485,8 @@ class CLSTMSegmenter(nn.Module):
             hidden_dims = [hidden_dims]        
 
         self.clstm = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers)
-
+        #print(len(list(self.clstm.parameters())))
+        #print(hidden_dims[-1], num_classes)
         self.conv = nn.Conv2d(in_channels=hidden_dims[-1], out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))
         self.softmax = nn.Softmax2d()
 

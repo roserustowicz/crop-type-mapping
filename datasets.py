@@ -5,6 +5,7 @@ File that houses the dataset wrappers we have.
 """
 
 import torch
+import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 from random import shuffle
 import pickle
@@ -44,8 +45,15 @@ class CropTypeDS(Dataset):
             grid = preprocess_grid(grid, self.model_name, self.timeslice)
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess_label(label, self.model_name, self.num_classes) 
-    
-        return torch.tensor(grid, dtype=torch.float32), torch.tensor(label, dtype=torch.float32)
+        
+        grid = torch.tensor(grid, dtype=torch.float32)
+        label = torch.tensor(label, dtype=torch.float32)
+        
+        #tsfrm = transforms.Compose([
+         #               transforms.Normalize([0, 0, 0], [1, 1, 1])
+          #              ])
+
+        return grid, label
 
 class GridDataLoader(DataLoader):
 

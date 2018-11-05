@@ -54,30 +54,38 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
         loss_fn = loss_fns.get_loss_fn(args.model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.lrdecay)
+        
+        for p in model.parameters():
+            if p.requires_grad:
+                print(p.size())
         writer = SummaryWriter()
 
-            
-        for split in ['train', 'val']:
-            dl = dataloaders[split]
-            batch_num = 0
-            # TODO: Currently hardcoded to use padded inputs for an RNN model
-            #       consider generalizing somehow so the training script can be
-            #       more generic
-            #for padded_inputs, lengths, targets in dl:
-            for inputs, targets in dl:
+        for i in range(args.epochs):  
+            for split in ['train', 'val']:
+                print(f"SPLIT: {split}")
+                dl = dataloaders[split]
+                batch_num = 0
+                # TODO: Currently hardcoded to use padded inputs for an RNN model
+                #       consider generalizing somehow so the training script can be
+                #       more generic
+                #for padded_inputs, lengths, targets in dl:
+                for inputs, targets in dl:
+                    with torch.set_grad_enabled(True):
+                        inputs.to(args.device)
+                        targets.to(args.device)
+                        preds = model.forward(inputs)
+                        loss = loss_fn(targets, preds)
+                       
+                        if split == 'train':
+                            optimizer.zero_grad()
+                            loss.backward()
+                            before = print(torch.sum(list(model.parameters())[0].grad))
+                            optimizer.step()
 
-                with torch.set_grad_enabled(True):
-                    inputs.to(args.device)
-                    targets.to(args.device)
-                    preds = model.forward(inputs)
-                    loss = loss_fn(targets, preds)
-                    
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+                    writer.add_scalar('/{split}/loss', loss, batch_num)
+                    batch_num += 1
+                    print("\t", loss)
 
-                writer.add_scalar('/{split}/loss', loss, batch_num)
-                batch_num += 1
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
 
@@ -132,7 +140,7 @@ if __name__ == "__main__":
                         default=5)
     parser.add_argument('--num_workers', type=int,
                         help="Number of workers to use for pulling data",
-                        default=8)
+                        default=32)
     # TODO: find correct string name
     parser.add_argument('--device', type=str,
                         help="Cuda or CPU",
@@ -145,7 +153,7 @@ if __name__ == "__main__":
     # Args for CLSTM model
     parser.add_argument('--hidden_dims', type=int, 
                         help="Number of channels in hidden state used in convolutional RNN",
-                        default=4)
+                        default=64)
     parser.add_argument('--crnn_kernel_sizes', type=int,
                         help="Convolutional kernel size used within a recurrent cell",
                         default=3)
