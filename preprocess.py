@@ -36,12 +36,12 @@ def onehot_mask(mask, num_classes):
 
 def visualize_rgb(argmax_array, num_classes, class_colors=None): 
     mask = []
-    final = np.zeros((argmax_array.shape[0], 
+    rgb_output = np.zeros((argmax_array.shape[0], 3, argmax_array.shape[2], argmax_array.shape[3]))
 
     if class_colors == None:
         rgbs = [ [255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 255, 255], [0, 0, 255] ]
-
-    print('rgbs: ', rgbs)
+    
+    assert len(rgbs) == num_classes
 
     for cur_class in range(0, num_classes):
         tmp = np.asarray([argmax_array == cur_class+1])[0]
@@ -52,14 +52,10 @@ def visualize_rgb(argmax_array, num_classes, class_colors=None):
                                      np.ones_like(tmp)*rgbs[cur_class][1],
                                      np.ones_like(tmp)*rgbs[cur_class][2]), axis=1) 
 
-        final += (mask_cat * class_vals)
-        print('mask cat: ', mask_cat.shape)
-        print('class vals: ', class_vals.shape)
-        print('final: ', final.shape)
+        rgb_output += (mask_cat * class_vals)
+        
+    return rgb_output
 
-argmax_array = np.random.randint(low=0, high=4, size=(2, 1, 5, 5)) 
-visualize_rgb(argmax_array, num_classes=5)
-    
 def retrieve_label(grid_name, country):
     """ Return the label of the grid specified by grid_name.
 

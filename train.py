@@ -16,6 +16,7 @@ import visdom
 from constants import *
 from util import *
 from tensorboardX import SummaryWriter
+import preprocess
 
 def evaluate(model, inputs, labels, loss_fn):
     """ Evalautes the model on the inputs using the labels and loss fn.
@@ -127,9 +128,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         opts={'title': 'Label Masks'})
 
             # Show targets (labels)
-            disp_targets = np.argmax(targets.numpy(), axis=1)
+            disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
+            disp_targets = np.argmax(disp_targets, axis=1)
             disp_targets = np.expand_dims(disp_targets, axis=1)
-            disp_targets = 255*(disp_targets / args.num_classes) 
+            disp_targets = preprocess.visualize_rgb(disp_targets, args.num_classes)
             vis.images(disp_targets,
                         nrow=5,
                         win='Target Images',
@@ -138,10 +140,14 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             # Show predictions, masked with label mask
             disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1)
             disp_preds = np.expand_dims(disp_preds, axis=1)
-            disp_preds = 255*(disp_preds / args.num_classes) * label_mask
+            disp_preds = preprocess.visualize_rgb(disp_preds, args.num_classes) 
+            disp_preds_w_mask = disp_preds * label_mask
             vis.images(disp_preds,
                         win='Predicted Images',
                         opts={'title': 'Predicted Images'})
+            vis.images(disp_preds_w_mask,
+                        win='Predicted Images with Label Mask',
+                        opts={'title': 'Predicted Images with Label Mask'})
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
