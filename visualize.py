@@ -21,6 +21,10 @@ def visualize_rgb(argmax_array, num_classes, class_colors=None):
 
         mask_cat = np.concatenate((tmp, tmp, tmp), axis=1)
 
+        print('cur_class: ', cur_class)
+        print('r: ', rgbs[cur_class][0])
+        print('g: ', rgbs[cur_class][1])
+        print('b: ', rgbs[cur_class][2])
         class_vals = np.concatenate((np.ones_like(tmp)*rgbs[cur_class][0],
                                      np.ones_like(tmp)*rgbs[cur_class][1],
                                      np.ones_like(tmp)*rgbs[cur_class][2]), axis=1) 
