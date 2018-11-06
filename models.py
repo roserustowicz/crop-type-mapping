@@ -411,18 +411,24 @@ class CLSTM(nn.Module):
         self.bias = bias
        
         if isinstance(kernel_sizes, list):
-            self.kernel_sizes = kernel_sizes
+            if len(kernel_sizes) != lstm_num_layers and len(kernel_sizes) == 1:
+                self.kernel_sizes = kernel_sizes * lstm_num_layers
+            else:
+                self.kernel_sizes = kernel_sizes
         else:
-            self.kernel_sizes = [kernel_sizes]        
+            self.kernel_sizes = [kernel_sizes] * lstm_num_layers      
         
         if isinstance(hidden_dims, list):
-            self.hidden_dims = hidden_dims
+            if len(hidden_dims) != lstm_num_layers and len(hidden_dims) == 1:
+                self.hidden_dims = hidden_dims * lstm_num_layers
+            else:
+                self.hidden_dims = hidden_dims
         else:
-            self.hidden_dims = [hidden_dims]        
+            self.hidden_dims = [hidden_dims] * lstm_num_layers       
 
         cell_list = []
         for i in range(self.lstm_num_layers):
-            cur_input_dim = self.start_num_channels if i == 0 else hidden_dims[i-1]
+            cur_input_dim = self.start_num_channels if i == 0 else self.hidden_dims[i-1]
 
             cell_list.append(ConvLSTMCell(input_size=(self.height, self.width),
                                           input_dim = cur_input_dim,
@@ -490,7 +496,14 @@ class CLSTMSegmenter(nn.Module):
 
     def forward(self, inputs):
         layer_output_list, last_state_list = self.clstm(inputs)
-        preds = self.softmax(self.conv(last_state_list[0][0]))
+
+        #print('last state list: ', last_state_list[0][0].shape)        
+        scores = self.conv(last_state_list[0][0])
+        #print('scores: ', scores.shape)        
+        preds = self.softmax(scores)
+        #print('preds: ', preds.shape)        
+        preds = torch.log(preds)
+
         return preds
 
 def get_model(model_name, **kwargs):

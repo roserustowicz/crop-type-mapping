@@ -16,7 +16,7 @@ import visdom
 from constants import *
 from util import *
 from tensorboardX import SummaryWriter
-import preprocess
+import visualize
 
 def evaluate(model, inputs, labels, loss_fn):
     """ Evalautes the model on the inputs using the labels and loss fn.
@@ -73,6 +73,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
   
         for i in range(args.epochs):
             for split in ['train', 'val']:
+                print(split)
                 dl = dataloaders[split]
                 batch_num = 0
                 # TODO: Currently hardcoded to use padded inputs for an RNN model
@@ -90,64 +91,67 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             
                             optimizer.zero_grad()
                             loss.backward()
-                            #before = print(torch.sum(list(model.parameters())[0].grad))
+                            before = print(torch.sum(list(model.parameters())[0].grad))
                             optimizer.step()
                         
                         elif split == 'val':
                             vis_data['val_loss'].append(loss.data)
 
                     batch_num += 1
-                    #print("\t", loss)
+                    print("\t", loss)
 
 
-            # For each epoch, update in visdom
-            vis.line(Y=np.array(vis_data['train_loss']), 
-                     X=np.array(range(len(vis_data['train_loss']))), 
-                     win='Train Loss',
-                     opts={'legend': ['train_loss'], 
-                           'markers': False,
-                           'title': 'Train loss curve',
-                           'xlabel': 'Batch number',
-                           'ylabel': 'Loss'})
+                    if split == 'train':
+                        # For each epoch, update in visdom
+                        vis.line(Y=np.array(vis_data['train_loss']), 
+                	         X=np.array(range(len(vis_data['train_loss']))), 
+			         win='Train Loss',
+			         opts={'legend': ['train_loss'], 
+				       'markers': False,
+				       'title': 'Train loss curve',
+				       'xlabel': 'Batch number',
+				       'ylabel': 'Loss'})
+                    else:
+                        vis.line(Y=np.array(vis_data['val_loss']), 
+			         X=np.array(range(len(vis_data['val_loss']))), 
+			         win='Val Loss',
+                                 opts={'legend': ['val_loss'], 
+				       'markers': False,
+				       'title': 'Validation loss curve',
+				       'xlabel': 'Batch number',
+                                       'ylabel': 'Loss'})
 
-            vis.line(Y=np.array(vis_data['val_loss']), 
-                     X=np.array(range(len(vis_data['val_loss']))), 
-                     win='Val Loss',
-                     opts={'legend': ['val_loss'], 
-                           'markers': False,
-                           'title': 'Validation loss curve',
-                           'xlabel': 'Batch number',
-                           'ylabel': 'Loss'})
+		    # Create and show mask for labeled areas
+                    label_mask = np.sum(targets.numpy(), axis=1)
+                    label_mask = np.expand_dims(label_mask, axis=1)
+                    vis.images(label_mask,
+				nrow=n_row,
+				win='Label Masks',
+				opts={'title': 'Label Masks'})
 
-            # Create and show mask for labeled areas
-            label_mask = np.sum(targets.numpy(), axis=1)
-            label_mask = np.expand_dims(label_mask, axis=1)
-            vis.images(label_mask,
-                        nrow=5,
-                        win='Label Masks',
-                        opts={'title': 'Label Masks'})
+	            # Show targets (labels)
+                    disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
+                    disp_targets = np.argmax(disp_targets, axis=1) 
+                    disp_targets = np.expand_dims(disp_targets, axis=1)
+                    disp_targets = visualize.visualize_rgb(disp_targets, args.num_classes)
+                    vis.images(disp_targets,
+				nrow=n_row,
+				win='Target Images',
+				opts={'title': 'Target Images'})
 
-            # Show targets (labels)
-            disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
-            disp_targets = np.argmax(disp_targets, axis=1)
-            disp_targets = np.expand_dims(disp_targets, axis=1)
-            disp_targets = preprocess.visualize_rgb(disp_targets, args.num_classes)
-            vis.images(disp_targets,
-                        nrow=5,
-                        win='Target Images',
-                        opts={'title': 'Target Images'})
-
-            # Show predictions, masked with label mask
-            disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1)
-            disp_preds = np.expand_dims(disp_preds, axis=1)
-            disp_preds = preprocess.visualize_rgb(disp_preds, args.num_classes) 
-            disp_preds_w_mask = disp_preds * label_mask
-            vis.images(disp_preds,
-                        win='Predicted Images',
-                        opts={'title': 'Predicted Images'})
-            vis.images(disp_preds_w_mask,
-                        win='Predicted Images with Label Mask',
-                        opts={'title': 'Predicted Images with Label Mask'})
+		    # Show predictions, masked with label mask
+                    disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1)
+                    disp_preds = np.expand_dims(disp_preds, axis=1)
+                    disp_preds = visualize.visualize_rgb(disp_preds, args.num_classes) 
+                    disp_preds_w_mask = disp_preds * label_mask
+                    vis.images(disp_preds,
+				nrow=n_row,
+				win='Predicted Images',
+				opts={'title': 'Predicted Images'})
+                    vis.images(disp_preds_w_mask,
+				nrow=n_row,
+				win='Predicted Images with Label Mask',
+				opts={'title': 'Predicted Images with Label Mask'})
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
@@ -216,7 +220,7 @@ if __name__ == "__main__":
     # Args for CLSTM model
     parser.add_argument('--hidden_dims', type=int, 
                         help="Number of channels in hidden state used in convolutional RNN",
-                        default=4)
+                        default=128)
     parser.add_argument('--crnn_kernel_sizes', type=int,
                         help="Convolutional kernel size used within a recurrent cell",
                         default=3)

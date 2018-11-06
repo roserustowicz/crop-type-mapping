@@ -31,33 +31,36 @@ def mask_ce_loss(y_true, y_pred):
 
     """
     batch, classes, rows, cols = y_true.shape
-
+    print('batch loss: ', batch)
     # [batch x classes x rows x cols] --> [batch x rows x cols x classes]
     y_true = y_true.permute(0, 2, 3, 1)
     # [batch x rows x cols x classes] --> [batch*rows*cols x classes]
     y_true = y_true.contiguous().view(-1, y_true.shape[3])
     
+    y_true_npy = y_true.cpu().numpy()
+    num_examples = int(np.sum(y_true_npy))
+
     # [batch x classes x rows x cols] --> [batch x rows x cols x classes]
     y_pred = y_pred.permute(0, 2, 3, 1)
     # [batch x rows x cols x classes] --> [batch*rows*cols x classes]
-    y_pred = y_pred.contiguous().view(-1, y_true.shape[-1])
+    y_pred = y_pred.contiguous().view(-1, y_pred.shape[3])
 
     loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
     loss_mask_repeat = loss_mask.unsqueeze(1).repeat(1,y_pred.shape[1]).type(torch.FloatTensor).cuda()
    
     # take argmax to get true values from one-hot encoding 
+    
     vals, y_true = torch.max(y_true, dim=1)
     
     y_true = y_true * loss_mask
-    ytruenpy = y_true.cpu().numpy()
 
     y_pred = y_pred * loss_mask_repeat
 
-    loss_fn = nn.CrossEntropyLoss(reduction="sum")
+    #loss_fn = nn.CrossEntropyLoss(reduction="sum")
+    loss_fn = nn.NLLLoss(reduction="sum")
     total_loss = loss_fn(y_pred, y_true.type(torch.LongTensor).cuda())
-    
-    num_examples = int(sum(ytruenpy > 0))
-    return total_loss / num_examples / batch
+    print('num exs: ', num_examples)    
+    return total_loss / num_examples #/ batch
 
 # TODO: Incorporate lr decay
 def get_optimizer(params, optimizer_name, lr, momentum, lrdecay):
