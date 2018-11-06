@@ -11,6 +11,7 @@ import models
 import datetime
 import torch
 import datasets
+import metrics
 import visdom
 
 from constants import *
@@ -31,8 +32,12 @@ def evaluate(model, inputs, labels, loss_fn):
         loss - (float) the loss the model incurs
         TO BE EXPANDED
     """
-
-    return -1
+    preds = model.forward(inputs)
+    loss = loss_fn(labels, preds)
+    
+    accuracy = metrics.get_accuracy(preds, labels, reduction='avg')
+    
+    return preds, loss, accuracy
 
 def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """ Trains the model on the inputs
@@ -78,18 +83,19 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     with torch.set_grad_enabled(True):
                         inputs.to(args.device)
                         targets.to(args.device)
-                        preds = model.forward(inputs)
-                        loss = loss_fn(targets, preds)
+                        
+                        preds, loss, accuracy = evaluate(model, inputs, targets, loss_fn)
 
                         if split == 'train':
                             vis_data['train_loss'].append(loss.data)
-                            
+                            vis_data['train_acc'].append(accuracy) 
                             optimizer.zero_grad()
                             loss.backward()
                             optimizer.step()
                         
                         elif split == 'val':
                             vis_data['val_loss'].append(loss.data)
+                            vis_data['val_acc'].append(accuracy)
 
                     batch_num += 1
 
@@ -103,6 +109,15 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 				       'title': 'Train loss curve',
 				       'xlabel': 'Batch number',
 				       'ylabel': 'Loss'})
+                        
+                        vis.line(Y=np.array(vis_data['train_acc']), 
+                	         X=np.array(range(len(vis_data['train_acc']))), 
+			         win='Train Accuracy',
+			         opts={'legend': ['train_acc'], 
+				       'markers': False,
+				       'title': 'Training Accuracy',
+				       'xlabel': 'Batch number',
+				       'ylabel': 'Accuracy'})
                     else:
                         vis.line(Y=np.array(vis_data['val_loss']), 
 			         X=np.array(range(len(vis_data['val_loss']))), 
@@ -112,6 +127,15 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 				       'title': 'Validation loss curve',
 				       'xlabel': 'Batch number',
                                        'ylabel': 'Loss'})
+                        
+                        vis.line(Y=np.array(vis_data['val_acc']), 
+                	         X=np.array(range(len(vis_data['val_acc']))), 
+			         win='Val Accuracy',
+			         opts={'legend': ['val_acc'], 
+				       'markers': False,
+				       'title': 'Validation Accuracy',
+				       'xlabel': 'Batch number',
+				       'ylabel': 'Accuracy'})
 
 		    # Create and show mask for labeled areas
                     label_mask = np.sum(targets.numpy(), axis=1)
