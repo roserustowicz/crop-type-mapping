@@ -1,3 +1,15 @@
+"""
+Wrapper script for performing random search. 
+
+Currently hard-coded to iterate over hp space, but with intelligeny key parsing should be possible to fully automate this process. 
+
+run with:
+
+python random_search.py --model_name bidir_clstm --dataset full --epochs 10 --batch_size_range="(4, 24)" --lr_range="(-5, -1)" --hidden_dims_range="(5, 8)" --weight_decay_range="(-5, 0)" --num_samples=10
+
+"""
+
+
 import argparse
 import os
 import train 
@@ -39,7 +51,7 @@ if __name__ ==  "__main__":
 
 
     # for some number of iterations
-    for _ in range(search_range.num_samples):
+    for sample_no in range(search_range.num_samples):
         
         # generate new sets of hyper parameters in the ranges specified
         lr_exp = np.random.uniform(lr_range[0], lr_range[1])
@@ -66,10 +78,15 @@ if __name__ ==  "__main__":
         experiment_name = f"lr{lr}_bs{batch_size}_wd{weight_decay}_hd{hidden_dims}_epochs{search_range.epochs}_model{train_args.model_name}_dataset{train_args.dataset}"
 
         print(f"TRAINING: {experiment_name}")
-
+        #try:
         train.train(model, train_args.model_name, train_args, dataloaders=dataloaders) 
         print("FINISHED TRAINING ONE MODEL") 
         experiment_name = f"lr{lr}_bs{batch_size}_wd{weight_decay}_hd{hidden_dims}_epochs{search_range.epochs}_model{train_args.model_name}_dataset{train_args.dataset}"
 
         torch.save(model.state_dict(), os.path.join(search_range.save_dir, experiment_name))
+        #except:
+        print("Memory error")
+        torch.cuda.empty_cache()
+        sample_no -= 1
+
 

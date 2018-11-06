@@ -346,5 +346,9 @@ def get_train_parser():
                         default=None)    
     parser.add_argument('--weight_decay', type=float,
                         help="l2 regularization weight")
+    parser.add_argument('--env_name', type=str, default=None,
+                         help="Environment name for visdom visualization")
+    parser.add_argument('--snapshot', type=bool, default=False, 
+                         help="If true, create a visdom panel of predictions for each epoch")
 
     return parser

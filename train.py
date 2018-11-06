@@ -14,6 +14,7 @@ import datasets
 import metrics
 import visdom
 import util
+import numpy as np
 
 from constants import *
 from tensorboardX import SummaryWriter
@@ -69,7 +70,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         vis = visdom.Visdom(port=8097, env=env_name)
 
         loss_fn = loss_fns.get_loss_fn(args.model_name)
-        optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.lrdecay)
+        optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay, args.lrdecay)
         
         for i in range(args.epochs):
             for split in ['train', 'val']:
