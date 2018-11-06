@@ -60,10 +60,10 @@ def mask_ce_loss(y_true, y_pred):
     return total_loss / num_examples #/ batch
 
 # TODO: Incorporate lr decay
-def get_optimizer(params, optimizer_name, lr, momentum, lrdecay):
+def get_optimizer(params, optimizer_name, lr, momentum, weight_decay, lrdecay):
     if optimizer_name == "sgd":
-        return optim.SGD(params, lr=lr, momentum=momentum)
+        return optim.SGD(params, lr=lr, momentum=momentum, weight_decay=weight_decay)
     elif optimizer_name == "adam":
-        return optim.Adam(params, lr=lr)
+        return optim.Adam(params, lr=lr, weight_decay=weight_decay)
 
     raise ValueError(f"Optimizer: {optimizer_name} unsupported")

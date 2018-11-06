@@ -6,11 +6,13 @@ File that houses the dataset wrappers we have.
 
 import torch
 from torch.utils.data import Dataset, DataLoader
-from random import shuffle
 import pickle
 import h5py
-from preprocess import *
 import numpy as np
+import os
+from preprocess import *
+from constants import *
+from random import shuffle
 
 class CropTypeDS(Dataset):
 
@@ -58,3 +60,11 @@ class GridDataLoader(DataLoader):
                                              pin_memory=True,
                                              collate_fn=truncateToSmallestLength)
 
+
+def get_dataloaders(grid_dir, country, dataset, args):
+    dataloaders = {}
+    for split in SPLITS:
+        grid_path = os.path.join(grid_dir, f"{country}_{dataset}_{split}")
+        dataloaders[split] = GridDataLoader(args, grid_path)
+
+    return dataloaders

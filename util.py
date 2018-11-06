@@ -6,6 +6,7 @@ Util file for misc functions
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
+import argparse
 import pickle
 import pandas as pd
 import time
@@ -266,3 +267,84 @@ def fill_NA(X):
     """
     X_noNA = np.where(np.isnan(X), ma.array(X, mask=np.isnan(X)).mean(axis=0), X) 
     return(X_noNA)
+
+
+def get_train_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model_name', type=str,
+                        help="model's name",
+                        required=True)
+    parser.add_argument('--hdf5_filepath', type=str,
+                        help="full path to hdf5 data file",
+                        default="/home/data/ghana/data.hdf5")
+    parser.add_argument('--dataset', type=str,
+                        help="Full or small?",
+                        choices=('full', 'small'),
+                        required=True)
+    parser.add_argument('--country', type=str,
+                        help="country to predict over",
+                        default="ghana")
+    parser.add_argument('--grid_dir', type=str,
+                        help="full path to directory containing grid splits",
+                        default="/home/data/ghana")
+    parser.add_argument('--epochs', type=int,
+                        help="# of times to train over the dataset")
+    parser.add_argument('--batch_size', type=int,
+                        help="batch size to use")
+    parser.add_argument('--optimizer', type=str,
+                        help="Optimizer to use for training",
+                        default="adam",
+                        choices=('sgd', 'adam'))
+    parser.add_argument('--lr', type=float,
+                        help="Initial learning rate to use")
+    parser.add_argument('--momentum', type=float,
+                        help="Momentum to use when training",
+                        default=.9)
+    parser.add_argument('--lrdecay', type=float,
+                        help="Learning rate decay per **batch**",
+                        default=1)
+    parser.add_argument('--shuffle', type=str2bool,
+                        help="shuffle dataset between epochs?",
+                        default=True)
+    parser.add_argument('--use_s1', type=str2bool,
+                        help="use s1 data?",
+                        default=False)
+    parser.add_argument('--use_s2', type=str2bool,
+                        help="use s2 data?",
+                        default=True)
+    parser.add_argument('--num_classes', type=int,
+                        help="Number of crops to predict over",
+                        default=5)
+    parser.add_argument('--num_workers', type=int,
+                        help="Number of workers to use for pulling data",
+                        default=8)
+    # TODO: find correct string name
+    parser.add_argument('--device', type=str,
+                        help="Cuda or CPU",
+                        default='cuda')
+    parser.add_argument('--save_dir', type=str,
+                        help="Directory to save the models in. If unspecified, saves the model to ./models.",
+                        default='./models')
+    parser.add_argument('--name', type=str,
+                        help="Name of experiment. Used to uniquely save the model. Defaults to current time + model name if not set.")
+    # Args for CLSTM model
+    parser.add_argument('--hidden_dims', type=int, 
+                        help="Number of channels in hidden state used in convolutional RNN",
+                        default=4)
+    parser.add_argument('--crnn_kernel_sizes', type=int,
+                        help="Convolutional kernel size used within a recurrent cell",
+                        default=3)
+    parser.add_argument('--conv_kernel_size', type=int,
+                        help="Convolutional kernel size used within a convolutional layer",
+                        default=3)
+    parser.add_argument('--crnn_num_layers', type=int,
+                        help="Number of convolutional RNN cells to stack",
+                        default=1)
+    
+    parser.add_argument('--time_slice', type=int,
+                        help="which time slice for training FCN",
+                        default=None)    
+    parser.add_argument('--weight_decay', type=float,
+                        help="l2 regularization weight")
+
+    return parser
