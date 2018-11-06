@@ -20,7 +20,23 @@ from constants import *
 from tensorboardX import SummaryWriter
 import visualize
 
-def evaluate(preds, labels, loss_fn):
+def evaluate_split(model, split_loader):
+    total_correct = 0
+    total_loss = 0
+    total_pixels = 0
+    for inputs, targets in split_loader:
+        with torch.set_grad_enabled(False):
+            inputs.to(args.device)
+            targets.to(args.device)
+            preds = model(inputs)   
+            batch_loss, batch_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
+            total_loss += batch_loss.item()
+            total_correct += batch_correct
+            total_pixels += num_pixels
+
+    return total_correct / total_pixels, total_correct / total_pixels
+
+def evaluate(preds, labels, loss_fn, reduction):
     """ Evalautes the model on the inputs using the labels and loss fn.
 
     Args:
@@ -32,12 +48,14 @@ def evaluate(preds, labels, loss_fn):
         loss - (float) the loss the model incurs
         TO BE EXPANDED
     """
-    preds = model.forward(inputs)
-    loss = loss_fn(labels, preds)
-
-    accuracy = metrics.get_accuracy(preds, labels, reduction='avg')
-    
-    return preds, loss, accuracy
+    if reduction == "avg":
+        loss = loss_fn(labels, preds, reduction)
+        accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
+        return loss, accuracy
+    else:
+        loss, _ = loss_fn(labels, preds, reduction)
+        total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
+        return loss, total_correct, num_pixels
 
 def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """ Trains the model on the inputs
@@ -72,7 +90,16 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         loss_fn = loss_fns.get_loss_fn(args.model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay, args.lrdecay)
         
+        best_val_loss = float("inf")
+        best_model = model
+        best_epoch = 0
+
         for i in range(args.epochs):
+            
+            val_loss = 0
+            val_acc = 0
+            val_num_pixels = 0
+
             for split in ['train', 'val']:
                 dl = dataloaders[split]
                 batch_num = 0
@@ -83,10 +110,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     with torch.set_grad_enabled(True):
                         inputs.to(args.device)
                         targets.to(args.device)
-                        
-                        preds, loss, accuracy = evaluate(model, inputs, targets, loss_fn)
+                        preds = model(inputs)   
 
                         if split == 'train':
+                            loss, accuracy = evaluate(preds, targets, loss_fn, reduction="avg")
                             vis_data['train_loss'].append(loss.data)
                             vis_data['train_acc'].append(accuracy) 
                             optimizer.zero_grad()
@@ -94,8 +121,14 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             optimizer.step()
                         
                         elif split == 'val':
-                            vis_data['val_loss'].append(loss.data)
-                            vis_data['val_acc'].append(accuracy)
+                            loss, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
+                            vis_data['val_loss'].append(loss.data / num_pixels)
+                            vis_data['val_acc'].append(total_correct / num_pixels)
+                            
+                            val_loss += loss.data
+                            val_acc += total_correct
+                            val_num_pixels += num_pixels
+
 
                     batch_num += 1
 
