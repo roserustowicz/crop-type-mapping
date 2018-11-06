@@ -34,7 +34,7 @@ def evaluate(model, inputs, labels, loss_fn):
     """
     preds = model.forward(inputs)
     loss = loss_fn(labels, preds)
-    
+
     accuracy = metrics.get_accuracy(preds, labels, reduction='avg')
     
     return preds, loss, accuracy
