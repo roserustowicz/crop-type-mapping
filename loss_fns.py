@@ -49,7 +49,6 @@ def mask_ce_loss(y_true, y_pred):
     loss_mask_repeat = loss_mask.unsqueeze(1).repeat(1,y_pred.shape[1]).type(torch.FloatTensor).cuda()
    
     # take argmax to get true values from one-hot encoding 
-    
     vals, y_true = torch.max(y_true, dim=1)
     
     y_true = y_true * loss_mask
