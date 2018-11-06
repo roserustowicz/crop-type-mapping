@@ -5,7 +5,7 @@ Currently hard-coded to iterate over hp space, but with intelligeny key parsing 
 
 run with:
 
-python random_search.py --model_name bidir_clstm --dataset full --epochs 10 --batch_size_range="(4, 24)" --lr_range="(-5, -1)" --hidden_dims_range="(5, 8)" --weight_decay_range="(-5, 0)" --num_samples=10
+python random_search.py --model_name bidir_clstm --dataset small --epochs 1 --batch_size_range="(4, 24)" --lr_range="(-5, -1)" --hidden_dims_range="(4, 7)" --weight_decay_range="(-5, 0)" --num_samples=3 --logfile=test.log
 
 """
 
