@@ -10,6 +10,8 @@ import torch.nn.utils.rnn as rnn
 import numpy as np
 from constants import *
 from util import *
+import os
+import random
 
 def onehot_mask(mask, num_classes):
     """
@@ -31,9 +33,9 @@ def onehot_mask(mask, num_classes):
 
     mask[mask >= num_classes] = num_classes
     return np.eye(num_classes+1)[mask][:, :, 1:] 
-    
-def retrieve_mask(grid_name):
-    """ Return the mask of the grid specified by grid_name.
+
+def retrieve_label(grid_name, country):
+    """ Return the label of the grid specified by grid_name.
 
     Args:
         grid_name - (string) string representation of the grid number
@@ -41,10 +43,50 @@ def retrieve_mask(grid_name):
     Returns:
         mask - (npy arr) mask containing labels for each pixel
     """
-    mask = None
-    return mask
+    label_path = '{}/{}/{}'.format(DATA_FILE_PATH, country, LABEL_DIR)
+    label_fname = [f for f in os.listdir(label_path) if '_{}_'.format(grid_name.zfill(6)) in f and f.endswith('_label.npy')]
+    label_grid_path = "/".join((label_path, label_fname[0]))
+    label = np.load(label_grid_path)
+    return label
 
-def retrieve_grid(grid_name):
+def retrieve_best_s2_grid(grid_name, country):
+    """ Retrieves the least cloudy s2 image of the grid specified.
+
+    Args:
+        grid_name - (string) string representation of the grid number
+
+    Returns:
+        grid - (npy array) concatenation of the s1 and s2 values of the grid over time
+    """
+    s2_path = '{}/{}/{}'.format(DATA_FILE_PATH, country, S2_DIR)
+    
+    # Read in Sentinel-2 stack
+    s2_fname = [f for f in os.listdir(s2_path) if f.endswith('_{}.npy'.format(grid_name.zfill(6)))]
+    s2_grid_path = "/".join((s2_path, s2_fname[0]))
+    s2_stack = np.load(s2_grid_path)    
+
+    # Read in coresponding cloud stack
+    s2_cloudmask_fname = [f for f in os.listdir(s2_path) if f.endswith('_{}_cloudmask.npy'.format(grid_name.zfill(6)))]
+    s2_grid_cloudmask_path = "/".join((s2_path, s2_cloudmask_fname[0]))
+    cloud_stack = np.load(s2_grid_cloudmask_path)
+
+    # Check the timestamps of the data and cloud masks are the same
+    assert s2_stack.shape[-1] == cloud_stack.shape[-1]    
+    
+    # Get the index of the least cloudy image
+    idx = get_least_cloudy_idx(cloud_stack)
+
+    # Take the Sentinel-2 grid at the least cloudy index
+    grid = s2_stack[:, :, :, idx]
+    return grid
+
+def get_least_cloudy_idx(cloud_stack):
+    cloud_stack = remap_cloud_stack(cloud_stack)
+    cloudiness = np.mean(cloud_stack, axis=(0, 1))
+    least_cloudy_idx = np.argmax(cloudiness)
+    return least_cloudy_idx
+
+def retrieve_grid(grid_name, country):
     """ Retrieves a concatenation of the s1 and s2 values of the grid specified.
 
     Args:
@@ -53,6 +95,7 @@ def retrieve_grid(grid_name):
     Returns:
         grid - (npy array) concatenation of the s1 and s2 values of the grid over time
     """
+    
     grid = None
     return grid
 
@@ -209,6 +252,17 @@ def concat_s1_s2(s1, s2):
         s2, _, _ = sample_timeseries(s2, s1.shape[-1])
     return np.concatenate((s1, s2), axis=0)
 
+def remap_cloud_stack(cloud_stack):
+    """ 
+     Remap cloud mask values so clearest pixels have highest values
+     Rank by clear, shadows, haze, clouds
+     clear = 0 --> 3, clouds = 1  --> 0, shadows = 2 --> 2, haze = 3 --> 1
+    """
+    remapped_cloud_stack = np.zeros_like((cloud_stack))
+    remapped_cloud_stack[cloud_stack == 0] = 3
+    remapped_cloud_stack[cloud_stack == 2] = 2
+    remapped_cloud_stack[cloud_stack == 3] = 1
+    return remapped_cloud_stack
 
 def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False):
     """
@@ -251,15 +305,8 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
 
     # Given a stack of cloud masks, remap it and use to compute scores
     if isinstance(cloud_stack,np.ndarray):
-        # Remap cloud mask values so clearest pixels have highest values
-        # Rank by clear, shadows, haze, clouds
-        # clear = 0 --> 3, clouds = 1  --> 0, shadows = 2 --> 2, haze = 3 --> 1
-        remap_cloud_stack = np.zeros_like((cloud_stack))
-        remap_cloud_stack[cloud_stack == 0] = 3
-        remap_cloud_stack[cloud_stack == 2] = 2
-        remap_cloud_stack[cloud_stack == 3] = 1
-
-        scores = np.mean(remap_cloud_stack, axis=(0, 1))
+        remapped_cloud_stack = remap_cloud_stack(cloud_stack)
+        scores = np.mean(remapped_cloud_stack, axis=(0, 1))
 
     else:
         if verbose:
@@ -291,7 +338,7 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
 
     if isinstance(cloud_stack, np.ndarray):
         if remap_clouds:
-            sampled_cloud_stack = remap_cloud_stack[:, :, samples]
+            sampled_cloud_stack = remapped_cloud_stack[:, :, samples]
         else:
             sampled_cloud_stack = cloud_stack[:, :, samples]
         return sampled_img_stack, sampled_dates, sampled_cloud_stack
@@ -457,5 +504,5 @@ def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytim
             output_fname = "_".join([data_set, 'raw', satellite_original, band_order, 'y'+data_type, 'g'+str(len(gridded_fnames))+'.npy'])
             np.save(os.path.join(home, country, 'pixel_arrays', data_set, 'raw', satellite_original, output_fname), y_total3types[data_type])
    
-    return [X_total3types, y_total3types]
-  
+    return [X_total3types, y_total3types]  
+

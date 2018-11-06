@@ -11,10 +11,12 @@ import models
 import datetime
 import torch
 import datasets
+import visdom
 
 from constants import *
 from util import *
 from tensorboardX import SummaryWriter
+import visualize
 
 def evaluate(model, inputs, labels, loss_fn):
     """ Evalautes the model on the inputs using the labels and loss fn.
@@ -52,32 +54,97 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
         if args is None: raise ValueError("Args is NONE")
 
+        # set up information lists for visdom    
+        # TODO: Add args to visdom envs default name
+        vis_data = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
+        n_row = NROW
+        if not args.env_name:
+            env_name = "{}".format(args.model_name)
+        else:
+            env_name = args.env_name
+        vis = visdom.Visdom(port=8097, env=env_name)
+
         loss_fn = loss_fns.get_loss_fn(args.model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.lrdecay)
-        writer = SummaryWriter()
+        
+        for i in range(args.epochs):
+            for split in ['train', 'val']:
+                dl = dataloaders[split]
+                batch_num = 0
+                # TODO: Currently hardcoded to use padded inputs for an RNN model
+                #       consider generalizing somehow so the training script can be
+                #       more generic
+                for inputs, targets in dl:
+                    with torch.set_grad_enabled(True):
+                        inputs.to(args.device)
+                        targets.to(args.device)
+                        preds = model.forward(inputs)
+                        loss = loss_fn(targets, preds)
 
-            
-        for split in ['train', 'val']:
-            dl = dataloaders[split]
-            batch_num = 0
-            # TODO: Currently hardcoded to use padded inputs for an RNN model
-            #       consider generalizing somehow so the training script can be
-            #       more generic
-            #for padded_inputs, lengths, targets in dl:
-            for inputs, targets in dl:
+                        if split == 'train':
+                            vis_data['train_loss'].append(loss.data)
+                            
+                            optimizer.zero_grad()
+                            loss.backward()
+                            optimizer.step()
+                        
+                        elif split == 'val':
+                            vis_data['val_loss'].append(loss.data)
 
-                with torch.set_grad_enabled(True):
-                    inputs.to(args.device)
-                    targets.to(args.device)
-                    preds = model.forward(inputs)
-                    loss = loss_fn(targets, preds)
-                    
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+                    batch_num += 1
 
-                writer.add_scalar('/{split}/loss', loss, batch_num)
-                batch_num += 1
+                    if split == 'train':
+                        # For each epoch, update in visdom
+                        vis.line(Y=np.array(vis_data['train_loss']), 
+                	         X=np.array(range(len(vis_data['train_loss']))), 
+			         win='Train Loss',
+			         opts={'legend': ['train_loss'], 
+				       'markers': False,
+				       'title': 'Train loss curve',
+				       'xlabel': 'Batch number',
+				       'ylabel': 'Loss'})
+                    else:
+                        vis.line(Y=np.array(vis_data['val_loss']), 
+			         X=np.array(range(len(vis_data['val_loss']))), 
+			         win='Val Loss',
+                                 opts={'legend': ['val_loss'], 
+				       'markers': False,
+				       'title': 'Validation loss curve',
+				       'xlabel': 'Batch number',
+                                       'ylabel': 'Loss'})
+
+		    # Create and show mask for labeled areas
+                    label_mask = np.sum(targets.numpy(), axis=1)
+                    label_mask = np.expand_dims(label_mask, axis=1)
+                    vis.images(label_mask,
+				nrow=n_row,
+				win='Label Masks',
+				opts={'title': 'Label Masks'})
+
+	            # Show targets (labels)
+                    disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
+                    disp_targets = np.argmax(disp_targets, axis=1) 
+                    disp_targets = np.expand_dims(disp_targets, axis=1)
+                    disp_targets = visualize.visualize_rgb(disp_targets, args.num_classes)
+                    vis.images(disp_targets,
+				nrow=n_row,
+				win='Target Images',
+				opts={'title': 'Target Images'})
+
+		    # Show predictions, masked with label mask
+                    disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1)
+                    disp_preds = np.expand_dims(disp_preds, axis=1)
+                    disp_preds = visualize.visualize_rgb(disp_preds, args.num_classes) 
+                    disp_preds_w_mask = disp_preds * label_mask
+                    vis.images(disp_preds,
+				nrow=n_row,
+				win='Predicted Images',
+				opts={'title': 'Predicted Images'})
+                    vis.images(disp_preds_w_mask,
+				nrow=n_row,
+				win='Predicted Images with Label Mask',
+				opts={'title': 'Predicted Images with Label Mask'})
+
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
 
@@ -145,7 +212,7 @@ if __name__ == "__main__":
     # Args for CLSTM model
     parser.add_argument('--hidden_dims', type=int, 
                         help="Number of channels in hidden state used in convolutional RNN",
-                        default=4)
+                        default=128)
     parser.add_argument('--crnn_kernel_sizes', type=int,
                         help="Convolutional kernel size used within a recurrent cell",
                         default=3)
@@ -159,8 +226,14 @@ if __name__ == "__main__":
     parser.add_argument('--time_slice', type=int,
                         help="which time slice for training FCN",
                         default=None)    
+    # Args for visdom
+    parser.add_argument('--env_name', type=str, default=None,
+                        help="Environment name for visdom visualization")
+    parser.add_argument('--snapshot', type=bool, default=False, 
+                        help="If true, create a visdom panel of predictions for each epoch")
 
     args = parser.parse_args()
+
     # load in data generator
     dataloaders = {}
     for split in SPLITS:
@@ -171,9 +244,11 @@ if __name__ == "__main__":
     model = models.get_model(**vars(args))
     if args.model_name in DL_MODELS and args.device == 'cuda' and torch.cuda.is_available():
         model.to(args.device)
-    
+
+
     # train model
     train(model, args.model_name, args, dataloaders=dataloaders)
+    
     # evaluate model
 
     # save model
