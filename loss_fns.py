@@ -31,7 +31,7 @@ def mask_ce_loss(y_true, y_pred):
 
     """
     batch, classes, rows, cols = y_true.shape
-    print('batch loss: ', batch)
+    
     # [batch x classes x rows x cols] --> [batch x rows x cols x classes]
     y_true = y_true.permute(0, 2, 3, 1)
     # [batch x rows x cols x classes] --> [batch*rows*cols x classes]
@@ -56,10 +56,8 @@ def mask_ce_loss(y_true, y_pred):
 
     y_pred = y_pred * loss_mask_repeat
 
-    #loss_fn = nn.CrossEntropyLoss(reduction="sum")
     loss_fn = nn.NLLLoss(reduction="sum")
     total_loss = loss_fn(y_pred, y_true.type(torch.LongTensor).cuda())
-    print('num exs: ', num_examples)    
     return total_loss / num_examples #/ batch
 
 # TODO: Incorporate lr decay

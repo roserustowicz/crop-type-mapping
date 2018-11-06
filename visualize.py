@@ -39,12 +39,13 @@ def visualize_model_preds(model, grid_name, save=False):
     """
     # assuming there is some way to store the model's name in the model itself
     # assuming these functions exists somewhere in preprocess
+    
+    # TODO: This function as a whole is a WIP -- was abandoned to
+    #  get visdom working instead ... 
 
     label = preprocess.retrieve_label(grid_name, country) # get the mask given a grid's name (ex: "004232")
     best_grid = preprocess.retrieve_best_s2_grid(grid_name, country) # get the actual grid data given a grid's name
     
-    print(label.shape)
-    print(best_grid.shape)
     grid = preprocess.preprocess_grid(grid, model.name) # preprocess the grid in a model specific way
 
     preds = model.predict(grid) # get model predictions

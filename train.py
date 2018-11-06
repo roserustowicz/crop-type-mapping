@@ -57,7 +57,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         # set up information lists for visdom    
         # TODO: Add args to visdom envs default name
         vis_data = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
-        n_row = 10
+        n_row = NROW
         if not args.env_name:
             env_name = "{}".format(args.model_name)
         else:
@@ -67,13 +67,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         loss_fn = loss_fns.get_loss_fn(args.model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.lrdecay)
         
-        #for p in model.parameters():
-        #    if p.requires_grad:
-        #        print(p.size())        
-  
         for i in range(args.epochs):
             for split in ['train', 'val']:
-                print(split)
                 dl = dataloaders[split]
                 batch_num = 0
                 # TODO: Currently hardcoded to use padded inputs for an RNN model
@@ -91,15 +86,12 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             
                             optimizer.zero_grad()
                             loss.backward()
-                            before = print(torch.sum(list(model.parameters())[0].grad))
                             optimizer.step()
                         
                         elif split == 'val':
                             vis_data['val_loss'].append(loss.data)
 
                     batch_num += 1
-                    print("\t", loss)
-
 
                     if split == 'train':
                         # For each epoch, update in visdom

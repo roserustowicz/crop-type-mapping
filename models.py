@@ -497,11 +497,8 @@ class CLSTMSegmenter(nn.Module):
     def forward(self, inputs):
         layer_output_list, last_state_list = self.clstm(inputs)
 
-        #print('last state list: ', last_state_list[0][0].shape)        
         scores = self.conv(last_state_list[0][0])
-        #print('scores: ', scores.shape)        
         preds = self.softmax(scores)
-        #print('preds: ', preds.shape)        
         preds = torch.log(preds)
 
         return preds
