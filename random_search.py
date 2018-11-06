@@ -40,15 +40,25 @@ if __name__ ==  "__main__":
                         help="number of random searches to perform")
     search_parser.add_argument('--epochs', type=int,
                         help="number of epochs to train the model for")
-    search_parser.add_argument('--save_dir', type=str)
+    search_parser.add_argument('--numTrack', type=int,
+                        help="number of models to track",
+                        default=1)
+    search_parser.add_argument('--logfile', type=str,
+                        help="file to write logs to; if not specified, prints to terminal")
 
     search_range = search_parser.parse_args()
+    #TODO: VERY HACKY, SWITCH TO USING PYTHON LOGGING MODULE OR ACTUALLY USING WRITE CALLS
+    old_stdout = sys.stdout
+    if search_range.logfile is not None:
+        logfile = open(search_range.logfile, "w")
+        sys.stdout = logfile
 
     lr_range = search_range.lr_range
     batch_size_range = search_range.batch_size_range
     hidden_dims_range = search_range.hidden_dims_range
     weight_decay_range = search_range.weight_decay_range
 
+    experiments = {}
 
     # for some number of iterations
     for sample_no in range(search_range.num_samples):
@@ -75,18 +85,27 @@ if __name__ ==  "__main__":
         
         model = models.get_model(**vars(train_args))
         model.to(train_args.device)
-        experiment_name = f"lr{lr}_bs{batch_size}_wd{weight_decay}_hd{hidden_dims}_epochs{search_range.epochs}_model{train_args.model_name}_dataset{train_args.dataset}"
+        experiment_name = f"lr{lr}_bs{batch_size}_wd{weight_decay}_hd{hidden_dims}_epochs{search_range.epochs}_model_{train_args.model_name}_dataset_{train_args.dataset}"
 
+        train_args.name = experiment_name
+        print("="*100)
         print(f"TRAINING: {experiment_name}")
-        #try:
         train.train(model, train_args.model_name, train_args, dataloaders=dataloaders) 
-        print("FINISHED TRAINING ONE MODEL") 
-        experiment_name = f"lr{lr}_bs{batch_size}_wd{weight_decay}_hd{hidden_dims}_epochs{search_range.epochs}_model{train_args.model_name}_dataset{train_args.dataset}"
+        print(f"FINISHED TRAINING") 
+        for state_dict_name in os.listdir(train_args.save_dir):
+            if experiment_name in state_dict_name:
+                model.load_state_dict(torch.load(os.path.join(train_args.save_dir, state_dict_name)))
+                loss, acc = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device)
+                print(f"Best Performance: \n\t loss: {loss} \n\t acc: {acc}\n")
+                experiments[experiment_name] = [loss, acc]
+                break
 
-        torch.save(model.state_dict(), os.path.join(search_range.save_dir, experiment_name))
-        #except:
-        print("Memory error")
         torch.cuda.empty_cache()
-        sample_no -= 1
-
-
+   
+    print("SUMMARY")
+    for key, value in sorted(experiments.items(), key=lambda x: x[1][1], reverse=True):
+        print(key, "\t", value[0], "\t", value[1])
+        
+    sys.stdout = old_stdout
+    if search_range.logfile is not None:
+        logfile.close()

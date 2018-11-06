@@ -20,21 +20,22 @@ from constants import *
 from tensorboardX import SummaryWriter
 import visualize
 
-def evaluate_split(model, split_loader):
+def evaluate_split(model, model_name, split_loader, device):
     total_correct = 0
     total_loss = 0
     total_pixels = 0
+    loss_fn = loss_fns.get_loss_fn(model_name)
     for inputs, targets in split_loader:
         with torch.set_grad_enabled(False):
-            inputs.to(args.device)
-            targets.to(args.device)
+            inputs.to(device)
+            targets.to(device)
             preds = model(inputs)   
             batch_loss, batch_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
             total_loss += batch_loss.item()
             total_correct += batch_correct
             total_pixels += num_pixels
 
-    return total_correct / total_pixels, total_correct / total_pixels
+    return total_loss / total_pixels, total_correct / total_pixels
 
 def evaluate(preds, labels, loss_fn, reduction):
     """ Evalautes the model on the inputs using the labels and loss fn.
@@ -90,9 +91,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         loss_fn = loss_fns.get_loss_fn(args.model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay, args.lrdecay)
         
-        best_val_loss = float("inf")
-        best_model = model
-        best_epoch = 0
+        best_val_acc = 0
 
         for i in range(args.epochs):
             
@@ -122,13 +121,12 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         
                         elif split == 'val':
                             loss, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
-                            vis_data['val_loss'].append(loss.data / num_pixels)
+                            vis_data['val_loss'].append(loss.item() / num_pixels)
                             vis_data['val_acc'].append(total_correct / num_pixels)
                             
-                            val_loss += loss.data
+                            val_loss += loss.item()
                             val_acc += total_correct
                             val_num_pixels += num_pixels
-
 
                     batch_num += 1
 
@@ -201,6 +199,13 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 				nrow=n_row,
 				win='Predicted Images with Label Mask',
 				opts={'title': 'Predicted Images with Label Mask'})
+                if split == "val":
+                    val_loss = val_loss / val_num_pixels
+                    val_acc = val_acc / val_num_pixels
+                    
+                    if val_acc > best_val_acc:
+                        torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + f"_best_epoch_{i}_acc:{val_acc}_loss:{val_loss}"))
+                        best_val_acc = val_acc
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
@@ -221,8 +226,10 @@ if __name__ == "__main__":
     if args.model_name in DL_MODELS and args.device == 'cuda' and torch.cuda.is_available():
         model.to(args.device)
 
+    if args.name is None:
+        args.name = str(datetime.datetime.now()) + "_" + args.model_name
 
-    # train model
+# train model
     train(model, args.model_name, args, dataloaders=dataloaders)
     
     # evaluate model
@@ -232,8 +239,6 @@ if __name__ == "__main__":
         os.mkdir(args.save_dir)
 
     if args.model_name in DL_MODELS:
-        if args.name is None:
-            args.name = str(datetime.datetime.now()) + "_" + args.model_name
         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name))
         print("MODEL SAVED")
      
