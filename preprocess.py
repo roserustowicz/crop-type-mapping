@@ -113,6 +113,9 @@ def preprocess_grid(grid, model_name, time_slice = None):
     
     if model_name == "fcn":
         return preprocessForFCN(grid, time_slice)
+    
+    if model_name == "unet":
+        return preprocessForUNet(grid, time_slice)
 
     raise ValueError(f'Model: {model_name} unsupported')
     
@@ -137,6 +140,10 @@ def preprocess_label(label, model_name, num_classes=None):
     if model_name == "fcn":
         assert not num_classes is None
         return preprocessLabelForFCN(label, num_classes)
+    
+    if model_name == "unet":
+        assert not num_classes is None
+        return preprocessLabelForUNet(label, num_classes)
 
     raise ValueError(f'Model: {model_name} unsupported')
     
@@ -155,6 +162,18 @@ def preprocessLabelForCLSTM(label, num_classes):
 
 
 def preprocessLabelForFCN(label, num_classes):
+    """ Converts to onehot encoding and shifts channels to be first dim.
+
+    Args:
+        label - (npy arr) [64x64] categorical labels for each pixel
+        num_classes - (npy arr) number of classes 
+    """
+
+    mask = onehot_mask(label, num_classes)
+    return np.transpose(mask, [2, 0, 1])
+
+
+def preprocessLabelForUNet(label, num_classes):
     """ Converts to onehot encoding and shifts channels to be first dim.
 
     Args:
@@ -192,7 +211,11 @@ def preprocessForCLSTM(grid):
 def preprocessForFCN(grid, time_slice):
     grid = takeTimeSlice(grid, time_slice)
     return grid
-    
+
+def preprocessForUNet(grid, time_slice):
+    grid = takeTimeSlice(grid, time_slice)
+    return grid
+
 
 def truncateToSmallestLength(batch):
     """ Truncates len of all sequences to MIN_TIMESTAMPS.
