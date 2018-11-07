@@ -37,7 +37,7 @@ def get_accuracy(model_preds, targets, reduction='avg'):
     total_correct = np.sum(np.logical_and(bool1, bool2))
  
     if reduction == 'avg':
-        return total_correct / num_pixels
+        return total_correct / (num_pixels + 1)
     else:
-        return total_correct, num_pixels
+        return total_correct, num_pixels + 1
 

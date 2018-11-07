@@ -6,13 +6,13 @@ Currently hard-coded to iterate over hp space, but with intelligeny key parsing 
 run with:
 
 python random_search.py --model_name bidir_clstm --dataset small --epochs 1 --batch_size_range="(4, 24)" --lr_range="(-5, -1)" --hidden_dims_range="(4, 7)" --weight_decay_range="(-5, 0)" --num_samples=3 --logfile=test.log
-
 """
 
 
 import argparse
 import os
 import train 
+import pickle
 import numpy as np
 import util
 import datasets
@@ -35,6 +35,12 @@ def generate_real_power_HP(base, minVal, maxVal):
 def generate_int_HP(minVal, maxVal):
     return np.random.randint(minVal, maxVal)
 
+def generate_float_HP(minVal, maxVal):
+    return np.random.uniform(minVal, maxVal)
+
+def generate_string_HP(choices):
+    return np.random.choice(choices)
+
 def str2tuple(arg):
     return literal_eval(arg)
 
@@ -52,6 +58,8 @@ if __name__ ==  "__main__":
                         help="Tuple containing (base, min exp, max exp). Picks number of channels from base ** min exp to base ** max exp.")
     search_parser.add_argument('--weight_decay_range', type=str2tuple,
                         help="Tuple containing (base, min exp, max exp). Picks weight decay between base ** min exp to base ** max exp on a logarithmic scale.")
+    search_parser.add_argument('--momentum_range', type=str2tuple)
+    search_parser.add_argument('--optimizer_range', type=str2tuple)
     search_parser.add_argument('--num_samples', type=int,
                         help="number of random searches to perform")
     search_parser.add_argument('--epochs', type=int,
@@ -61,9 +69,7 @@ if __name__ ==  "__main__":
 
     search_range = search_parser.parse_args()
     #TODO: VERY HACKY, SWITCH TO USING PYTHON LOGGING MODULE OR ACTUALLY USING WRITE CALLS
-    print("before")
     old_stdout = sys.stdout
-    print("after")
     if search_range.logfile is not None:
         logfile = open(search_range.logfile, "w")
         sys.stdout = logfile
@@ -72,7 +78,6 @@ if __name__ ==  "__main__":
     for arg in vars(search_range):
         if "range" not in arg: continue
         hp = arg[:arg.find("range") - 1]
-        print(hp)
         hps[hp] = [] 
 
     experiments = {}
@@ -94,6 +99,10 @@ if __name__ ==  "__main__":
                 hp_val = generate_real_power_HP(vars(search_range)[arg][0], vars(search_range)[arg][1], vars(search_range)[arg][2])
             elif hp in INT_HP:
                 hp_val = generate_int_HP(vars(search_range)[arg][0], vars(search_range)[arg][1])
+            elif hp in FLOAT_HP:
+                hp_val = generate_float_HP(vars(search_range)[arg][0], vars(search_range)[arg][1])
+            elif hp in STRING_HP:
+                hp_val = generate_string_HP(vars(search_range)[arg])
             else:
                 raise ValueError(f"HP {hp} unsupported") 
 
@@ -119,8 +128,8 @@ if __name__ ==  "__main__":
                 loss, acc = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device)
                 print(f"Best Performance: \n\t loss: {loss} \n\t acc: {acc}\n")
                 experiments[experiment_name] = [loss, acc]
-                for param in hps:
-                    hps[param].append([loss, acc])
+                for hp in hps:
+                    hps[hp].append([train_args.__dict__[hp], loss, acc])
                 break
 
         torch.cuda.empty_cache()
@@ -129,8 +138,9 @@ if __name__ ==  "__main__":
     for key, value in sorted(experiments.items(), key=lambda x: x[1][1], reverse=True):
         print(key, "\t", value[0], "\t", value[1])
     
+    with open("hps_results.pkl", "wb") as f:
+        pickle.dump(hps, f)
 
-    print(hps)
     sys.stdout = old_stdout
     if search_range.logfile is not None:
         logfile.close()
