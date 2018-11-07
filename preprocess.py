@@ -31,7 +31,7 @@ def onehot_mask(mask, num_classes):
       it has 0's in all channels of the one hot mask at that pixel location.
     """
 
-    mask[mask >= num_classes] = num_classes
+    mask[mask > num_classes] = 0
     return np.eye(num_classes+1)[mask][:, :, 1:] 
 
 def retrieve_label(grid_name, country):

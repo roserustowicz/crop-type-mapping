@@ -188,6 +188,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
 		    # Show predictions, masked with label mask
                     disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1)
+                    disp_preds = disp_preds + 1 
                     disp_preds = np.expand_dims(disp_preds, axis=1)
                     disp_preds = visualize.visualize_rgb(disp_preds, args.num_classes) 
                     disp_preds_w_mask = disp_preds * label_mask
@@ -204,7 +205,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     val_acc = val_acc / val_num_pixels
                     
                     if val_acc > best_val_acc:
-                        torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + f"_best_epoch_{i}_acc:{val_acc}_loss:{val_loss}"))
+                        torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_acc = val_acc
 
     else:

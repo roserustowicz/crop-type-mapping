@@ -12,3 +12,7 @@ LABEL_DIR = "raster_64x64_npy"
 S1_DIR = "s1_npy"
 S2_DIR = "s2_64x64_npy"
 NROW = 10
+
+INT_POWER_EXP = ["hidden_dims"]
+REAL_POWER_EXP = ["weight_decay", "lr"]
+INT_HP = ['batch_size']
