@@ -6,6 +6,7 @@ Consider this essentially a util library specifically for data manipulation.
 
 """
 import torch
+import torchvision.transforms as transforms
 import torch.nn.utils.rnn as rnn
 import numpy as np
 from constants import *
@@ -109,14 +110,12 @@ def preprocess_grid(grid, model_name, time_slice = None):
     """
 
     if model_name == "bidir_clstm":
-        return preprocessForCLSTM(grid)
+        return preprocessGridForCLSTM(grid)
     
     if model_name == "fcn":
-        return preprocessForFCN(grid, time_slice)
+        return preprocessGridForFCN(grid, time_slice)
 
     raise ValueError(f'Model: {model_name} unsupported')
-    
-    
 
 def preprocess_label(label, model_name, num_classes=None):
     """ Returns a preprocess version of the label based on the model.
@@ -140,8 +139,6 @@ def preprocess_label(label, model_name, num_classes=None):
 
     raise ValueError(f'Model: {model_name} unsupported')
     
-    
-
 def preprocessLabelForCLSTM(label, num_classes):
     """ Converts to onehot encoding and shifts channels to be first dim.
 
@@ -150,9 +147,10 @@ def preprocessLabelForCLSTM(label, num_classes):
         num_classes - (npy arr) number of classes 
     """
 
-    mask = onehot_mask(label, num_classes)
-    return np.transpose(mask, [2, 0, 1])
-
+    label = onehot_mask(label, num_classes)
+    label =  np.transpose(label, [2, 0, 1])
+    label = torch.tensor(label, dtype=torch.float32)
+    return label
 
 def preprocessLabelForFCN(label, num_classes):
     """ Converts to onehot encoding and shifts channels to be first dim.
@@ -162,9 +160,10 @@ def preprocessLabelForFCN(label, num_classes):
         num_classes - (npy arr) number of classes 
     """
 
-    mask = onehot_mask(label, num_classes)
-    return np.transpose(mask, [2, 0, 1])
-
+    label = onehot_mask(label, num_classes)
+    label = np.transpose(mask, [2, 0, 1])
+    label = torch.tensor(label, dtype=torch.float32)
+    return label
 
 def moveTimeToStart(arr):
     """ Moves time axis to the first dim.
@@ -185,11 +184,18 @@ def takeTimeSlice(arr, timeslice):
     arr_slice = arr[timeslice,:,:,:]
     return arr_slice
 
-def preprocessForCLSTM(grid):
+def preprocessGridForCLSTM(grid):
     grid = moveTimeToStart(grid)
+    grid = torch.tensor(grid, dtype=torch.float32)
+    for timestamp in grid:
+        transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
+    """
+    for band in range(grid.shape[1]):
+        grid[:, band, :, :] = ((grid[:, band, :, :] - S2_BAND_MEANS[band]) / S2_BAND_STDS[band])
+        """
     return grid
 
-def preprocessForFCN(grid, time_slice):
+def preprocessGridForFCN(grid, time_slice):
     grid = takeTimeSlice(grid, time_slice)
     return grid
     

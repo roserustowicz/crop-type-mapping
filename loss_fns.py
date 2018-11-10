@@ -57,10 +57,11 @@ def mask_ce_loss(y_true, y_pred, reduction):
 
     loss_fn = nn.NLLLoss(reduction="sum")
     total_loss = loss_fn(y_pred, y_true.type(torch.LongTensor).cuda())
+
     if reduction == "sum":
-        return total_loss, num_examples+1
+        return total_loss, num_examples
     else:
-        return total_loss / (num_examples + 1)
+        return total_loss / num_examples
 
 # TODO: Incorporate lr decay
 def get_optimizer(params, optimizer_name, lr, momentum, weight_decay, lrdecay):
