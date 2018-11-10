@@ -1,11 +1,11 @@
 """
 Wrapper script for performing random search. 
 
-Currently hard-coded to iterate over hp space, but with intelligeny key parsing should be possible to fully automate this process. 
-
 run with:
 
 python random_search.py --model_name bidir_clstm --dataset small --epochs 1 --batch_size_range="(4, 24)" --lr_range="(-5, -1)" --hidden_dims_range="(4, 7)" --weight_decay_range="(-5, 0)" --num_samples=3 --logfile=test.log
+n random_search.py --model_name bidir_clstm --dataset small --epochs 1 --batch_size_range="(4, 24)" --lr_range="(10, -5, -1)" --hidden_dims_range="(2, 3, 7)" --weight_decay_range="(10, -5, 0)" --momentum_range="(.5, .999)" --optimizer_range="('adam', 'sgd')" --num_samples=3
+
 """
 
 
