@@ -14,6 +14,30 @@ from util import *
 import os
 import random
 
+def reshapeForLoss(y):
+    """ Reshapes labels or preds for loss fn.
+    To get them to the correct shape, we permute: 
+      [batch x classes x rows x cols] --> [batch x rows x cols x classes]
+      and then reshape to [N x classes], where N = batch*rows*cols
+    """
+
+    # [batch x classes x rows x cols] --> [batch x rows x cols x classes]
+    y = y.permute(0, 2, 3, 1)
+    # [batch x rows x cols x classes] --> [batch*rows*cols x classes]
+    y = y.contiguous().view(-1, y.shape[3])
+
+    return y
+
+def maskForLoss(y_pred, y_true):
+    loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
+    loss_mask_repeat = loss_mask.unsqueeze(1).repeat(1,y_pred.shape[1]).type(torch.FloatTensor).cuda()
+   
+    # take argmax to get true values from one-hot encoding 
+    vals, y_true = torch.max(y_true, dim=1)
+    y_true = y_true * loss_mask
+    y_pred = y_pred * loss_mask_repeat
+
+    return y_pred, y_true
 def onehot_mask(mask, num_classes):
     """
     Return a one-hot version of the mask for a grid

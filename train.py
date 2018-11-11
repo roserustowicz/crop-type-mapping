@@ -187,8 +187,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 				opts={'title': 'Target Images'})
 
 		    # Show predictions, masked with label mask
+                    
                     disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1)
-                    disp_preds = disp_preds + 1 
+                    disp_preds = disp_preds+1
                     disp_preds = np.expand_dims(disp_preds, axis=1)
                     disp_preds = visualize.visualize_rgb(disp_preds, args.num_classes) 
                     disp_preds_w_mask = disp_preds * label_mask
