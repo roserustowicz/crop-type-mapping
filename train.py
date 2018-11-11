@@ -49,17 +49,20 @@ def evaluate(preds, labels, loss_fn, reduction):
         loss - (float) the loss the model incurs
         TO BE EXPANDED
     """
+
+    f1 = metrics.get_f1score(preds, labels)
+    cm = metrics.get_cm(preds, labels)
+
     if reduction == "avg":
         loss = loss_fn(labels, preds, reduction)
         accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
         cm = metrics.get_cm(preds, labels)
-        return loss, cm, accuracy
+        return loss, cm, f1, accuracy
     else:
         loss, _ = loss_fn(labels, preds, reduction)
         total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
         cm = metrics.get_cm(preds, labels)
-        return loss, cm, total_correct, num_pixels
-
+        return loss, cm, f1, total_correct, num_pixels
 
 def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """ Trains the model on the inputs
@@ -83,7 +86,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
         # set up information lists for visdom    
         # TODO: Add args to visdom envs default name
-        vis_data = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
+        vis_data = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': [], 'train_f1': [], 'val_f1': []}
         n_row = NROW
         if not args.env_name:
             env_name = "{}".format(args.model_name)
@@ -103,8 +106,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             val_num_pixels = 0
             train_loss = []
             train_acc = []
-            #val_loss = []
-            #val_acc = []
+            train_f1 = []
+            val_f1 = []
             cm = np.zeros((args.num_classes, args.num_classes)).astype(int)
 
             for split in ['train', 'val']:
@@ -118,26 +121,33 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         inputs.to(args.device)
                         targets.to(args.device)
                         preds = model(inputs)   
-
+                        
                         if split == 'train':
-                            loss, cm, accuracy = evaluate(preds, targets, loss_fn, reduction="avg")
-                            cm += cm_cur
+                            loss, cm_cur, f1, accuracy = evaluate(preds, targets, loss_fn, reduction="avg")
+                            
+                            if cm_cur is not None:
+                                cm += cm_cur
 
-                            train_loss.append(loss.data)
-                            train_acc.append(accuracy)
-                            optimizer.zero_grad()
-                            loss.backward()
-                            optimizer.step()
+                                train_loss.append(loss.data)
+                                train_acc.append(accuracy)
+                                train_f1.append(f1)
+                                optimizer.zero_grad()
+                                loss.backward()
+                                optimizer.step()
                         
                         elif split == 'val':
-                            loss, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
-                            val_loss.append(loss.item() / num_pixels)
-                            val_acc.append(total_correct / num_pixels)
+                            loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
                             
-                            val_loss += loss.item()
-                            val_acc += total_correct
-                            val_num_pixels += num_pixels
-
+                            if cm_cur is not None:
+                                # TODO: resolve val_loss, val_acc 
+                                val_loss.append(loss.item() / num_pixels)
+                                val_acc.append(total_correct / num_pixels)
+                                val_f1.append(f1)
+                    
+                                val_loss += loss.item()
+                                val_acc += total_correct
+                                val_num_pixels += num_pixels
+        
                     batch_num += 1
 
 		    # Create and show mask for labeled areas
@@ -177,8 +187,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 if split == 'train':
                     train_loss = np.mean(train_loss)
                     train_acc = np.mean(train_acc)
+                    train_f1 = np.mean(train_f1)
                     vis_data['train_loss'].append(train_loss)
                     vis_data['train_acc'].append(train_acc) 
+                    vis_data['train_f1'].append(train_f1) 
 
                     # For each epoch, update in visdom
                     vis.line(Y=np.array(vis_data['train_loss']), 
@@ -198,6 +210,15 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 				   'title': 'Training Accuracy',
 				   'xlabel': 'Epoch',
 				   'ylabel': 'Accuracy'})
+               
+                    vis.line(Y=np.array(vis_data['train_f1']), 
+                	     X=np.array(range(len(vis_data['train_f1']))), 
+			     win='Train f1-score',
+			     opts={'legend': ['train_f1'], 
+				   'markers': False,
+				   'title': 'Training f1-score',
+				   'xlabel': 'Epoch',
+				   'ylabel': 'f1-score'})
                     
                     fig = plot_confusion_matrix(cm, CM_CLASSES, 
                                                 normalize=False,
@@ -212,11 +233,15 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     if val_acc > best_val_acc:
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_acc = val_acc
-                    
+                   
+                    # TODO: resolve val_loss / val_acc 
                     #val_loss = np.mean(val_loss)
                     #val_acc = np.mean(val_acc)
+                    val_f1 = np.mean(val_f1)
+                    
                     vis_data['val_loss'].append(val_loss)
                     vis_data['val_acc'].append(val_acc)
+                    vis_data['val_f1'].append(val_f1)
 
                     vis.line(Y=np.array(vis_data['val_loss']), 
 			     X=np.array(range(len(vis_data['val_loss']))), 
@@ -236,6 +261,15 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 				   'xlabel': 'Batch number',
 				   'ylabel': 'Accuracy'})
 
+                    vis.line(Y=np.array(vis_data['val_f1']), 
+                	     X=np.array(range(len(vis_data['val_f1']))), 
+			     win='Val f1-score',
+			     opts={'legend': ['val_f1'], 
+				   'markers': False,
+				   'title': 'Val f1-score',
+				   'xlabel': 'Epoch',
+				   'ylabel': 'f1-score'})
+                    
                     fig = plot_confusion_matrix(cm, CM_CLASSES, 
                                                 normalize=False,
                                                 title='Validation Confusion matrix, epoch {}'.format(i),

@@ -3,7 +3,7 @@ import torch
 import util
 
 from constants import *
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score
 
 def get_accuracy(y_pred, y_true, reduction='avg'):
     """
@@ -50,6 +50,27 @@ def get_accuracy(y_pred, y_true, reduction='avg'):
     else:
         return total_correct, num_pixels
 
+def get_f1score(y_pred, y_true):
+    # Reshape truth labels into [N, num_classes]
+    y_true = util.bxclxrxc_to_brcxcl(y_true)
+
+    # Reshape predictions into [N, num_classes]
+    y_pred = util.bxclxrxc_to_brcxcl(y_pred)
+
+    # Create mask for valid pixel locations
+    loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
+
+    # Take argmax for labels and targets
+    _, y_true = torch.max(y_true, dim=1)
+    _, y_pred = torch.max(y_pred, dim=1)
+
+    # Get only valid locations
+    y_true = y_true[loss_mask == 1]
+    y_pred = y_pred[loss_mask == 1]
+    
+    return f1_score(y_true, y_pred, labels=CM_LABELS, average='micro') 
+
+
 def get_cm(y_pred, y_true):
     """
     Get confusion matrix from predictions and labels
@@ -77,5 +98,8 @@ def get_cm(y_pred, y_true):
     # Get only valid locations
     y_true = y_true[loss_mask == 1]
     y_pred = y_pred[loss_mask == 1]
-
-    return confusion_matrix(y_true, y_pred, labels=CM_LABELS)
+    
+    if y_true.shape[0] == 0:
+        pass
+    else: 
+        return confusion_matrix(y_true, y_pred, labels=CM_LABELS)
