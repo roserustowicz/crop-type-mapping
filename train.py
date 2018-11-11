@@ -13,18 +13,35 @@ import torch
 import datasets
 import metrics
 import visdom
+import util
+import numpy as np
 
 from constants import *
-from util import *
 from tensorboardX import SummaryWriter
 import visualize
 
-def evaluate(model, inputs, labels, loss_fn):
+def evaluate_split(model, model_name, split_loader, device):
+    total_correct = 0
+    total_loss = 0
+    total_pixels = 0
+    loss_fn = loss_fns.get_loss_fn(model_name)
+    for inputs, targets in split_loader:
+        with torch.set_grad_enabled(False):
+            inputs.to(device)
+            targets.to(device)
+            preds = model(inputs)   
+            batch_loss, batch_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
+            total_loss += batch_loss.item()
+            total_correct += batch_correct
+            total_pixels += num_pixels
+
+    return total_loss / total_pixels, total_correct / total_pixels
+
+def evaluate(preds, labels, loss_fn, reduction):
     """ Evalautes the model on the inputs using the labels and loss fn.
 
     Args:
-        model - (something with predict?) the model being tested
-        inputs - (npy array / tf tensor) the inputs the model should use
+        preds - (tf tensor) the inputs the model should use
         labels - (npy array / tf tensor) the labels for the inputs
         loss_fn - (function) function that takes preds and labels and outputs some metric
 
@@ -32,12 +49,14 @@ def evaluate(model, inputs, labels, loss_fn):
         loss - (float) the loss the model incurs
         TO BE EXPANDED
     """
-    preds = model.forward(inputs)
-    loss = loss_fn(labels, preds)
-
-    accuracy = metrics.get_accuracy(preds, labels, reduction='avg')
-    
-    return preds, loss, accuracy
+    if reduction == "avg":
+        loss = loss_fn(labels, preds, reduction)
+        accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
+        return loss, accuracy
+    else:
+        loss, _ = loss_fn(labels, preds, reduction)
+        total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
+        return loss, total_correct, num_pixels
 
 def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """ Trains the model on the inputs
@@ -70,9 +89,16 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         vis = visdom.Visdom(port=8097, env=env_name)
 
         loss_fn = loss_fns.get_loss_fn(args.model_name)
-        optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.lrdecay)
+        optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay, args.lrdecay)
         
+        best_val_acc = 0
+
         for i in range(args.epochs):
+            
+            val_loss = 0
+            val_acc = 0
+            val_num_pixels = 0
+
             for split in ['train', 'val']:
                 dl = dataloaders[split]
                 batch_num = 0
@@ -83,10 +109,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     with torch.set_grad_enabled(True):
                         inputs.to(args.device)
                         targets.to(args.device)
-                        
-                        preds, loss, accuracy = evaluate(model, inputs, targets, loss_fn)
+                        preds = model(inputs)   
 
                         if split == 'train':
+                            loss, accuracy = evaluate(preds, targets, loss_fn, reduction="avg")
                             vis_data['train_loss'].append(loss.data)
                             vis_data['train_acc'].append(accuracy) 
                             optimizer.zero_grad()
@@ -94,8 +120,13 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             optimizer.step()
                         
                         elif split == 'val':
-                            vis_data['val_loss'].append(loss.data)
-                            vis_data['val_acc'].append(accuracy)
+                            loss, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
+                            vis_data['val_loss'].append(loss.item() / num_pixels)
+                            vis_data['val_acc'].append(total_correct / num_pixels)
+                            
+                            val_loss += loss.item()
+                            val_acc += total_correct
+                            val_num_pixels += num_pixels
 
                     batch_num += 1
 
@@ -170,6 +201,13 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 				nrow=n_row,
 				win='Predicted Images with Label Mask',
 				opts={'title': 'Predicted Images with Label Mask'})
+                if split == "val":
+                    val_loss = val_loss / val_num_pixels
+                    val_acc = val_acc / val_num_pixels
+                    
+                    if val_acc > best_val_acc:
+                        torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
+                        best_val_acc = val_acc
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
@@ -178,101 +216,22 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
 if __name__ == "__main__":
     # parse args
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model_name', type=str,
-                        help="model's name",
-                        required=True)
-    parser.add_argument('--hdf5_filepath', type=str,
-                        help="full path to hdf5 data file",
-                        default="/home/data/ghana/data.hdf5")
-    parser.add_argument('--dataset', type=str,
-                        help="Full or small?",
-                        choices=('full', 'small'),
-                        required=True)
-    parser.add_argument('--country', type=str,
-                        help="country to predict over",
-                        default="ghana")
-    parser.add_argument('--grid_dir', type=str,
-                        help="full path to directory containing grid splits",
-                        default="/home/data/ghana")
-    parser.add_argument('--epochs', type=int,
-                        help="# of times to train over the dataset")
-    parser.add_argument('--batch_size', type=int,
-                        help="batch size to use")
-    parser.add_argument('--optimizer', type=str,
-                        help="Optimizer to use for training",
-                        default="sgd",
-                        choices=('sgd', 'adam'))
-    parser.add_argument('--lr', type=float,
-                        help="Initial learning rate to use")
-    parser.add_argument('--momentum', type=float,
-                        help="Momentum to use when training",
-                        default=.9)
-    parser.add_argument('--lrdecay', type=float,
-                        help="Learning rate decay per **batch**",
-                        default=1)
-    parser.add_argument('--shuffle', type=str2bool,
-                        help="shuffle dataset between epochs?",
-                        default=True)
-    parser.add_argument('--use_s1', type=str2bool,
-                        help="use s1 data?",
-                        default=True)
-    parser.add_argument('--use_s2', type=str2bool,
-                        help="use s2 data?",
-                        default=True)
-    parser.add_argument('--num_classes', type=int,
-                        help="Number of crops to predict over",
-                        default=5)
-    parser.add_argument('--num_workers', type=int,
-                        help="Number of workers to use for pulling data",
-                        default=8)
-    # TODO: find correct string name
-    parser.add_argument('--device', type=str,
-                        help="Cuda or CPU",
-                        default='cuda')
-    parser.add_argument('--save_dir', type=str,
-                        help="Directory to save the models in. If unspecified, saves the model to ./models.",
-                        default='./models')
-    parser.add_argument('--name', type=str,
-                        help="Name of experiment. Used to uniquely save the model. Defaults to current time + model name if not set.")
-    # Args for CLSTM model
-    parser.add_argument('--hidden_dims', type=int, 
-                        help="Number of channels in hidden state used in convolutional RNN",
-                        default=128)
-    parser.add_argument('--crnn_kernel_sizes', type=int,
-                        help="Convolutional kernel size used within a recurrent cell",
-                        default=3)
-    parser.add_argument('--conv_kernel_size', type=int,
-                        help="Convolutional kernel size used within a convolutional layer",
-                        default=3)
-    parser.add_argument('--crnn_num_layers', type=int,
-                        help="Number of convolutional RNN cells to stack",
-                        default=1)
-    
-    parser.add_argument('--time_slice', type=int,
-                        help="which time slice for training FCN",
-                        default=None)    
-    # Args for visdom
-    parser.add_argument('--env_name', type=str, default=None,
-                        help="Environment name for visdom visualization")
-    parser.add_argument('--snapshot', type=bool, default=False, 
-                        help="If true, create a visdom panel of predictions for each epoch")
+    parser = util.get_train_parser()
 
     args = parser.parse_args()
 
     # load in data generator
-    dataloaders = {}
-    for split in SPLITS:
-        grid_path = os.path.join(args.grid_dir, f"{args.country}_{args.dataset}_{split}")
-        dataloaders[split] = datasets.GridDataLoader(args, grid_path)
+    dataloaders = datasets.get_dataloaders(args.grid_dir, args.country, args.dataset, args)
     
     # load in model
     model = models.get_model(**vars(args))
     if args.model_name in DL_MODELS and args.device == 'cuda' and torch.cuda.is_available():
         model.to(args.device)
 
+    if args.name is None:
+        args.name = str(datetime.datetime.now()) + "_" + args.model_name
 
-    # train model
+# train model
     train(model, args.model_name, args, dataloaders=dataloaders)
     
     # evaluate model
@@ -282,8 +241,6 @@ if __name__ == "__main__":
         os.mkdir(args.save_dir)
 
     if args.model_name in DL_MODELS:
-        if args.name is None:
-            args.name = str(datetime.datetime.now()) + "_" + args.model_name
         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name))
         print("MODEL SAVED")
      

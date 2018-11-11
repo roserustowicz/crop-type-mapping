@@ -6,15 +6,17 @@ File that houses the dataset wrappers we have.
 
 import torch
 from torch.utils.data import Dataset, DataLoader
-from random import shuffle
 import pickle
 import h5py
-from preprocess import *
 import numpy as np
+import os
+from preprocess import *
+from constants import *
+from random import shuffle
 
 class CropTypeDS(Dataset):
 
-    def __init__(self, args, grid_path):
+    def __init__(self, args, grid_path, split):
         self.model_name = args.model_name
         # open hdf5 file
         self.hdf5_filepath = args.hdf5_filepath
@@ -25,6 +27,7 @@ class CropTypeDS(Dataset):
         self.use_s1 = args.use_s1
         self.use_s2 = args.use_s2
         self.num_classes = args.num_classes
+        self.split = split
         ## Timeslice for FCN
         self.timeslice = args.time_slice
 
@@ -44,13 +47,12 @@ class CropTypeDS(Dataset):
             grid = preprocess_grid(grid, self.model_name, self.timeslice)
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess_label(label, self.model_name, self.num_classes) 
-    
-        return torch.tensor(grid, dtype=torch.float32), torch.tensor(label, dtype=torch.float32)
 
+        return grid, label
 class GridDataLoader(DataLoader):
 
-    def __init__(self, args, grid_path):
-        dataset = CropTypeDS(args, grid_path)
+    def __init__(self, args, grid_path, split):
+        dataset = CropTypeDS(args, grid_path, split)
         super(GridDataLoader, self).__init__(dataset,
                                              batch_size=args.batch_size,
                                              shuffle=args.shuffle,
@@ -58,3 +60,11 @@ class GridDataLoader(DataLoader):
                                              pin_memory=True,
                                              collate_fn=truncateToSmallestLength)
 
+
+def get_dataloaders(grid_dir, country, dataset, args):
+    dataloaders = {}
+    for split in SPLITS:
+        grid_path = os.path.join(grid_dir, f"{country}_{dataset}_{split}")
+        dataloaders[split] = GridDataLoader(args, grid_path, split)
+
+    return dataloaders

@@ -36,7 +36,7 @@ def focal_loss(y_true, y_pred, gamma=2):
     return loss / num_examples
 
 
-def mask_ce_loss(y_true, y_pred):
+def mask_ce_loss(y_true, y_pred, reduction):
     """
     Args:
         y_true - (npy arr) 
@@ -54,14 +54,17 @@ def mask_ce_loss(y_true, y_pred):
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
     loss_fn = nn.NLLLoss(reduction="sum")
     total_loss = loss_fn(y_pred, y_true.type(torch.LongTensor).cuda())
-    return total_loss / num_examples
-
+    
+    if reduction == "sum":
+        return total_loss, num_examples
+    else:
+        return total_loss / num_examples
 
 def get_optimizer(params, optimizer_name, lr, momentum, lrdecay):
     if optimizer_name == "sgd":
-        return optim.SGD(params, lr=lr, momentum=momentum)
+        return optim.SGD(params, lr=lr, momentum=momentum, weight_decay=weight_decay)
     elif optimizer_name == "adam":
-        return optim.Adam(params, lr=lr)
+        return optim.Adam(params, lr=lr, weight_decay=weight_decay)
 
     raise ValueError(f"Optimizer: {optimizer_name} unsupported")
 
