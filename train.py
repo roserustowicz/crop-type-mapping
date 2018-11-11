@@ -52,11 +52,14 @@ def evaluate(preds, labels, loss_fn, reduction):
     if reduction == "avg":
         loss = loss_fn(labels, preds, reduction)
         accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
-        return loss, accuracy
+        cm = metrics.get_cm(preds, labels)
+        return loss, cm, accuracy
     else:
         loss, _ = loss_fn(labels, preds, reduction)
         total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
-        return loss, total_correct, num_pixels
+        cm = metrics.get_cm(preds, labels)
+        return loss, cm, total_correct, num_pixels
+
 
 def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """ Trains the model on the inputs
@@ -98,6 +101,11 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             val_loss = 0
             val_acc = 0
             val_num_pixels = 0
+            train_loss = []
+            train_acc = []
+            #val_loss = []
+            #val_acc = []
+            cm = np.zeros((args.num_classes, args.num_classes)).astype(int)
 
             for split in ['train', 'val']:
                 dl = dataloaders[split]
@@ -112,61 +120,25 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         preds = model(inputs)   
 
                         if split == 'train':
-                            loss, accuracy = evaluate(preds, targets, loss_fn, reduction="avg")
-                            vis_data['train_loss'].append(loss.data)
-                            vis_data['train_acc'].append(accuracy) 
+                            loss, cm, accuracy = evaluate(preds, targets, loss_fn, reduction="avg")
+                            cm += cm_cur
+
+                            train_loss.append(loss.data)
+                            train_acc.append(accuracy)
                             optimizer.zero_grad()
                             loss.backward()
                             optimizer.step()
                         
                         elif split == 'val':
                             loss, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
-                            vis_data['val_loss'].append(loss.item() / num_pixels)
-                            vis_data['val_acc'].append(total_correct / num_pixels)
+                            val_loss.append(loss.item() / num_pixels)
+                            val_acc.append(total_correct / num_pixels)
                             
                             val_loss += loss.item()
                             val_acc += total_correct
                             val_num_pixels += num_pixels
 
                     batch_num += 1
-
-                    if split == 'train':
-                        # For each epoch, update in visdom
-                        vis.line(Y=np.array(vis_data['train_loss']), 
-                	         X=np.array(range(len(vis_data['train_loss']))), 
-			         win='Train Loss',
-			         opts={'legend': ['train_loss'], 
-				       'markers': False,
-				       'title': 'Train loss curve',
-				       'xlabel': 'Batch number',
-				       'ylabel': 'Loss'})
-                        
-                        vis.line(Y=np.array(vis_data['train_acc']), 
-                	         X=np.array(range(len(vis_data['train_acc']))), 
-			         win='Train Accuracy',
-			         opts={'legend': ['train_acc'], 
-				       'markers': False,
-				       'title': 'Training Accuracy',
-				       'xlabel': 'Batch number',
-				       'ylabel': 'Accuracy'})
-                    else:
-                        vis.line(Y=np.array(vis_data['val_loss']), 
-			         X=np.array(range(len(vis_data['val_loss']))), 
-			         win='Val Loss',
-                                 opts={'legend': ['val_loss'], 
-				       'markers': False,
-				       'title': 'Validation loss curve',
-				       'xlabel': 'Batch number',
-                                       'ylabel': 'Loss'})
-                        
-                        vis.line(Y=np.array(vis_data['val_acc']), 
-                	         X=np.array(range(len(vis_data['val_acc']))), 
-			         win='Val Accuracy',
-			         opts={'legend': ['val_acc'], 
-				       'markers': False,
-				       'title': 'Validation Accuracy',
-				       'xlabel': 'Batch number',
-				       'ylabel': 'Accuracy'})
 
 		    # Create and show mask for labeled areas
                     label_mask = np.sum(targets.numpy(), axis=1)
@@ -187,12 +159,12 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 				opts={'title': 'Target Images'})
 
 		    # Show predictions, masked with label mask
-                    
                     disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1)
                     disp_preds = disp_preds+1
                     disp_preds = np.expand_dims(disp_preds, axis=1)
                     disp_preds = visualize.visualize_rgb(disp_preds, args.num_classes) 
                     disp_preds_w_mask = disp_preds * label_mask
+                    
                     vis.images(disp_preds,
 				nrow=n_row,
 				win='Predicted Images',
@@ -201,13 +173,74 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 				nrow=n_row,
 				win='Predicted Images with Label Mask',
 				opts={'title': 'Predicted Images with Label Mask'})
-                if split == "val":
+                
+                if split == 'train':
+                    train_loss = np.mean(train_loss)
+                    train_acc = np.mean(train_acc)
+                    vis_data['train_loss'].append(train_loss)
+                    vis_data['train_acc'].append(train_acc) 
+
+                    # For each epoch, update in visdom
+                    vis.line(Y=np.array(vis_data['train_loss']), 
+            	             X=np.array(range(len(vis_data['train_loss']))),
+			     win='Train Loss',
+			     opts={'legend': ['train_loss'], 
+                                   'markers': False,
+				   'title': 'Train loss curve',
+				   'xlabel': 'Epoch',
+				   'ylabel': 'Loss'})
+                        
+                    vis.line(Y=np.array(vis_data['train_acc']), 
+                	     X=np.array(range(len(vis_data['train_acc']))), 
+			     win='Train Accuracy',
+			     opts={'legend': ['train_acc'], 
+				   'markers': False,
+				   'title': 'Training Accuracy',
+				   'xlabel': 'Epoch',
+				   'ylabel': 'Accuracy'})
+                    
+                    fig = plot_confusion_matrix(cm, CM_CLASSES, 
+                                                normalize=False,
+                                                title='Train Confusion matrix, epoch {}'.format(i),
+                                                cmap=plt.cm.Blues)
+                    vis.matplot(fig, win='Train CM')
+
+                else:
                     val_loss = val_loss / val_num_pixels
                     val_acc = val_acc / val_num_pixels
                     
                     if val_acc > best_val_acc:
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_acc = val_acc
+                    
+                    #val_loss = np.mean(val_loss)
+                    #val_acc = np.mean(val_acc)
+                    vis_data['val_loss'].append(val_loss)
+                    vis_data['val_acc'].append(val_acc)
+
+                    vis.line(Y=np.array(vis_data['val_loss']), 
+			     X=np.array(range(len(vis_data['val_loss']))), 
+			     win='Val Loss',
+                             opts={'legend': ['val_loss'], 
+				   'markers': False,
+				   'title': 'Validation loss curve',
+			           'xlabel': 'Epoch',
+                                   'ylabel': 'Loss'})
+                        
+                    vis.line(Y=np.array(vis_data['val_acc']), 
+            	             X=np.array(range(len(vis_data['val_acc']))), 
+			     win='Val Accuracy',
+	                     opts={'legend': ['val_acc'], 
+				   'markers': False,
+			           'title': 'Validation Accuracy',
+				   'xlabel': 'Batch number',
+				   'ylabel': 'Accuracy'})
+
+                    fig = plot_confusion_matrix(cm, CM_CLASSES, 
+                                                normalize=False,
+                                                title='Validation Confusion matrix, epoch {}'.format(i),
+                                                cmap=plt.cm.Blues)
+                    vis.matplot(fig, win='Val CM')
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")

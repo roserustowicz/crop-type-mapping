@@ -52,6 +52,7 @@ def mask_ce_loss(y_true, y_pred, reduction):
     num_examples = torch.sum(y_true).item()
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
+   
     loss_fn = nn.NLLLoss(reduction="sum")
     total_loss = loss_fn(y_pred, y_true.type(torch.LongTensor).cuda())
     

@@ -12,6 +12,23 @@ import pandas as pd
 import time
 from sklearn.model_selection import GroupShuffleSplit
 
+def bxclxrxc_to_brcxcl(tensor):
+    """
+    Converts a pytorch tensor of shape [batch x classes x rows x cols]  
+      to [batch*rows*cols x classes]
+
+    Args: 
+      tensor - (pytorch tensor) 
+
+    Returns: 
+      tensor 
+    """
+    # [batch x classes x rows x cols] --> [batch x rows x cols x classes]
+    tensor = tensor.permute(0, 2, 3, 1)
+    # [batch x rows x cols x classes] --> [batch*rows*cols x classes]
+    return tensor.contiguous().view(-1, tensor.shape[3])
+    
+
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
@@ -63,10 +80,11 @@ def plot_confusion_matrix(cm, classes,
     """
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Confusion matrix, without normalization')
+        #print("Normalized confusion matrix")
+    #else:
+    #print('Confusion matrix, without normalization')
 
+    fig = plt.figure()
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
@@ -84,7 +102,7 @@ def plot_confusion_matrix(cm, classes,
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     plt.tight_layout()
-
+    return fig
 
 def split_with_group(df, group, train_frac, test_frac, data_cols, lbl_cols, random_seed=None, shuffle=True, save=False):
     """
