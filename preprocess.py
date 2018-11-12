@@ -211,8 +211,10 @@ def takeTimeSlice(arr, timeslice):
 def preprocessGridForCLSTM(grid):
     grid = moveTimeToStart(grid)
     grid = torch.tensor(grid, dtype=torch.float32)
-    for timestamp in grid:
-        transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
+    normalize = transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
+    for timestamp in range(grid.shape[0]):
+        grid[timestamp] = normalize(grid[timestamp])
+    
     """
     for band in range(grid.shape[1]):
         grid[:, band, :, :] = ((grid[:, band, :, :] - S2_BAND_MEANS[band]) / S2_BAND_STDS[band])
