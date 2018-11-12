@@ -4,20 +4,16 @@ Script for training and evaluating a model
 
 """
 import os
-import argparse
-import h5py
 import loss_fns
 import models
 import datetime
 import torch
 import datasets
 import metrics
-import visdom
 import util
 import numpy as np
 
 from constants import *
-from tensorboardX import SummaryWriter
 import visualize
 
 def evaluate_split(model, model_name, split_loader, device):
@@ -38,25 +34,34 @@ def evaluate_split(model, model_name, split_loader, device):
     return total_loss / total_pixels, total_correct / total_pixels
 
 def evaluate(preds, labels, loss_fn, reduction):
-    """ Evalautes the model on the inputs using the labels and loss fn.
+    """ Evalautes loss and metrics for predictions vs labels.
 
     Args:
-        preds - (tf tensor) the inputs the model should use
-        labels - (npy array / tf tensor) the labels for the inputs
-        loss_fn - (function) function that takes preds and labels and outputs some metric
+        preds - (tf tensor) model predictions
+        labels - (npy array / tf tensor) ground truth labels
+        loss_fn - (function) function that takes preds and labels and outputs some loss metric
+        reduction - (str) "avg" or "sum", where "avg" calculates the average accuracy for each batch
+                                          where "sum" tracks total correct and total pixels separately
 
     Returns:
         loss - (float) the loss the model incurs
-        TO BE EXPANDED
+        cm - (nparray) confusion matrix given preds and labels
+        f1 - (float) f1-score
+        accuracy - (float) given "avg" reduction, returns accuracy 
+        total_correct - (int) given "sum" reduction, gives total correct pixels
+        num_pixels - (int) given "sum" reduction, gives total number of valid pixels
     """
+    f1 = metrics.get_f1score(preds, labels)
+    cm = metrics.get_cm(preds, labels)
+
     if reduction == "avg":
         loss = loss_fn(labels, preds, reduction)
         accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
-        return loss, accuracy
+        return loss, cm, f1, accuracy
     else:
         loss, _ = loss_fn(labels, preds, reduction)
         total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
-        return loss, total_correct, num_pixels
+        return loss, cm, f1, total_correct, num_pixels
 
 def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """ Trains the model on the inputs
@@ -79,14 +84,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         if args is None: raise ValueError("Args is NONE")
 
         # set up information lists for visdom    
-        # TODO: Add args to visdom envs default name
-        vis_data = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
-        n_row = NROW
-        if not args.env_name:
-            env_name = "{}".format(args.model_name)
-        else:
-            env_name = args.env_name
-        vis = visdom.Visdom(port=8097, env=env_name)
+        vis_data = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': [], 'train_f1': [], 'val_f1': []}
+        vis = visualize.setup_visdom(args.env_name, args.model_name)
 
         loss_fn = loss_fns.get_loss_fn(args.model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
@@ -99,6 +98,11 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             val_loss = 0
             val_acc = 0
             val_num_pixels = 0
+            
+            all_metrics = {'train_loss': [], 'train_acc': [], 'train_f1': [], 
+                       'train_cm': np.zeros((args.num_classes, args.num_classes)).astype(int),
+                       'val_loss': [], 'val_acc': [], 'val_f1': [],
+                       'val_cm': np.zeros((args.num_classes, args.num_classes)).astype(int)}
 
             for split in ['train', 'val']:
                 dl = dataloaders[split]
@@ -111,98 +115,54 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         inputs.to(args.device)
                         targets.to(args.device)
                         preds = model(inputs)   
-
+                        
                         if split == 'train':
-                            loss, accuracy = evaluate(preds, targets, loss_fn, reduction="avg")
-                            vis_data['train_loss'].append(loss.data)
-                            vis_data['train_acc'].append(accuracy) 
-                            optimizer.zero_grad()
-                            loss.backward()
-                            optimizer.step()
+                            loss, cm_cur, f1, accuracy = evaluate(preds, targets, loss_fn, reduction="avg")
+                            if cm_cur is not None:        
+                                # If there are valid pixels, update weights
+                                optimizer.zero_grad()
+                                loss.backward()
+                                optimizer.step()
                         
                         elif split == 'val':
-                            loss, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
-                            vis_data['val_loss'].append(loss.item() / num_pixels)
-                            vis_data['val_acc'].append(total_correct / num_pixels)
-                            
-                            val_loss += loss.item()
-                            val_acc += total_correct
-                            val_num_pixels += num_pixels
-
+                            loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
+                            if cm_cur is not None:
+                                # If there are valid pixels, update info for val
+                                val_loss += loss.item()
+                                val_acc += total_correct
+                                val_num_pixels += num_pixels
+                        
+                        if cm_cur is not None:
+                            # If there are valid pixels, update metrics
+                            all_metrics[f'{split}_cm'] += cm_cur
+                            all_metrics[f'{split}_loss'].append(loss.data)
+                            all_metrics[f'{split}_acc'].append(accuracy)
+                            all_metrics[f'{split}_f1'].append(f1)
+        
                     batch_num += 1
-
-                    if split == 'train':
-                        # For each epoch, update in visdom
-                        vis.line(Y=np.array(vis_data['train_loss']), 
-                	         X=np.array(range(len(vis_data['train_loss']))), 
-			         win='Train Loss',
-			         opts={'legend': ['train_loss'], 
-				       'markers': False,
-				       'title': 'Train loss curve',
-				       'xlabel': 'Batch number',
-				       'ylabel': 'Loss'})
-                        
-                        vis.line(Y=np.array(vis_data['train_acc']), 
-                	         X=np.array(range(len(vis_data['train_acc']))), 
-			         win='Train Accuracy',
-			         opts={'legend': ['train_acc'], 
-				       'markers': False,
-				       'title': 'Training Accuracy',
-				       'xlabel': 'Batch number',
-				       'ylabel': 'Accuracy'})
-                    else:
-                        vis.line(Y=np.array(vis_data['val_loss']), 
-			         X=np.array(range(len(vis_data['val_loss']))), 
-			         win='Val Loss',
-                                 opts={'legend': ['val_loss'], 
-				       'markers': False,
-				       'title': 'Validation loss curve',
-				       'xlabel': 'Batch number',
-                                       'ylabel': 'Loss'})
-                        
-                        vis.line(Y=np.array(vis_data['val_acc']), 
-                	         X=np.array(range(len(vis_data['val_acc']))), 
-			         win='Val Accuracy',
-			         opts={'legend': ['val_acc'], 
-				       'markers': False,
-				       'title': 'Validation Accuracy',
-				       'xlabel': 'Batch number',
-				       'ylabel': 'Accuracy'})
 
 		    # Create and show mask for labeled areas
                     label_mask = np.sum(targets.numpy(), axis=1)
                     label_mask = np.expand_dims(label_mask, axis=1)
-                    vis.images(label_mask,
-				nrow=n_row,
-				win='Label Masks',
-				opts={'title': 'Label Masks'})
+                    visualize.visdom_plot_images(vis, label_mask, 'Label Masks')
 
 	            # Show targets (labels)
                     disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
                     disp_targets = np.argmax(disp_targets, axis=1) 
                     disp_targets = np.expand_dims(disp_targets, axis=1)
                     disp_targets = visualize.visualize_rgb(disp_targets, args.num_classes)
-                    vis.images(disp_targets,
-				nrow=n_row,
-				win='Target Images',
-				opts={'title': 'Target Images'})
+                    visualize.visdom_plot_images(vis, disp_targets, 'Target Images')
 
 		    # Show predictions, masked with label mask
-                    
-                    disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1)
-                    disp_preds = disp_preds+1
+                    disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1) + 1
                     disp_preds = np.expand_dims(disp_preds, axis=1)
                     disp_preds = visualize.visualize_rgb(disp_preds, args.num_classes) 
                     disp_preds_w_mask = disp_preds * label_mask
-                    vis.images(disp_preds,
-				nrow=n_row,
-				win='Predicted Images',
-				opts={'title': 'Predicted Images'})
-                    vis.images(disp_preds_w_mask,
-				nrow=n_row,
-				win='Predicted Images with Label Mask',
-				opts={'title': 'Predicted Images with Label Mask'})
-                if split == "val":
+
+                    visualize.visdom_plot_images(vis, disp_preds, 'Predicted Images')    
+                    visualize.visdom_plot_images(vis, disp_preds_w_mask, 'Predicted Images with Label Mask')
+                
+                if split == 'val':
                     val_loss = val_loss / val_num_pixels
                     lr_scheduler.step(val_loss)
                     val_acc = val_acc / val_num_pixels
@@ -210,6 +170,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     if val_acc > best_val_acc:
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_acc = val_acc
+                
+                visualize.record_batch(all_metrics, split, vis_data, vis, i)
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
@@ -233,7 +195,7 @@ if __name__ == "__main__":
     if args.name is None:
         args.name = str(datetime.datetime.now()) + "_" + args.model_name
 
-# train model
+    # train model
     train(model, args.model_name, args, dataloaders=dataloaders)
     
     # evaluate model

@@ -5,7 +5,66 @@ File for visualizing model performance.
 """
 
 import numpy as np
+import matplotlib.pyplot as plt
+import visdom
+
 import preprocess
+import util
+from constants import * 
+
+def setup_visdom(env_name, model_name):
+    # TODO: Add args to visdom envs default name
+    if not env_name:
+        env_name = "{}".format(model_name)
+    else:
+        env_name = env_name
+    return visdom.Visdom(port=8097, env=env_name)
+
+def visdom_plot_metric(metric_name, split, title, x_label, y_label, vis_data, vis):
+    """
+    Args: 
+      metric_name - "loss", "acc", "f1"
+    """
+    vis.line(Y=np.array(vis_data['{}_{}'.format(split, metric_name)]),
+             X=np.array(range(len(vis_data['{}_{}'.format(split, metric_name)]))),
+             win=title,
+             opts={'legend': ['{}_{}'.format(split, metric_name)],
+                   'markers': False, 
+                   'title': title,
+                   'xlabel': x_label,
+                   'ylabel': y_label})
+    
+
+def visdom_plot_images(vis, imgs, win):
+    """
+    Plot image panel in visdom
+    Args: 
+      imgs - (array) array of images [batch x channels x rows x cols]
+      win - (str) serves as both window name and title name
+    """
+    vis.images(imgs, nrow=NROW, win=win, 
+               opts={'title': win})
+
+def record_batch(all_metrics, split, vis_data, vis, epoch_num):
+    """
+    """
+    if all_metrics[f'{split}_loss'] is not None: loss_batch = np.mean(all_metrics[f'{split}_loss'])
+    if all_metrics[f'{split}_acc'] is not None: acc_batch = np.mean(all_metrics[f'{split}_acc'])
+    if all_metrics[f'{split}_f1'] is not None: f1_batch = np.mean(all_metrics[f'{split}_f1'])
+
+    vis_data[f'{split}_loss'].append(loss_batch)
+    vis_data[f'{split}_acc'].append(acc_batch)
+    vis_data[f'{split}_f1'].append(f1_batch)
+
+    visdom_plot_metric('loss', split, f'{split} Loss', 'Epoch', 'Loss', vis_data, vis)
+    visdom_plot_metric('acc', split, f'{split} Accuracy', 'Epoch', 'Accuracy', vis_data, vis)
+    visdom_plot_metric('f1', split, f'{split} f1-score', 'Epoch', 'f1-score', vis_data, vis)
+               
+    fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], CM_CLASSES,
+                                     normalize=False,
+                                     title='{} confusion matrix, epoch {}'.format(split, epoch_num),
+                                     cmap=plt.cm.Blues)
+    vis.matplot(fig, win=f'{split} CM')
 
 def visualize_rgb(argmax_array, num_classes, class_colors=None): 
     mask = []

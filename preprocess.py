@@ -29,15 +29,52 @@ def reshapeForLoss(y):
     return y
 
 def maskForLoss(y_pred, y_true):
+    """
+    Masks y_pred and y_true with valid pixel locations. 
+    
+    Args:
+      y_pred - 
+      y_true - 
+    
+    Returns: 
+      y_pred - 
+      y_true - 
+    """
     loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
+
     loss_mask_repeat = loss_mask.unsqueeze(1).repeat(1,y_pred.shape[1]).type(torch.FloatTensor).cuda()
+    y_pred = y_pred * loss_mask_repeat
    
     # take argmax to get true values from one-hot encoding 
-    vals, y_true = torch.max(y_true, dim=1)
+    _, y_true = torch.max(y_true, dim=1)
     y_true = y_true * loss_mask
-    y_pred = y_pred * loss_mask_repeat
 
     return y_pred, y_true
+
+def maskForMetric(y_pred, y_true):
+    """
+    Masks y_pred and y_true with valid pixel locations for metric calculations
+
+    Args: 
+      y_pred - 
+      y_true - 
+
+    Returns: 
+      y_pred - 
+      y_true - 
+    """
+    # Create mask for valid pixel locations
+    loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
+
+    # Take argmax for labels and targets
+    _, y_true = torch.max(y_true, dim=1)
+    _, y_pred = torch.max(y_pred, dim=1)
+
+    # Get only valid locations
+    y_true = y_true[loss_mask == 1]
+    y_pred = y_pred[loss_mask == 1]
+    return y_pred, y_true
+
 def onehot_mask(mask, num_classes):
     """
     Return a one-hot version of the mask for a grid
@@ -211,8 +248,10 @@ def takeTimeSlice(arr, timeslice):
 def preprocessGridForCLSTM(grid):
     grid = moveTimeToStart(grid)
     grid = torch.tensor(grid, dtype=torch.float32)
-    for timestamp in grid:
-        transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
+    normalize = transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
+    for timestamp in range(grid.shape[0]):
+        grid[timestamp] = normalize(grid[timestamp])
+    
     """
     for band in range(grid.shape[1]):
         grid[:, band, :, :] = ((grid[:, band, :, :] - S2_BAND_MEANS[band]) / S2_BAND_STDS[band])
@@ -294,7 +333,7 @@ def remap_cloud_stack(cloud_stack):
     remapped_cloud_stack[cloud_stack == 3] = 1
     return remapped_cloud_stack
 
-def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False):
+def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
@@ -305,6 +344,9 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
       cloud_stack - (numpy array) [rows x cols x timestamps], temporal stack of cloud masks
       reverse - (boolean) take 1 - probabilities, encourages cloudy images to be sampled
       seed - (int) a random seed for sampling
+      verbose - 
+      timestamps_first - 
+      least_cloudy - (bool) if true, take the least cloudy images rather than sampling with probability
 
     Returns:
       sampled_img_stack - (numpy array) [bands x rows x cols x num_samples], temporal stack
@@ -346,11 +388,15 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     if reverse:
         scores = 3 - scores
 
-    # Compute probabilities of scores with softmax
-    probabilities = softmax(scores)
+    if least_cloudy:
+        samples = scores.argsort()[-num_samples:]
+    else:
+        # Compute probabilities of scores with softmax
+        probabilities = softmax(scores)
 
-    # Sample from timestamp indices according to probabilities
-    samples = np.random.choice(timestamps, size=num_samples, replace=False, p=probabilities)
+        # Sample from timestamp indices according to probabilities
+        samples = np.random.choice(timestamps, size=num_samples, replace=False, p=probabilities)
+    
     # Sort samples to maintain sequential ordering
     samples.sort()
 
