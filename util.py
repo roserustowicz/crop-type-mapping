@@ -274,7 +274,7 @@ def get_train_parser():
                         required=True)
     parser.add_argument('--hdf5_filepath', type=str,
                         help="full path to hdf5 data file",
-                        default="data/ghana/data.hdf5")
+                        default="/home/data/ghana/data.hdf5")
     parser.add_argument('--dataset', type=str,
                         help="Full or small?",
                         choices=('full', 'small'),
@@ -284,7 +284,7 @@ def get_train_parser():
                         default="ghana")
     parser.add_argument('--grid_dir', type=str,
                         help="full path to directory containing grid splits",
-                        default="data/ghana")
+                        default="/home/data/ghana")
     parser.add_argument('--epochs', type=int,
                         help="# of times to train over the dataset")
     parser.add_argument('--batch_size', type=int,
