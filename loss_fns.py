@@ -15,7 +15,7 @@ from constants import *
 def get_loss_fn(model_name):
     return focal_loss
 
-def focal_loss(y_true, y_pred, gamma=2):
+def focal_loss(y_true, y_pred, reduction, gamma=2):
     y_true = preprocess.reshapeForLoss(y_true)
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
@@ -33,7 +33,10 @@ def focal_loss(y_true, y_pred, gamma=2):
     y = focal_loss * nll_loss
     loss = torch.sum(focal_loss * nll_loss)
     num_examples = torch.sum(y_true, dtype=torch.float32)
-    return loss / num_examples
+    if reduction == "sum":
+        return loss, num_examples
+    else:
+        return loss / num_examples
 
 
 def mask_ce_loss(y_true, y_pred, reduction):
@@ -60,7 +63,7 @@ def mask_ce_loss(y_true, y_pred, reduction):
     else:
         return total_loss / num_examples
 
-def get_optimizer(params, optimizer_name, lr, momentum, lrdecay):
+def get_optimizer(params, optimizer_name, lr, momentum, weight_decay):
     if optimizer_name == "sgd":
         return optim.SGD(params, lr=lr, momentum=momentum, weight_decay=weight_decay)
     elif optimizer_name == "adam":

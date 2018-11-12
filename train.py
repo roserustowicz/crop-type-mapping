@@ -15,6 +15,7 @@ import metrics
 import visdom
 import util
 import numpy as np
+import matplotlib.pyplot as plt
 
 from constants import *
 from tensorboardX import SummaryWriter
@@ -89,8 +90,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         vis = visdom.Visdom(port=8097, env=env_name)
 
         loss_fn = loss_fns.get_loss_fn(args.model_name)
-        optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay, args.lrdecay)
-        
+        optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
+        grad_norms = []
         best_val_acc = 0
 
         for i in range(args.epochs):
@@ -117,6 +118,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             vis_data['train_acc'].append(accuracy) 
                             optimizer.zero_grad()
                             loss.backward()
+                            grad = list(model.parameters())[0].grad.view(-1).cpu().numpy()
+                            grad_norm = np.linalg.norm(grad)
+                            print(grad_norm)
+                            grad_norms.append(grad_norm)
                             optimizer.step()
                         
                         elif split == 'val':
@@ -208,7 +213,17 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     if val_acc > best_val_acc:
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_acc = val_acc
+        
+        fig = plt.hist(grad_norms, bins=range(0, 20))
+        plt.title("Counts of L2 Norm of Grads")
+        plt.xlabel("L2 Norm of a batch")
+        plt.ylabel("Counts")
+        plt.savefig("grad_hist.png")
 
+        grad_norms = np.array(grad_norms)
+        print("TOTAL NUM BATCHES", len(grad_norms))
+        print("TOTAL BATCHES WITH 0 GRAD: ", len(grad_norms[grad_norms < 1e-10]))
+        print("TOTAL BATCHES WITH < 1e-5 GRAD: ", len(grad_norms[grad_norms < 1e-5]))
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
 
@@ -217,7 +232,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 if __name__ == "__main__":
     # parse args
     parser = util.get_train_parser()
-
     args = parser.parse_args()
 
     # load in data generator
