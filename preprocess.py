@@ -30,14 +30,31 @@ def reshapeForLoss(y):
 
 def maskForLoss(y_pred, y_true):
     loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
+
     loss_mask_repeat = loss_mask.unsqueeze(1).repeat(1,y_pred.shape[1]).type(torch.FloatTensor).cuda()
+    y_pred = y_pred * loss_mask_repeat
    
     # take argmax to get true values from one-hot encoding 
-    vals, y_true = torch.max(y_true, dim=1)
+    _, y_true = torch.max(y_true, dim=1)
     y_true = y_true * loss_mask
-    y_pred = y_pred * loss_mask_repeat
 
     return y_pred, y_true
+
+def maskForMetric(y_pred, y_true):
+    """
+    """
+    # Create mask for valid pixel locations
+    loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
+
+    # Take argmax for labels and targets
+    _, y_true = torch.max(y_true, dim=1)
+    _, y_pred = torch.max(y_pred, dim=1)
+
+    # Get only valid locations
+    y_true = y_true[loss_mask == 1]
+    y_pred = y_pred[loss_mask == 1]
+    return y_pred, y_true
+
 def onehot_mask(mask, num_classes):
     """
     Return a one-hot version of the mask for a grid

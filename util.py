@@ -12,23 +12,6 @@ import pandas as pd
 import time
 from sklearn.model_selection import GroupShuffleSplit
 
-def bxclxrxc_to_brcxcl(tensor):
-    """
-    Converts a pytorch tensor of shape [batch x classes x rows x cols]  
-      to [batch*rows*cols x classes]
-
-    Args: 
-      tensor - (pytorch tensor) 
-
-    Returns: 
-      tensor 
-    """
-    # [batch x classes x rows x cols] --> [batch x rows x cols x classes]
-    tensor = tensor.permute(0, 2, 3, 1)
-    # [batch x rows x cols x classes] --> [batch*rows*cols x classes]
-    return tensor.contiguous().view(-1, tensor.shape[3])
-    
-
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True

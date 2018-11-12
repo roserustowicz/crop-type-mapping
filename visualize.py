@@ -5,7 +5,31 @@ File for visualizing model performance.
 """
 
 import numpy as np
+import visdom
+
 import preprocess
+from constants import * 
+
+def setup_visdom(env_name, model_name):
+    # TODO: Add args to visdom envs default name
+    if not env_name:
+        env_name = "{}".format(model_name)
+    else:
+        env_name = env_name
+    return visdom.Visdom(port=8097, env=env_name)
+
+#def vis_plot_metric(metric_name, title, x_label, y_label, vis_data)
+
+
+def vis_plot_images(vis, imgs, win):
+    """
+    Plot image panel in visdom
+    Args: 
+      imgs - (array) array of images [batch x channels x rows x cols]
+      win - (str) serves as both window name and title name
+    """
+    vis.images(imgs, nrow=NROW, win=win, 
+               opts={'title': win})
 
 def visualize_rgb(argmax_array, num_classes, class_colors=None): 
     mask = []
