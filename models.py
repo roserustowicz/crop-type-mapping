@@ -197,7 +197,6 @@ def make_fcn_model(n_class, n_channel):
     
     return fcn8s
 
-
 def make_UNet_model(n_class, n_channel):
     model = UNet(n_class, n_channel)
     model = model.cuda()
@@ -283,6 +282,25 @@ class UNet(nn.Module):
         final = torch.log(final)
         return final
 
+def make_fcn_clstm_model(n_channel, input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
+    fcn_crnn = FCN_CRNN(n_channel, input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
+    return fcn_crnn
+
+class FCN_CRNN(nn.Module):
+    def __init__(self, n_channel, input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
+        super(FCN_CRNN, self).__init__()
+        
+        self.fcn = FCN8s_croptype(num_classes, n_channel)
+        self.crnn = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
+
+    def forward(self, input_tensor):
+        batch, timestamps, bands, rows, cols = input_tensor.size()
+        fcn_input = input_tensor.view(batch * timestamps, bands, rows, cols)
+        fcn_output = self.fcn(fcn_input)
+  
+        crnn_input = fcn_output.view(batch, timestamps, -1, rows, cols)
+        preds = self.crnn(crnn_input)
+        return preds
     
 class FCN8s_croptype(nn.Module):
     '''
@@ -609,7 +627,7 @@ def get_model(model_name, **kwargs):
                                         n_jobs=kwargs.get('n_jobs', -1),
                                         n_estimators=kwargs.get('n_estimators', 50))
 
-    if model_name == 'bidir_clstm':
+    elif model_name == 'bidir_clstm':
         num_bands = -1
         if kwargs.get('use_s1') and kwargs.get('use_s2'):
             num_bands = S1_NUM_BANDS + S2_NUM_BANDS
@@ -628,7 +646,7 @@ def get_model(model_name, **kwargs):
                                        conv_kernel_size=kwargs.get('conv_kernel_size'), 
                                        lstm_num_layers=kwargs.get('crnn_num_layers'),
                                        num_classes=kwargs.get('num_classes'))
-    if model_name == 'fcn':
+    elif model_name == 'fcn':
         num_bands = -1
         if kwargs.get('use_s1') and kwargs.get('use_s2'):
             num_bands = S1_NUM_BANDS + S2_NUM_BANDS
@@ -657,6 +675,25 @@ def get_model(model_name, **kwargs):
             model = make_UNet_model(n_class=kwargs.get('num_classes'), n_channel = num_bands*MIN_TIMESTAMPS)
         else: 
             model = make_UNet_model(n_class=kwargs.get('num_classes'), n_channel = num_bands)
+    
+    elif model_name == 'fcn_crnn':
+        num_bands = -1
+        if kwargs.get('use_s1') and kwargs.get('use_s2'):
+            num_bands = S1_NUM_BANDS + S2_NUM_BANDS
+        elif kwargs.get('use_s1'):
+            num_bands = S1_NUM_BANDS
+        elif kwargs.get('use_s2'):
+            num_bands = S2_NUM_BANDS
+        else:
+            raise ValueError("S1 / S2 usage not specified in args!")
 
+        model = make_fcn_clstm_model(n_channel=num_bands, 
+                                     input_size=(MIN_TIMESTAMPS, num_bands, GRID_SIZE, GRID_SIZE), 
+                                     hidden_dims=kwargs.get('hidden_dims'), 
+                                     lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
+                                     conv_kernel_size=kwargs.get('conv_kernel_size'), 
+                                     lstm_num_layers=kwargs.get('crnn_num_layers'), 
+                                     num_classes=kwargs.get('num_classes'))
+  
     return model
 
