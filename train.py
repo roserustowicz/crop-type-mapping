@@ -1,4 +1,4 @@
-"""/
+"""
 
 Script for training and evaluating a model
 
