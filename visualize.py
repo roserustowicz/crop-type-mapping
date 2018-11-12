@@ -72,8 +72,6 @@ def record_batch(targets, preds, num_classes, split, vis_data, vis):
         visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
 
 
-
-
 def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
     """
     """

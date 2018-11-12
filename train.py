@@ -150,33 +150,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
                     batch_num += 1
 
-                    """
-		    # Create and show mask for labeled areas
-                    label_mask = np.sum(targets.numpy(), axis=1)
-                    label_mask = np.expand_dims(label_mask, axis=1)
-                    visualize.visdom_plot_images(vis, label_mask, 'Label Masks')
-
-	            # Show targets (labels)
-                    disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
-                    disp_targets = np.argmax(disp_targets, axis=1) 
-                    disp_targets = np.expand_dims(disp_targets, axis=1)
-                    disp_targets = visualize.visualize_rgb(disp_targets, args.num_classes)
-                    visualize.visdom_plot_images(vis, disp_targets, 'Target Images')
-
-		    # Show predictions, masked with label mask
-                    disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1) + 1
-                    disp_preds = np.expand_dims(disp_preds, axis=1)
-                    disp_preds = visualize.visualize_rgb(disp_preds, args.num_classes) 
-                    disp_preds_w_mask = disp_preds * label_mask
-
-                    visualize.visdom_plot_images(vis, disp_preds, 'Predicted Images')    
-                    visualize.visdom_plot_images(vis, disp_preds_w_mask, 'Predicted Images with Label Mask')
-                
-                    # Show gradnorm per batch
-                    if split == 'train':
-                        visualize.visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
-                     """
-
                 if split == 'val':
                     val_loss = val_loss / val_num_pixels
                     lr_scheduler.step(val_loss)
