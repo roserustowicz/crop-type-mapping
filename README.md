@@ -7,4 +7,4 @@ To use visdom for visualization, open a separate terminal and run the following 
 
 Replace local host with the static IP address provided on google cloud
 
-
+The main script is contained within `train.py`
