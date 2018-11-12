@@ -28,6 +28,7 @@ class CropTypeDS(Dataset):
         self.use_s2 = args.use_s2
         self.num_classes = args.num_classes
         self.split = split
+        self.apply_transforms = args.apply_transforms
         ## Timeslice for FCN
         self.timeslice = args.time_slice
 
@@ -43,12 +44,15 @@ class CropTypeDS(Dataset):
             if self.use_s2:
                 s2 = data['s2'][self.grid_list[idx]][()]
             
+            transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
+
             grid = concat_s1_s2(s1, s2)
-            grid = preprocess_grid(grid, self.model_name, self.timeslice)
+            grid = preprocess_grid(grid, self.model_name, self.timeslice, transform)
             label = data['labels'][self.grid_list[idx]][()]
-            label = preprocess_label(label, self.model_name, self.num_classes) 
+            label = preprocess_label(label, self.model_name, self.num_classes, transform) 
 
         return grid, label
+
 class GridDataLoader(DataLoader):
 
     def __init__(self, args, grid_path, split):
