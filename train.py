@@ -88,12 +88,13 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         vis = visualize.setup_visdom(args.env_name, args.model_name)
 
         loss_fn = loss_fns.get_loss_fn(args.model_name)
-        optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay, args.lrdecay)
-        
+        optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)
         best_val_acc = 0
 
         for i in range(args.epochs):
-            
+            for param_group in optimizer.param_groups:
+                print(param_group['lr'])
             val_loss = 0
             val_acc = 0
             val_num_pixels = 0
@@ -163,6 +164,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 
                 if split == 'val':
                     val_loss = val_loss / val_num_pixels
+                    lr_scheduler.step(val_loss)
                     val_acc = val_acc / val_num_pixels
                     
                     if val_acc > best_val_acc:

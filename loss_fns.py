@@ -18,6 +18,7 @@ def get_loss_fn(model_name):
 def focal_loss(y_true, y_pred, reduction, gamma=2):
     """
     """ 
+
     y_true = preprocess.reshapeForLoss(y_true)
     num_examples = torch.sum(y_true, dtype=torch.float32).cuda()
 
@@ -36,7 +37,6 @@ def focal_loss(y_true, y_pred, reduction, gamma=2):
     focal_loss = focal_loss.view(-1)
     y = focal_loss * nll_loss
     loss = torch.sum(focal_loss * nll_loss)
-    
     if reduction == "sum":
         if num_examples == 0:
             return None, 0
@@ -48,6 +48,7 @@ def focal_loss(y_true, y_pred, reduction, gamma=2):
         else:
             return loss / num_examples
 
+          
 def mask_ce_loss(y_true, y_pred, reduction):
     """
     Args:
@@ -79,7 +80,7 @@ def mask_ce_loss(y_true, y_pred, reduction):
         else:
             return total_loss / (num_examples)
 
-def get_optimizer(params, optimizer_name, lr, momentum, weight_decay, lrdecay):
+def get_optimizer(params, optimizer_name, lr, momentum, weight_decay):
     if optimizer_name == "sgd":
         return optim.SGD(params, lr=lr, momentum=momentum, weight_decay=weight_decay)
     elif optimizer_name == "adam":

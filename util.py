@@ -274,7 +274,7 @@ def get_train_parser():
                         required=True)
     parser.add_argument('--hdf5_filepath', type=str,
                         help="full path to hdf5 data file",
-                        default="/home/data/ghana/data.hdf5")
+                        default="data/ghana/data.hdf5")
     parser.add_argument('--dataset', type=str,
                         help="Full or small?",
                         choices=('full', 'small'),
@@ -284,7 +284,7 @@ def get_train_parser():
                         default="ghana")
     parser.add_argument('--grid_dir', type=str,
                         help="full path to directory containing grid splits",
-                        default="/home/data/ghana")
+                        default="data/ghana")
     parser.add_argument('--epochs', type=int,
                         help="# of times to train over the dataset")
     parser.add_argument('--batch_size', type=int,
@@ -343,7 +343,14 @@ def get_train_parser():
                         help="which time slice for training FCN",
                         default=None)    
     parser.add_argument('--weight_decay', type=float,
-                        help="l2 regularization weight")
+                        help="l2 regularization weight",
+                        default=0)
+    parser.add_argument('--lr_decay', type=float,
+                        help="Factor to multiply lr by on decay",
+                        default=.5)
+    parser.add_argument('--patience', type=int,
+                        help="Number of epochs before decreasing lr.",
+                        default=3)
     parser.add_argument('--env_name', type=str, default=None,
                          help="Environment name for visdom visualization")
     parser.add_argument('--snapshot', type=bool, default=False, 
