@@ -84,7 +84,11 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         if args is None: raise ValueError("Args is NONE")
 
         # set up information lists for visdom    
-        vis_data = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': [], 'train_f1': [], 'val_f1': []}
+        vis_data = {'train_loss': [], 'val_loss': [], 
+                    'train_acc': [], 'val_acc': [], 
+                    'train_f1': [], 'val_f1': [], 
+                    'train_gradnorm': []}
+        
         vis = visualize.setup_visdom(args.env_name, args.model_name)
 
         loss_fn = loss_fns.get_loss_fn(args.model_name)
@@ -123,6 +127,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                 optimizer.zero_grad()
                                 loss.backward()
                                 optimizer.step()
+
+                                gradnorm = torch.norm(list(model.parameters())[0].grad)
+                                vis_data['train_gradnorm'].append(gradnorm)
                         
                         elif split == 'val':
                             loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
@@ -139,29 +146,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             all_metrics[f'{split}_acc'].append(accuracy)
                             all_metrics[f'{split}_f1'].append(f1)
         
+                    visualize.record_batch(targets, preds, args.num_classes, split, vis_data, vis)
+
                     batch_num += 1
 
-		    # Create and show mask for labeled areas
-                    label_mask = np.sum(targets.numpy(), axis=1)
-                    label_mask = np.expand_dims(label_mask, axis=1)
-                    visualize.visdom_plot_images(vis, label_mask, 'Label Masks')
-
-	            # Show targets (labels)
-                    disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
-                    disp_targets = np.argmax(disp_targets, axis=1) 
-                    disp_targets = np.expand_dims(disp_targets, axis=1)
-                    disp_targets = visualize.visualize_rgb(disp_targets, args.num_classes)
-                    visualize.visdom_plot_images(vis, disp_targets, 'Target Images')
-
-		    # Show predictions, masked with label mask
-                    disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1) + 1
-                    disp_preds = np.expand_dims(disp_preds, axis=1)
-                    disp_preds = visualize.visualize_rgb(disp_preds, args.num_classes) 
-                    disp_preds_w_mask = disp_preds * label_mask
-
-                    visualize.visdom_plot_images(vis, disp_preds, 'Predicted Images')    
-                    visualize.visdom_plot_images(vis, disp_preds_w_mask, 'Predicted Images with Label Mask')
-                
                 if split == 'val':
                     val_loss = val_loss / val_num_pixels
                     lr_scheduler.step(val_loss)
@@ -171,7 +159,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_acc = val_acc
                 
-                visualize.record_batch(all_metrics, split, vis_data, vis, i)
+                visualize.record_epoch(all_metrics, split, vis_data, vis, i)
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
