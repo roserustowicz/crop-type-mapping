@@ -161,7 +161,7 @@ def retrieve_grid(grid_name, country):
     grid = None
     return grid
 
-def preprocess_grid(grid, model_name, time_slice = None):
+def preprocess_grid(grid, model_name, time_slice=None, transform=False):
     """ Returns a preprocessed version of the grid based on the model.
 
     Args:
@@ -171,7 +171,7 @@ def preprocess_grid(grid, model_name, time_slice = None):
     """
 
     if model_name == "bidir_clstm":
-        return preprocessGridForCLSTM(grid)
+        return preprocessGridForCLSTM(grid, transform)
     
     if model_name == "fcn":
         return preprocessGridForFCN(grid, time_slice)
@@ -200,13 +200,16 @@ def preprocess_label(label, model_name, num_classes=None):
 
     raise ValueError(f'Model: {model_name} unsupported')
     
-def preprocessLabelForCLSTM(label, num_classes):
+def preprocessLabelForCLSTM(label, num_classes, transform):
     """ Converts to onehot encoding and shifts channels to be first dim.
 
     Args:
         label - (npy arr) [64x64] categorical labels for each pixel
         num_classes - (npy arr) number of classes 
     """
+    if transform:
+        label = np.fliplr(grid)
+        label = np.rot90(grid, k=np.random.randint(0,4))
 
     label = onehot_mask(label, num_classes)
     label =  np.transpose(label, [2, 0, 1])
@@ -226,6 +229,26 @@ def preprocessLabelForFCN(label, num_classes):
     label = torch.tensor(label, dtype=torch.float32)
     return label
 
+def preprocessGridForCLSTM(grid, transform):
+    grid = moveTimeToStart(grid)
+    if transform:
+        grid = np.fliplr(grid)
+        grid = np.rot90(grid, k=np.random.randint(0, 4), axes=(1, 2, 3))
+    grid = torch.tensor(grid, dtype=torch.float32)
+    normalize = transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
+    for timestamp in range(grid.shape[0]):
+        grid[timestamp] = normalize(grid[timestamp])
+    
+    """
+    for band in range(grid.shape[1]):
+        grid[:, band, :, :] = ((grid[:, band, :, :] - S2_BAND_MEANS[band]) / S2_BAND_STDS[band])
+        """
+    return grid
+
+def preprocessGridForFCN(grid, time_slice):
+    grid = takeTimeSlice(grid, time_slice)
+    return grid
+    
 def moveTimeToStart(arr):
     """ Moves time axis to the first dim.
     
@@ -244,24 +267,6 @@ def takeTimeSlice(arr, timeslice):
     arr = np.transpose(arr, [3, 0, 1, 2])
     arr_slice = arr[timeslice,:,:,:]
     return arr_slice
-
-def preprocessGridForCLSTM(grid):
-    grid = moveTimeToStart(grid)
-    grid = torch.tensor(grid, dtype=torch.float32)
-    normalize = transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
-    for timestamp in range(grid.shape[0]):
-        grid[timestamp] = normalize(grid[timestamp])
-    
-    """
-    for band in range(grid.shape[1]):
-        grid[:, band, :, :] = ((grid[:, band, :, :] - S2_BAND_MEANS[band]) / S2_BAND_STDS[band])
-        """
-    return grid
-
-def preprocessGridForFCN(grid, time_slice):
-    grid = takeTimeSlice(grid, time_slice)
-    return grid
-    
 
 def truncateToSmallestLength(batch):
     """ Truncates len of all sequences to MIN_TIMESTAMPS.
