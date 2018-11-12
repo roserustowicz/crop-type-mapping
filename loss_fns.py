@@ -15,8 +15,12 @@ from constants import *
 def get_loss_fn(model_name):
     return focal_loss
 
-def focal_loss(y_true, y_pred, gamma=2):
+def focal_loss(y_true, y_pred, reduction, gamma=2):
+    """
+    """ 
     y_true = preprocess.reshapeForLoss(y_true)
+    num_examples = torch.sum(y_true, dtype=torch.float32).cuda()
+
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
     y_true = y_true.type(torch.LongTensor).cuda()
@@ -28,13 +32,21 @@ def focal_loss(y_true, y_pred, gamma=2):
     # tricky line, essentially gathers the predictions for the correct class and takes e^{pred} to undo 
     # log operation 
     # .view(-1) necessary to get correct shape
-    focal_loss = (1 - torch.exp(torch.gather(y_pred, dim=1, index=y_true.view(-1, 1)))) ** gamma
+    focal_loss = (1 - torch.exp(x)) ** gamma
     focal_loss = focal_loss.view(-1)
     y = focal_loss * nll_loss
     loss = torch.sum(focal_loss * nll_loss)
-    num_examples = torch.sum(y_true, dtype=torch.float32)
-    return loss / num_examples
-
+    
+    if reduction == "sum":
+        if num_examples == 0:
+            return None, 0
+        else:
+            return loss, num_examples
+    else:
+        if num_examples == 0:
+            return None
+        else:
+            return loss / num_examples
 
 def mask_ce_loss(y_true, y_pred, reduction):
     """
@@ -52,15 +64,22 @@ def mask_ce_loss(y_true, y_pred, reduction):
     num_examples = torch.sum(y_true).item()
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
+   
     loss_fn = nn.NLLLoss(reduction="sum")
     total_loss = loss_fn(y_pred, y_true.type(torch.LongTensor).cuda())
-    
+   
     if reduction == "sum":
-        return total_loss, num_examples
+        if num_examples == 0:
+            return None, 0
+        else:
+            return total_loss, num_examples
     else:
-        return total_loss / num_examples
+        if num_examples == 0:
+            return None
+        else:
+            return total_loss / (num_examples)
 
-def get_optimizer(params, optimizer_name, lr, momentum, lrdecay):
+def get_optimizer(params, optimizer_name, lr, momentum, weight_decay, lrdecay):
     if optimizer_name == "sgd":
         return optim.SGD(params, lr=lr, momentum=momentum, weight_decay=weight_decay)
     elif optimizer_name == "adam":
