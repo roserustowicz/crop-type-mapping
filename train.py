@@ -4,8 +4,6 @@ Script for training and evaluating a model
 
 """
 import os
-import argparse
-import h5py
 import loss_fns
 import models
 import datetime
@@ -14,10 +12,8 @@ import datasets
 import metrics
 import util
 import numpy as np
-import matplotlib.pyplot as plt
 
 from constants import *
-from tensorboardX import SummaryWriter
 import visualize
 
 def evaluate_split(model, model_name, split_loader, device):
@@ -102,7 +98,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             val_acc = 0
             val_num_pixels = 0
             
-            metrics = {'train_loss': [], 'train_acc': [], 'train_f1': [], 
+            all_metrics = {'train_loss': [], 'train_acc': [], 'train_f1': [], 
                        'train_cm': np.zeros((args.num_classes, args.num_classes)).astype(int),
                        'val_loss': [], 'val_acc': [], 'val_f1': [],
                        'val_cm': np.zeros((args.num_classes, args.num_classes)).astype(int)}
@@ -137,10 +133,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         
                         if cm_cur is not None:
                             # If there are valid pixels, update metrics
-                            metrics[f'{split}_cm'] += cm_cur
-                            metrics[f'{split}_loss'].append(loss.data)
-                            metrics[f'{split}_acc'].append(accuracy)
-                            metrics[f'{split}_f1'].append(f1)
+                            all_metrics[f'{split}_cm'] += cm_cur
+                            all_metrics[f'{split}_loss'].append(loss.data)
+                            all_metrics[f'{split}_acc'].append(accuracy)
+                            all_metrics[f'{split}_f1'].append(f1)
         
                     batch_num += 1
 
@@ -173,23 +169,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_acc = val_acc
                 
-                if metrics[f'{split}_loss'] is not None: loss_batch = np.mean(metrics[f'{split}_loss'])
-                if metrics[f'{split}_acc'] is not None: acc_batch = np.mean(metrics[f'{split}_acc'])
-                if metrics[f'{split}_f1'] is not None: f1_batch = np.mean(metrics[f'{split}_f1'])
-                    
-                vis_data[f'{split}_loss'].append(loss_batch)
-                vis_data[f'{split}_acc'].append(acc_batch)
-                vis_data[f'{split}_f1'].append(f1_batch)
-
-                visualize.visdom_plot_metric('loss', split, f'{split} Loss', 'Epoch', 'Loss', vis_data, vis)
-                visualize.visdom_plot_metric('acc', split, f'{split} Accuracy', 'Epoch', 'Accuracy', vis_data, vis)
-                visualize.visdom_plot_metric('f1', split, f'{split} f1-score', 'Epoch', 'f1-score', vis_data, vis)
- 
-                fig = util.plot_confusion_matrix(metrics[f'{split}_cm'], CM_CLASSES, 
-                                                 normalize=False,
-                                                 title='{} confusion matrix, epoch {}'.format(split, i),
-                                                 cmap=plt.cm.Blues)
-                vis.matplot(fig, win=f'{split} CM')
+                visualize.record_batch(all_metrics, split, vis_data, vis, i)
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
