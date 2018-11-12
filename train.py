@@ -146,8 +146,11 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             all_metrics[f'{split}_acc'].append(accuracy)
                             all_metrics[f'{split}_f1'].append(f1)
         
+                    visualize.record_batch(targets, preds, args.num_classes, split, vis_data, vis)
+
                     batch_num += 1
 
+                    """
 		    # Create and show mask for labeled areas
                     label_mask = np.sum(targets.numpy(), axis=1)
                     label_mask = np.expand_dims(label_mask, axis=1)
@@ -172,6 +175,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     # Show gradnorm per batch
                     if split == 'train':
                         visualize.visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
+                     """
 
                 if split == 'val':
                     val_loss = val_loss / val_num_pixels
@@ -182,7 +186,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_acc = val_acc
                 
-                visualize.record_batch(all_metrics, split, vis_data, vis, i)
+                visualize.record_epoch(all_metrics, split, vis_data, vis, i)
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")

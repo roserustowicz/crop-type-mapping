@@ -45,7 +45,36 @@ def visdom_plot_images(vis, imgs, win):
     vis.images(imgs, nrow=NROW, win=win, 
                opts={'title': win})
 
-def record_batch(all_metrics, split, vis_data, vis, epoch_num):
+def record_batch(targets, preds, num_classes, split, vis_data, vis):
+    # Create and show mask for labeled areas
+    label_mask = np.sum(targets.numpy(), axis=1)
+    label_mask = np.expand_dims(label_mask, axis=1)
+    visdom_plot_images(vis, label_mask, 'Label Masks')
+
+    # Show targets (labels)
+    disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
+    disp_targets = np.argmax(disp_targets, axis=1)
+    disp_targets = np.expand_dims(disp_targets, axis=1)
+    disp_targets = visualize_rgb(disp_targets, num_classes)
+    visdom_plot_images(vis, disp_targets, 'Target Images')
+
+    # Show predictions, masked with label mask
+    disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1) + 1
+    disp_preds = np.expand_dims(disp_preds, axis=1)
+    disp_preds = visualize_rgb(disp_preds, num_classes)
+    disp_preds_w_mask = disp_preds * label_mask
+
+    visdom_plot_images(vis, disp_preds, 'Predicted Images')
+    visdom_plot_images(vis, disp_preds_w_mask, 'Predicted Images with Label Mask')
+
+    # Show gradnorm per batch
+    if split == 'train':
+        visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
+
+
+
+
+def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
     """
     """
     if all_metrics[f'{split}_loss'] is not None: loss_batch = np.mean(all_metrics[f'{split}_loss'])
