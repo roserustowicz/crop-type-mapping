@@ -15,7 +15,7 @@ NROW = 10
 
 INT_POWER_EXP = ["hidden_dims"]
 REAL_POWER_EXP = ["weight_decay", "lr"]
-INT_HP = ['batch_size']
+INT_HP = ['batch_size', 'crnn_num_layers']
 FLOAT_HP = ['momentum']
 STRING_HP = ['optimizer']
 

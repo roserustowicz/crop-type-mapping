@@ -27,7 +27,7 @@ def evaluate_split(model, model_name, split_loader, device):
             inputs.to(device)
             targets.to(device)
             preds = model(inputs)   
-            batch_loss, batch_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
+            batch_loss, cm, f1, batch_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
             total_loss += batch_loss.item()
             total_correct += batch_correct
             total_pixels += num_pixels
@@ -124,7 +124,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                 loss.backward()
                                 grad = list(model.parameters())[0].grad.view(-1).cpu().numpy()
                                 grad_norm = np.linalg.norm(grad)
-                                print(grad_norm)
                                 grad_norms.append(grad_norm)
                                 optimizer.step()
 
@@ -179,7 +178,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         plt.title("Counts of L2 Norm of Grads")
         plt.xlabel("L2 Norm of a batch")
         plt.ylabel("Counts")
-        plt.savefig("grad_hist.png")
+        #plt.savefig("grad_hist.png")
 
         grad_norms = np.array(grad_norms)
         print("TOTAL NUM BATCHES", len(grad_norms))
