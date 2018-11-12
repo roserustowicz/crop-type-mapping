@@ -57,9 +57,6 @@ def evaluate(preds, labels, loss_fn, reduction):
         accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, f1, accuracy
     else:
-        print('labels: ', labels.shape)
-        print('preds: ', preds.shape)
-        print('red: ', reduction)
         loss, _ = loss_fn(labels, preds, reduction)
         total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, f1, total_correct, num_pixels
@@ -95,9 +92,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
         for i in range(args.epochs):
             
-            #val_loss = 0
-            #val_acc = 0
-            #val_num_pixels = 0
+            val_loss = 0
+            val_acc = 0
+            val_num_pixels = 0
             
             metrics = {'train_loss': [], 'train_acc': [], 'train_f1': [], 
                        'train_cm': np.zeros((args.num_classes, args.num_classes)).astype(int),
@@ -122,7 +119,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             if cm_cur is not None:
                                 metrics['train_cm'] += cm_cur
                                 metrics['train_loss'].append(loss.data)
-                                #metrics['train_loss'].append(loss)
                                 metrics['train_acc'].append(accuracy)
                                 metrics['train_f1'].append(f1)
 
@@ -134,15 +130,14 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
                             
                             if cm_cur is not None:
-                                # TODO: resolve val_loss, val_acc 
                                 metrics['val_cm'] += cm_cur
                                 metrics['val_loss'].append(loss.item() / num_pixels)
                                 metrics['val_acc'].append(total_correct / num_pixels)
                                 metrics['val_f1'].append(f1)
                     
-                                #val_loss += loss.item()
-                                #val_acc += total_correct
-                                #val_num_pixels += num_pixels
+                                val_loss += loss.item()
+                                val_acc += total_correct
+                                val_num_pixels += num_pixels
         
                     batch_num += 1
 
@@ -210,14 +205,13 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     vis.matplot(fig, win='Train CM')
 
                 else:
-                    #val_loss = val_loss / val_num_pixels
-                    #val_acc = val_acc / val_num_pixels
+                    val_loss = val_loss / val_num_pixels
+                    val_acc = val_acc / val_num_pixels
                     
-                    #if val_acc > best_val_acc:
-                    #    torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
-                    #    best_val_acc = val_acc
+                    if val_acc > best_val_acc:
+                        torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
+                        best_val_acc = val_acc
                    
-                    # TODO: resolve val_loss / val_acc 
                     val_loss_batch = np.mean(metrics['val_loss'])
                     val_acc_batch = np.mean(metrics['val_acc'])
                     val_f1_batch = np.mean(metrics['val_f1'])
