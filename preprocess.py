@@ -208,12 +208,12 @@ def preprocessLabelForCLSTM(label, num_classes, transform, rot):
         num_classes - (npy arr) number of classes 
     """
     if transform:
-        label = np.fliplr(grid)
-        label = np.rot90(grid, k=rot)
+        label = np.fliplr(label)
+        label = np.rot90(label, k=rot)
 
     label = onehot_mask(label, num_classes)
     label =  np.transpose(label, [2, 0, 1])
-    label = torch.tensor(label, dtype=torch.float32)
+    label = torch.tensor(label.copy(), dtype=torch.float32)
     return label
 
 def preprocessLabelForFCN(label, num_classes):
@@ -234,7 +234,7 @@ def preprocessGridForCLSTM(grid, transform, rot):
     if transform:
         grid = grid[:, :, :, ::-1]
         grid = np.rot90(grid, k=rot, axes=(2, 3))
-    grid = torch.tensor(grid, dtype=torch.float32)
+    grid = torch.tensor(grid.copy(), dtype=torch.float32)
     normalize = transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
     for timestamp in range(grid.shape[0]):
         grid[timestamp] = normalize(grid[timestamp])
