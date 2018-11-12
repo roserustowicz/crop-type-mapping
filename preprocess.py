@@ -29,6 +29,17 @@ def reshapeForLoss(y):
     return y
 
 def maskForLoss(y_pred, y_true):
+    """
+    Masks y_pred and y_true with valid pixel locations. 
+    
+    Args:
+      y_pred - 
+      y_true - 
+    
+    Returns: 
+      y_pred - 
+      y_true - 
+    """
     loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
 
     loss_mask_repeat = loss_mask.unsqueeze(1).repeat(1,y_pred.shape[1]).type(torch.FloatTensor).cuda()
@@ -42,6 +53,15 @@ def maskForLoss(y_pred, y_true):
 
 def maskForMetric(y_pred, y_true):
     """
+    Masks y_pred and y_true with valid pixel locations for metric calculations
+
+    Args: 
+      y_pred - 
+      y_true - 
+
+    Returns: 
+      y_pred - 
+      y_true - 
     """
     # Create mask for valid pixel locations
     loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
@@ -311,7 +331,7 @@ def remap_cloud_stack(cloud_stack):
     remapped_cloud_stack[cloud_stack == 3] = 1
     return remapped_cloud_stack
 
-def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False):
+def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
@@ -322,6 +342,9 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
       cloud_stack - (numpy array) [rows x cols x timestamps], temporal stack of cloud masks
       reverse - (boolean) take 1 - probabilities, encourages cloudy images to be sampled
       seed - (int) a random seed for sampling
+      verbose - 
+      timestamps_first - 
+      least_cloudy - (bool) if true, take the least cloudy images rather than sampling with probability
 
     Returns:
       sampled_img_stack - (numpy array) [bands x rows x cols x num_samples], temporal stack
@@ -363,11 +386,15 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     if reverse:
         scores = 3 - scores
 
-    # Compute probabilities of scores with softmax
-    probabilities = softmax(scores)
+    if least_cloudy:
+        samples = scores.argsort()[-num_samples:]
+    else:
+        # Compute probabilities of scores with softmax
+        probabilities = softmax(scores)
 
-    # Sample from timestamp indices according to probabilities
-    samples = np.random.choice(timestamps, size=num_samples, replace=False, p=probabilities)
+        # Sample from timestamp indices according to probabilities
+        samples = np.random.choice(timestamps, size=num_samples, replace=False, p=probabilities)
+    
     # Sort samples to maintain sequential ordering
     samples.sort()
 
