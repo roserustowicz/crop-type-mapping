@@ -77,9 +77,13 @@ def record_batch(targets, preds, num_classes, split, vis_data, vis):
 def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
     """
     """
-    if all_metrics[f'{split}_loss'] is not None: loss_batch = np.mean(all_metrics[f'{split}_loss'])
-    if all_metrics[f'{split}_acc'] is not None: acc_batch = np.mean(all_metrics[f'{split}_acc'])
-    if all_metrics[f'{split}_f1'] is not None: f1_batch = np.mean(all_metrics[f'{split}_f1'])
+    losses = [x for x in all_metrics[f'{split}_loss'] if x is not None]
+    accs = [x for x in all_metrics[f'{split}_acc'] if x is not None]
+    f1s = [x for x in all_metrics[f'{split}_f1'] if x is not None]
+
+    if losses is not None: loss_batch = np.mean(losses)
+    if accs is not None: acc_batch = np.mean(accs)
+    if f1s is not None: f1_batch = np.mean(f1s)
 
     vis_data[f'{split}_loss'].append(loss_batch)
     vis_data[f'{split}_acc'].append(acc_batch)
