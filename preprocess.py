@@ -232,8 +232,8 @@ def preprocessLabelForFCN(label, num_classes):
 def preprocessGridForCLSTM(grid, transform):
     grid = moveTimeToStart(grid)
     if transform:
-        grid = np.fliplr(grid)
-        grid = np.rot90(grid, k=np.random.randint(0, 4), axes=(1, 2, 3))
+        grid = grid[:, :, :, ::-1]
+        grid = np.rot90(grid, k=np.random.randint(0, 4), axes=(2, 3))
     grid = torch.tensor(grid, dtype=torch.float32)
     normalize = transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
     for timestamp in range(grid.shape[0]):
