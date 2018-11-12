@@ -1,4 +1,4 @@
-"""
+"""/
 
 Script for training and evaluating a model
 
@@ -38,16 +38,22 @@ def evaluate_split(model, model_name, split_loader, device):
     return total_loss / total_pixels, total_correct / total_pixels
 
 def evaluate(preds, labels, loss_fn, reduction):
-    """ Evalautes the model on the inputs using the labels and loss fn.
+    """ Evalautes loss and metrics for predictions vs labels.
 
     Args:
-        preds - (tf tensor) the inputs the model should use
-        labels - (npy array / tf tensor) the labels for the inputs
-        loss_fn - (function) function that takes preds and labels and outputs some metric
+        preds - (tf tensor) model predictions
+        labels - (npy array / tf tensor) ground truth labels
+        loss_fn - (function) function that takes preds and labels and outputs some loss metric
+        reduction - (str) "avg" or "sum", where "avg" calculates the average accuracy for each batch
+                                          where "sum" tracks total correct and total pixels separately
 
     Returns:
         loss - (float) the loss the model incurs
-        TO BE EXPANDED
+        cm - (nparray) confusion matrix given preds and labels
+        f1 - (float) f1-score
+        accuracy - (float) given "avg" reduction, returns accuracy 
+        total_correct - (int) given "sum" reduction, gives total correct pixels
+        num_pixels - (int) given "sum" reduction, gives total number of valid pixels
     """
     f1 = metrics.get_f1score(preds, labels)
     cm = metrics.get_cm(preds, labels)
@@ -144,14 +150,14 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 		    # Create and show mask for labeled areas
                     label_mask = np.sum(targets.numpy(), axis=1)
                     label_mask = np.expand_dims(label_mask, axis=1)
-                    visualize.vis_plot_images(vis, label_mask, 'Label Masks')
+                    visualize.visdom_plot_images(vis, label_mask, 'Label Masks')
 
 	            # Show targets (labels)
                     disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
                     disp_targets = np.argmax(disp_targets, axis=1) 
                     disp_targets = np.expand_dims(disp_targets, axis=1)
                     disp_targets = visualize.visualize_rgb(disp_targets, args.num_classes)
-                    visualize.vis_plot_images(vis, disp_targets, 'Target Images')
+                    visualize.visdom_plot_images(vis, disp_targets, 'Target Images')
 
 		    # Show predictions, masked with label mask
                     disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1) + 1
@@ -159,8 +165,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     disp_preds = visualize.visualize_rgb(disp_preds, args.num_classes) 
                     disp_preds_w_mask = disp_preds * label_mask
 
-                    visualize.vis_plot_images(vis, disp_preds, 'Predicted Images')    
-                    visualize.vis_plot_images(vis, disp_preds_w_mask, 'Predicted Images with Label Mask')
+                    visualize.visdom_plot_images(vis, disp_preds, 'Predicted Images')    
+                    visualize.visdom_plot_images(vis, disp_preds_w_mask, 'Predicted Images with Label Mask')
                 
                 if split == 'train':
                     train_loss_batch = np.mean(metrics['train_loss'])
@@ -171,32 +177,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     vis_data['train_f1'].append(train_f1_batch) 
 
                     # For each epoch, update in visdom
-                    vis.line(Y=np.array(vis_data['train_loss']), 
-            	             X=np.array(range(len(vis_data['train_loss']))),
-			     win='Train Loss',
-			     opts={'legend': ['train_loss'], 
-                                   'markers': False,
-				   'title': 'Train loss curve',
-				   'xlabel': 'Epoch',
-				   'ylabel': 'Loss'})
-                        
-                    vis.line(Y=np.array(vis_data['train_acc']), 
-                	     X=np.array(range(len(vis_data['train_acc']))), 
-			     win='Train Accuracy',
-			     opts={'legend': ['train_acc'], 
-				   'markers': False,
-				   'title': 'Training Accuracy',
-				   'xlabel': 'Epoch',
-				   'ylabel': 'Accuracy'})
-               
-                    vis.line(Y=np.array(vis_data['train_f1']), 
-                	     X=np.array(range(len(vis_data['train_f1']))), 
-			     win='Train f1-score',
-			     opts={'legend': ['train_f1'], 
-				   'markers': False,
-				   'title': 'Training f1-score',
-				   'xlabel': 'Epoch',
-				   'ylabel': 'f1-score'})
+                    visualize.visdom_plot_metric('loss', split, 'Train Loss', 'Epoch', 'Loss', vis_data, vis)
+                    visualize.visdom_plot_metric('acc', split, 'Train Accuracy', 'Epoch', 'Accuracy', vis_data, vis)
+                    visualize.visdom_plot_metric('f1', split, 'Train f1-score', 'Epoch', 'f1-score', vis_data, vis)
                     
                     fig = util.plot_confusion_matrix(metrics['train_cm'], CM_CLASSES, 
                                                 normalize=False,
@@ -220,33 +203,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     vis_data['val_acc'].append(val_acc_batch)
                     vis_data['val_f1'].append(val_f1_batch)
 
-                    vis.line(Y=np.array(vis_data['val_loss']), 
-			     X=np.array(range(len(vis_data['val_loss']))), 
-			     win='Val Loss',
-                             opts={'legend': ['val_loss'], 
-				   'markers': False,
-				   'title': 'Validation loss curve',
-			           'xlabel': 'Epoch',
-                                   'ylabel': 'Loss'})
-                        
-                    vis.line(Y=np.array(vis_data['val_acc']), 
-            	             X=np.array(range(len(vis_data['val_acc']))), 
-			     win='Val Accuracy',
-	                     opts={'legend': ['val_acc'], 
-				   'markers': False,
-			           'title': 'Validation Accuracy',
-				   'xlabel': 'Batch number',
-				   'ylabel': 'Accuracy'})
-
-                    vis.line(Y=np.array(vis_data['val_f1']), 
-                	     X=np.array(range(len(vis_data['val_f1']))), 
-			     win='Val f1-score',
-			     opts={'legend': ['val_f1'], 
-				   'markers': False,
-				   'title': 'Val f1-score',
-				   'xlabel': 'Epoch',
-				   'ylabel': 'f1-score'})
-                    
+                    visualize.visdom_plot_metric('loss', split, 'Val Loss', 'Epoch', 'Loss', vis_data, vis)
+                    visualize.visdom_plot_metric('acc', split, 'Val Accuracy', 'Epoch', 'Accuracy', vis_data, vis)
+                    visualize.visdom_plot_metric('f1', split, 'Val f1-score', 'Epoch', 'f1-score', vis_data, vis)
+ 
                     fig = util.plot_confusion_matrix(metrics['val_cm'], CM_CLASSES, 
                                                 normalize=False,
                                                 title='Validation Confusion matrix, epoch {}'.format(i),

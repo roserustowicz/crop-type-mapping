@@ -18,10 +18,22 @@ def setup_visdom(env_name, model_name):
         env_name = env_name
     return visdom.Visdom(port=8097, env=env_name)
 
-#def vis_plot_metric(metric_name, title, x_label, y_label, vis_data)
+def visdom_plot_metric(metric_name, split, title, x_label, y_label, vis_data, vis):
+    """
+    Args: 
+      metric_name - "loss", "acc", "f1"
+    """
+    vis.line(Y=np.array(vis_data['{}_{}'.format(split, metric_name)]),
+             X=np.array(range(len(vis_data['{}_{}'.format(split, metric_name)]))),
+             win=title,
+             opts={'legend': ['{}_{}'.format(split, metric_name)],
+                   'markers': False, 
+                   'title': title,
+                   'xlabel': x_label,
+                   'ylabel': y_label})
+    
 
-
-def vis_plot_images(vis, imgs, win):
+def visdom_plot_images(vis, imgs, win):
     """
     Plot image panel in visdom
     Args: 
