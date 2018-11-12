@@ -45,11 +45,13 @@ class CropTypeDS(Dataset):
                 s2 = data['s2'][self.grid_list[idx]][()]
             
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
+            if transform:
+                rot = np.random.randint(0, 4)
 
             grid = concat_s1_s2(s1, s2)
-            grid = preprocess_grid(grid, self.model_name, self.timeslice, transform)
+            grid = preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
             label = data['labels'][self.grid_list[idx]][()]
-            label = preprocess_label(label, self.model_name, self.num_classes, transform) 
+            label = preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
 
         return grid, label
 
