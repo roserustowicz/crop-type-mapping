@@ -121,29 +121,26 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         
                         if split == 'train':
                             loss, cm_cur, f1, accuracy = evaluate(preds, targets, loss_fn, reduction="avg")
-                            
-                            if cm_cur is not None:
-                                metrics['train_cm'] += cm_cur
-                                metrics['train_loss'].append(loss.data)
-                                metrics['train_acc'].append(accuracy)
-                                metrics['train_f1'].append(f1)
-
+                            if cm_cur is not None:        
+                                # If there are valid pixels, update weights
                                 optimizer.zero_grad()
                                 loss.backward()
                                 optimizer.step()
                         
                         elif split == 'val':
                             loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
-                            
                             if cm_cur is not None:
-                                metrics['val_cm'] += cm_cur
-                                metrics['val_loss'].append(loss.item() / num_pixels)
-                                metrics['val_acc'].append(total_correct / num_pixels)
-                                metrics['val_f1'].append(f1)
-                    
+                                # If there are valid pixels, update info for val
                                 val_loss += loss.item()
                                 val_acc += total_correct
                                 val_num_pixels += num_pixels
+                        
+                        if cm_cur is not None:
+                            # If there are valid pixels, update metrics
+                            metrics[f'{split}_cm'] += cm_cur
+                            metrics[f'{split}_loss'].append(loss.data)
+                            metrics[f'{split}_acc'].append(accuracy)
+                            metrics[f'{split}_f1'].append(f1)
         
                     batch_num += 1
 
@@ -168,50 +165,31 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     visualize.visdom_plot_images(vis, disp_preds, 'Predicted Images')    
                     visualize.visdom_plot_images(vis, disp_preds_w_mask, 'Predicted Images with Label Mask')
                 
-                if split == 'train':
-                    train_loss_batch = np.mean(metrics['train_loss'])
-                    train_acc_batch = np.mean(metrics['train_acc'])
-                    train_f1_batch = np.mean(metrics['train_f1'])
-                    vis_data['train_loss'].append(train_loss_batch)
-                    vis_data['train_acc'].append(train_acc_batch) 
-                    vis_data['train_f1'].append(train_f1_batch) 
-
-                    # For each epoch, update in visdom
-                    visualize.visdom_plot_metric('loss', split, 'Train Loss', 'Epoch', 'Loss', vis_data, vis)
-                    visualize.visdom_plot_metric('acc', split, 'Train Accuracy', 'Epoch', 'Accuracy', vis_data, vis)
-                    visualize.visdom_plot_metric('f1', split, 'Train f1-score', 'Epoch', 'f1-score', vis_data, vis)
-                    
-                    fig = util.plot_confusion_matrix(metrics['train_cm'], CM_CLASSES, 
-                                                normalize=False,
-                                                title='Train Confusion matrix, epoch {}'.format(i),
-                                                cmap=plt.cm.Blues)
-                    vis.matplot(fig, win='Train CM')
-
-                else:
+                if split == 'val':
                     val_loss = val_loss / val_num_pixels
                     val_acc = val_acc / val_num_pixels
                     
                     if val_acc > best_val_acc:
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_acc = val_acc
-                   
-                    val_loss_batch = np.mean(metrics['val_loss'])
-                    val_acc_batch = np.mean(metrics['val_acc'])
-                    val_f1_batch = np.mean(metrics['val_f1'])
+                
+                if metrics[f'{split}_loss'] is not None: loss_batch = np.mean(metrics[f'{split}_loss'])
+                if metrics[f'{split}_acc'] is not None: acc_batch = np.mean(metrics[f'{split}_acc'])
+                if metrics[f'{split}_f1'] is not None: f1_batch = np.mean(metrics[f'{split}_f1'])
                     
-                    vis_data['val_loss'].append(val_loss_batch)
-                    vis_data['val_acc'].append(val_acc_batch)
-                    vis_data['val_f1'].append(val_f1_batch)
+                vis_data[f'{split}_loss'].append(loss_batch)
+                vis_data[f'{split}_acc'].append(acc_batch)
+                vis_data[f'{split}_f1'].append(f1_batch)
 
-                    visualize.visdom_plot_metric('loss', split, 'Val Loss', 'Epoch', 'Loss', vis_data, vis)
-                    visualize.visdom_plot_metric('acc', split, 'Val Accuracy', 'Epoch', 'Accuracy', vis_data, vis)
-                    visualize.visdom_plot_metric('f1', split, 'Val f1-score', 'Epoch', 'f1-score', vis_data, vis)
+                visualize.visdom_plot_metric('loss', split, f'{split} Loss', 'Epoch', 'Loss', vis_data, vis)
+                visualize.visdom_plot_metric('acc', split, f'{split} Accuracy', 'Epoch', 'Accuracy', vis_data, vis)
+                visualize.visdom_plot_metric('f1', split, f'{split} f1-score', 'Epoch', 'f1-score', vis_data, vis)
  
-                    fig = util.plot_confusion_matrix(metrics['val_cm'], CM_CLASSES, 
-                                                normalize=False,
-                                                title='Validation Confusion matrix, epoch {}'.format(i),
-                                                cmap=plt.cm.Blues)
-                    vis.matplot(fig, win='Val CM')
+                fig = util.plot_confusion_matrix(metrics[f'{split}_cm'], CM_CLASSES, 
+                                                 normalize=False,
+                                                 title='{} confusion matrix, epoch {}'.format(split, i),
+                                                 cmap=plt.cm.Blues)
+                vis.matplot(fig, win=f'{split} CM')
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
