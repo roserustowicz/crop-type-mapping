@@ -84,7 +84,11 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         if args is None: raise ValueError("Args is NONE")
 
         # set up information lists for visdom    
-        vis_data = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': [], 'train_f1': [], 'val_f1': []}
+        vis_data = {'train_loss': [], 'val_loss': [], 
+                    'train_acc': [], 'val_acc': [], 
+                    'train_f1': [], 'val_f1': [], 
+                    'train_gradnorm': []}
+        
         vis = visualize.setup_visdom(args.env_name, args.model_name)
 
         loss_fn = loss_fns.get_loss_fn(args.model_name)
@@ -123,6 +127,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                 optimizer.zero_grad()
                                 loss.backward()
                                 optimizer.step()
+
+                                gradnorm = torch.norm(list(model.parameters())[0].grad)
+                                vis_data['train_gradnorm'].append(gradnorm)
                         
                         elif split == 'val':
                             loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
@@ -162,6 +169,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     visualize.visdom_plot_images(vis, disp_preds, 'Predicted Images')    
                     visualize.visdom_plot_images(vis, disp_preds_w_mask, 'Predicted Images with Label Mask')
                 
+                    # Show gradnorm per batch
+                    if split == 'train':
+                        visualize.visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
+
                 if split == 'val':
                     val_loss = val_loss / val_num_pixels
                     lr_scheduler.step(val_loss)
