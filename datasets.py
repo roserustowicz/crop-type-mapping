@@ -43,10 +43,10 @@ class CropTypeDS(Dataset):
             s2 = None
             if self.use_s1:
                 s1 = data['s1'][self.grid_list[idx]][:2, :, :]
-                s1 = normalization(s1, 's1')
+                s1 = preprocess.normalization(s1, 's1')
             if self.use_s2:
                 s2 = data['s2'][self.grid_list[idx]][()]
-                s2 = normalization(s2, 's2')
+                s2 = preprocess.normalization(s2, 's2')
             
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)

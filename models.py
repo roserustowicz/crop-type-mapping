@@ -198,11 +198,15 @@ def make_fcn_model(n_class, n_channel, freeze=True):
     
     return fcn8s
 
-def make_UNet_model(n_class, n_channel):
-    model = UNet(n_class, n_channel)
+def make_UNet_model(n_class, n_channel, for_fcn=False):
+    model = UNet(n_class, n_channel, for_fcn)
     model = model.cuda()
         
     return model
+
+def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
+    fcn_crnn = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
+    return fcn_crnn
 
 class _EncoderBlock(nn.Module):
     def __init__(self, in_channels, out_channels, dropout=False):
@@ -242,8 +246,9 @@ class _DecoderBlock(nn.Module):
     
     
 class UNet(nn.Module):
-    def __init__(self, num_classes, num_channels):
+    def __init__(self, num_classes, num_channels, for_fcn):
         super(UNet, self).__init__()
+        self.for_fcn = for_fcn
         self.enc1 = _EncoderBlock(num_channels, 64)
         self.enc2 = _EncoderBlock(64, 128)
         # self.enc3 = _EncoderBlock(128, 256, dropout=True)
@@ -279,13 +284,14 @@ class UNet(nn.Module):
         # dec2 = self.dec2(torch.cat([dec3, F.upsample(enc2, dec3.size()[2:], mode='bilinear')], 1))
         dec1 = self.dec1(torch.cat([dec2, F.upsample(enc1, dec2.size()[2:], mode='bilinear')], 1))
         final = self.final(dec1)
-        final = self.softmax(F.upsample(final, x.size()[2:], mode='bilinear'))
-        final = torch.log(final)
-        return final
+        final = F.upsample(final, x.size()[2:], mode='bilinear')
+        if self.for_fcn:
+            return final
+        else:
+            final = self.softmax(final)
+            final = torch.log(final)
+            return final
 
-def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
-    fcn_crnn = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
-    return fcn_crnn
 
 class FCN_CRNN(nn.Module):
     def __init__(self, fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
@@ -294,6 +300,8 @@ class FCN_CRNN(nn.Module):
             self.fcn = simple_CNN(fcn_input_size, crnn_input_size[1])
         elif fcn_model_name == 'fcn8':
             self.fcn = make_fcn_model(crnn_input_size[1], fcn_input_size[1], freeze=False)
+        elif fcn_model_name == 'unet':
+            self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], for_fcn=True)
         if crnn_model_name == 'clstm': 
             self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
 

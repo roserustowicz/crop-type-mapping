@@ -361,7 +361,6 @@ def truncateToSmallestLength(batch):
     """
     batch_X = [item[0] for item in batch]
     batch_y = [item[1] for item in batch]
-    
     for i in range(len(batch_X)):
         if len(batch_X[i].shape)>3:
             batch_X[i], _, _ = sample_timeseries(batch_X[i], MIN_TIMESTAMPS, timestamps_first=True)
