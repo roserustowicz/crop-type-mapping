@@ -176,7 +176,7 @@ def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None
         return preprocessGridForCLSTM(grid, transform, rot)
     
     if model_name == "fcn":
-        return preprocessGridForFCN(grid, time_slice)
+        return preprocessGridForFCN(grid, time_slice, transform, rot)
 
     raise ValueError(f'Model: {model_name} unsupported')
 
@@ -198,7 +198,7 @@ def preprocess_label(label, model_name, num_classes=None, transform=False, rot=N
     
     if model_name == "fcn":
         assert not num_classes is None
-        return preprocessLabelForFCN(label, num_classes)
+        return preprocessLabelForFCN(label, num_classes, transform, rot)
 
     raise ValueError(f'Model: {model_name} unsupported')
     
@@ -217,13 +217,16 @@ def preprocessLabelForCLSTM(label, num_classes, transform, rot):
     label = torch.tensor(label.copy(), dtype=torch.float32)
     return label
 
-def preprocessLabelForFCN(label, num_classes):
+def preprocessLabelForFCN(label, num_classes, transform, rot):
     """ Converts to onehot encoding and shifts channels to be first dim.
 
     Args:
         label - (npy arr) [64x64] categorical labels for each pixel
         num_classes - (npy arr) number of classes 
     """
+    if transform:
+        label = np.fliplr(label)
+        label = np.rot90(label, k=rot)
 
     label = onehot_mask(label, num_classes)
     label = np.transpose(mask, [2, 0, 1])
@@ -255,7 +258,7 @@ def preprocessGridForCLSTM(grid, transform, rot):
         """
     return grid
 
-def preprocessGridForFCN(grid, time_slice):
+def preprocessGridForFCN(grid, time_slice, transform, rot):
     grid = takeTimeSlice(grid, time_slice)
     return grid
     
