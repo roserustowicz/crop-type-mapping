@@ -15,7 +15,6 @@ from constants import *
 from util import *
 import os
 import random
-import pdb
 
 
 def normalization(grid, satellite):

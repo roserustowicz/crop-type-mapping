@@ -1,5 +1,4 @@
 """
-    print('acc num pixels: ') 
 
 File housing all models.
 
@@ -315,7 +314,6 @@ class simple_CNN(nn.Module):
         self.conv1 = nn.Conv2d(input_size[1], fcn_out_feats, 3, padding=1) 
     def forward(self, x):
         h = x.cuda()
-        print('h: ', h.shape)
         h = self.conv1(h)
         return h
 
