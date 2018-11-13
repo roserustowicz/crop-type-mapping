@@ -209,8 +209,6 @@ def preprocessLabelForCLSTM(label, num_classes, transform, rot):
         label - (npy arr) [64x64] categorical labels for each pixel
         num_classes - (npy arr) number of classes 
     """
-    before = onehot_mask(label, num_classes)
-
     if transform:
         label = np.fliplr(label)
         label = np.rot90(label, k=rot)
@@ -263,7 +261,7 @@ def preprocessGridForFCN(grid, time_slice):
     
 def moveTimeToStart(arr):
     """ Moves time axis to the first dim.
-    
+        
     Args:
         arr - (npy arr) [bands x rows x cols x timestamps] 
     """

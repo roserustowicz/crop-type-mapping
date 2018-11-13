@@ -44,6 +44,7 @@ class CropTypeDS(Dataset):
                 s1 = data['s1'][self.grid_list[idx]][:2, :, :]
             if self.use_s2:
                 s2 = data['s2'][self.grid_list[idx]][()]
+
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
 
