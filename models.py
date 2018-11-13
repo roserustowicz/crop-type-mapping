@@ -205,8 +205,10 @@ def make_UNet_model(n_class, n_channel, for_fcn=False):
     return model
 
 def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
-    fcn_crnn = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
-    return fcn_crnn
+    model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
+    model = model.cuda()
+
+    return model
 
 class _EncoderBlock(nn.Module):
     def __init__(self, in_channels, out_channels, dropout=False):
