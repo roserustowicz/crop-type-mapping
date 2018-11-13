@@ -259,6 +259,10 @@ def preprocessGridForCLSTM(grid, transform, rot):
     return grid
 
 def preprocessGridForFCN(grid, time_slice, transform, rot):
+    grid = moveTimeToStart(grid)
+    if transform:
+        grid = grid[:, :, :, ::-1]
+        grid = np.rot90(grid, k=rot, axes=(2, 3))
     grid = takeTimeSlice(grid, time_slice)
     return grid
     
