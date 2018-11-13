@@ -6,6 +6,8 @@ Consider this essentially a util library specifically for data manipulation.
 
 """
 import torch
+from PIL import Image
+from torchvision.utils import save_image
 import torchvision.transforms as transforms
 import torch.nn.utils.rnn as rnn
 import numpy as np
@@ -207,10 +209,11 @@ def preprocessLabelForCLSTM(label, num_classes, transform, rot):
         label - (npy arr) [64x64] categorical labels for each pixel
         num_classes - (npy arr) number of classes 
     """
+    before = onehot_mask(label, num_classes)
+
     if transform:
         label = np.fliplr(label)
         label = np.rot90(label, k=rot)
-
     label = onehot_mask(label, num_classes)
     label =  np.transpose(label, [2, 0, 1])
     label = torch.tensor(label.copy(), dtype=torch.float32)
@@ -228,6 +231,15 @@ def preprocessLabelForFCN(label, num_classes):
     label = np.transpose(mask, [2, 0, 1])
     label = torch.tensor(label, dtype=torch.float32)
     return label
+
+def saveGridAsImg(grid, fname):
+    minval = 1100
+    maxval = 2100
+    for i in range(grid.shape[0]):
+        grid[i] = (grid[i] - minval) / (maxval -minval)
+    toImg = transforms.ToPILImage()
+    grid_as_img = toImg(torch.squeeze(grid[0, [2, 1, 0]]))
+    grid_as_img.save(fname)
 
 def preprocessGridForCLSTM(grid, transform, rot):
     grid = moveTimeToStart(grid)

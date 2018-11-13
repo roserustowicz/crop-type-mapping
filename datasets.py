@@ -23,6 +23,7 @@ class CropTypeDS(Dataset):
 
         with open(grid_path, "rb") as f:
             self.grid_list = list(pickle.load(f))
+
         self.num_grids = len(self.grid_list)
         self.use_s1 = args.use_s1
         self.use_s2 = args.use_s2
@@ -43,11 +44,8 @@ class CropTypeDS(Dataset):
                 s1 = data['s1'][self.grid_list[idx]][:2, :, :]
             if self.use_s2:
                 s2 = data['s2'][self.grid_list[idx]][()]
-            
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
-            rot = None
-            if transform:
-                rot = np.random.randint(0, 4)
+            rot = np.random.randint(0, 4)
 
             grid = concat_s1_s2(s1, s2)
             grid = preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
