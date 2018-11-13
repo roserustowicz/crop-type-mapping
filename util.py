@@ -348,6 +348,9 @@ def get_train_parser():
     parser.add_argument('--lr_decay', type=float,
                         help="Factor to multiply lr by on decay",
                         default=.5)
+    parser.add_argument('--apply_transforms', type=bool,
+                        help="Apply horizontal flipping / rotation",
+                        default=True)
     parser.add_argument('--patience', type=int,
                         help="Number of epochs before decreasing lr.",
                         default=3)

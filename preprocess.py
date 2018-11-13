@@ -6,6 +6,8 @@ Consider this essentially a util library specifically for data manipulation.
 
 """
 import torch
+from PIL import Image
+from torchvision.utils import save_image
 import torchvision.transforms as transforms
 import torch.nn.utils.rnn as rnn
 import numpy as np
@@ -169,7 +171,7 @@ def retrieve_grid(grid_name, country):
     grid = None
     return grid
 
-def preprocess_grid(grid, model_name, time_slice = None):
+def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None):
     """ Returns a preprocessed version of the grid based on the model.
 
     Args:
@@ -179,17 +181,17 @@ def preprocess_grid(grid, model_name, time_slice = None):
     """
 
     if model_name == "bidir_clstm":
-        return preprocessGridForCLSTM(grid)
+        return preprocessGridForCLSTM(grid, transform, rot)
     
     if model_name == "fcn":
-        return preprocessGridForFCN(grid, time_slice)
+        return preprocessGridForFCN(grid, time_slice, transform, rot)
     
     if model_name == "unet":
         return preprocessGridForUNet(grid, time_slice)
 
     raise ValueError(f'Model: {model_name} unsupported')
 
-def preprocess_label(label, model_name, num_classes=None):
+def preprocess_label(label, model_name, num_classes=None, transform=False, rot=None):
     """ Returns a preprocess version of the label based on the model.
 
     Usually this just means converting to a one hot representation and 
@@ -203,11 +205,12 @@ def preprocess_label(label, model_name, num_classes=None):
     """
     if model_name == "bidir_clstm":
         assert not num_classes is None
-        return preprocessLabelForCLSTM(label, num_classes)
+        return preprocessLabelForCLSTM(label, num_classes, transform, rot)
     
     if model_name == "fcn":
         assert not num_classes is None
-        return preprocessLabelForFCN(label, num_classes)
+
+        return preprocessLabelForFCN(label, num_classes, transform, rot)
     
     if model_name == "unet":
         assert not num_classes is None
@@ -215,26 +218,31 @@ def preprocess_label(label, model_name, num_classes=None):
 
     raise ValueError(f'Model: {model_name} unsupported')
     
-def preprocessLabelForCLSTM(label, num_classes):
+def preprocessLabelForCLSTM(label, num_classes, transform, rot):
     """ Converts to onehot encoding and shifts channels to be first dim.
 
     Args:
         label - (npy arr) [64x64] categorical labels for each pixel
         num_classes - (npy arr) number of classes 
     """
-
+    if transform:
+        label = np.fliplr(label)
+        label = np.rot90(label, k=rot)
     label = onehot_mask(label, num_classes)
     label =  np.transpose(label, [2, 0, 1])
-    label = torch.tensor(label, dtype=torch.float32)
+    label = torch.tensor(label.copy(), dtype=torch.float32)
     return label
 
-def preprocessLabelForFCN(label, num_classes):
+def preprocessLabelForFCN(label, num_classes, transform, rot):
     """ Converts to onehot encoding and shifts channels to be first dim.
 
     Args:
         label - (npy arr) [64x64] categorical labels for each pixel
         num_classes - (npy arr) number of classes 
     """
+    if transform:
+        label = np.fliplr(label)
+        label = np.rot90(label, k=rot)
 
     label = onehot_mask(label, num_classes)
     label = np.transpose(label, [2, 0, 1])
@@ -254,9 +262,53 @@ def preprocessLabelForUNet(label, num_classes):
     label = torch.tensor(label, dtype=torch.float32)
     return label
 
+def saveGridAsImg(grid, fname):
+    minval = 1100
+    maxval = 2100
+    for i in range(grid.shape[0]):
+        grid[i] = (grid[i] - minval) / (maxval -minval)
+    toImg = transforms.ToPILImage()
+    grid_as_img = toImg(torch.squeeze(grid[0, [2, 1, 0]]))
+    grid_as_img.save(fname)
+
+def preprocessGridForCLSTM(grid, transform, rot):
+    grid = moveTimeToStart(grid)
+    if transform:
+        grid = grid[:, :, :, ::-1]
+        grid = np.rot90(grid, k=rot, axes=(2, 3))
+    grid = torch.tensor(grid.copy(), dtype=torch.float32)
+    normalize = transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
+    for timestamp in range(grid.shape[0]):
+        grid[timestamp] = normalize(grid[timestamp])
+    
+    """
+    for band in range(grid.shape[1]):
+        grid[:, band, :, :] = ((grid[:, band, :, :] - S2_BAND_MEANS[band]) / S2_BAND_STDS[band])
+        """
+    return grid
+
+def preprocessGridForFCN(grid, time_slice, transform, rot):
+    grid = moveTimeToStart(grid)
+    if transform:
+        grid = grid[:, :, :, ::-1]
+        grid = np.rot90(grid, k=rot, axes=(2, 3))
+    grid = takeTimeSlice(grid, time_slice)
+    return grid
+    
+def preprocessGridForUNet(grid, time_slice = None):
+    grid, _, _ = sample_timeseries(grid, MIN_TIMESTAMPS)
+    grid = moveTimeToStart(grid)
+    grid = torch.tensor(grid, dtype=torch.float32)
+    
+    if time_slice is None:
+        grid = mergeTimeBandChannels(grid)
+    else:
+        grid = takeTimeSlice(grid, time_slice)
+    return grid 
+   
 def moveTimeToStart(arr):
     """ Moves time axis to the first dim.
-    
+        
     Args:
         arr - (npy arr) [bands x rows x cols x timestamps] 
     """
@@ -280,31 +332,6 @@ def mergeTimeBandChannels(arr):
     """
     arr_merge = arr.reshape(-1,arr.shape[2],arr.shape[3])
     return arr_merge
-
-
-def preprocessGridForCLSTM(grid):
-    grid = moveTimeToStart(grid)
-    grid = torch.tensor(grid, dtype=torch.float32)        
-    return grid
-
-def preprocessGridForFCN(grid, time_slice):
-    grid = moveTimeToStart(grid)
-    grid = torch.tensor(grid, dtype=torch.float32)
-    grid = takeTimeSlice(grid, time_slice)
-    return grid
-
-
-def preprocessGridForUNet(grid, time_slice = None):
-    grid, _, _ = sample_timeseries(grid, MIN_TIMESTAMPS)
-    grid = moveTimeToStart(grid)
-    grid = torch.tensor(grid, dtype=torch.float32)
-    
-    if time_slice is None:
-        grid = mergeTimeBandChannels(grid)
-    else:
-        grid = takeTimeSlice(grid, time_slice)
-    return grid
-
 
 def truncateToSmallestLength(batch):
     """ Truncates len of all sequences to MIN_TIMESTAMPS.
