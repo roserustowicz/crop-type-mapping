@@ -15,18 +15,20 @@ from constants import *
 def get_loss_fn(model_name):
     return focal_loss
 
-def focal_loss(y_true, y_pred, reduction, gamma=2):
+def focal_loss(y_true, y_pred, reduction, loss_weight = False, gamma=2):
     """
     """ 
-
     y_true = preprocess.reshapeForLoss(y_true)
     num_examples = torch.sum(y_true, dtype=torch.float32).cuda()
 
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
     y_true = y_true.type(torch.LongTensor).cuda()
-    loss_fn = nn.NLLLoss(reduction="none")
-
+    
+    if loss_weight:
+        loss_fn = nn.NLLLoss(weight = LOSS_WEIGHT,reduction="none")
+    else:
+        loss_fn = nn.NLLLoss(reduction="none")
     # get the predictions for each true class
     nll_loss = loss_fn(y_pred, y_true)
     x = torch.gather(y_pred, dim=1, index=y_true.view(-1, 1))
