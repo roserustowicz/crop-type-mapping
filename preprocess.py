@@ -190,7 +190,7 @@ def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None
         return preprocessGridForUNet(grid, time_slice)
 
     elif model_name == "fcn_crnn":
-        return preprocessGridForFCNCRNN(grid)
+        return preprocessGridForFCNCRNN(grid, transform, rot)
 
     raise ValueError(f'Model: {model_name} unsupported')
 
@@ -310,7 +310,7 @@ def preprocessGridForUNet(grid, time_slice = None):
         grid = takeTimeSlice(grid, time_slice)
     return grid 
    
-def preprocessGridForFCNCRNN(grid):
+def preprocessGridForFCNCRNN(grid, transform, rot):
     grid = moveTimeToStart(grid)
     if transform:
         grid = grid[:, :, :, ::-1]
