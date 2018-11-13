@@ -14,6 +14,16 @@ from util import *
 import os
 import random
 
+
+def normalization(grid, satellite):
+    if satellite == 's1':
+        grid = (grid-S1_BAND_MEANS.reshape(S1_NUM_BANDS, 1, 1, 1))/S1_BAND_STDS.reshape(S1_NUM_BANDS, 1, 1, 1)
+        print('s1'+str(grid.shape))
+    elif satellite == 's2':
+        grid = (grid-S2_BAND_MEANS.reshape(S2_NUM_BANDS, 1, 1, 1))/S2_BAND_STDS.reshape(S2_NUM_BANDS, 1, 1, 1)
+        print('s2'+str(grid.shape))
+    return grid
+        
 def reshapeForLoss(y):
     """ Reshapes labels or preds for loss fn.
     To get them to the correct shape, we permute: 
@@ -175,6 +185,9 @@ def preprocess_grid(grid, model_name, time_slice = None):
     
     if model_name == "fcn":
         return preprocessGridForFCN(grid, time_slice)
+    
+    if model_name == "unet":
+        return preprocessGridForUNet(grid, time_slice)
 
     raise ValueError(f'Model: {model_name} unsupported')
 
@@ -197,6 +210,10 @@ def preprocess_label(label, model_name, num_classes=None):
     if model_name == "fcn":
         assert not num_classes is None
         return preprocessLabelForFCN(label, num_classes)
+    
+    if model_name == "unet":
+        assert not num_classes is None
+        return preprocessLabelForUNet(label, num_classes)
 
     raise ValueError(f'Model: {model_name} unsupported')
     
@@ -222,7 +239,20 @@ def preprocessLabelForFCN(label, num_classes):
     """
 
     label = onehot_mask(label, num_classes)
-    label = np.transpose(mask, [2, 0, 1])
+    label = np.transpose(label, [2, 0, 1])
+    label = torch.tensor(label, dtype=torch.float32)
+    return label
+
+
+def preprocessLabelForUNet(label, num_classes):
+    """ Converts to onehot encoding and shifts channels to be first dim.
+
+    Args:
+        label - (npy arr) [64x64] categorical labels for each pixel
+        num_classes - (npy arr) number of classes 
+    """
+    label = onehot_mask(label, num_classes)
+    label = np.transpose(label, [2, 0, 1])
     label = torch.tensor(label, dtype=torch.float32)
     return label
 
@@ -239,29 +269,44 @@ def takeTimeSlice(arr, timeslice):
     """ Take time slice for fcn input [bands x rows x cols]
     
     Args:
-        arr - (npy arr) [bands x rows x cols x timestamps] 
+        arr - (npy arr) [timestamps x bands x rows x cols] 
     """
-    arr = np.transpose(arr, [3, 0, 1, 2])
     arr_slice = arr[timeslice,:,:,:]
     return arr_slice
 
+def mergeTimeBandChannels(arr):
+    """ Merge timestamps and band channels for UNet input [(bands x timestamps) x rows x cols]
+    
+    Args:
+        arr - (npy arr) [timestamps x bands x rows x cols] 
+    """
+    arr_merge = arr.reshape(-1,arr.shape[2],arr.shape[3])
+    return arr_merge
+
+
 def preprocessGridForCLSTM(grid):
     grid = moveTimeToStart(grid)
-    grid = torch.tensor(grid, dtype=torch.float32)
-    normalize = transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
-    for timestamp in range(grid.shape[0]):
-        grid[timestamp] = normalize(grid[timestamp])
-    
-    """
-    for band in range(grid.shape[1]):
-        grid[:, band, :, :] = ((grid[:, band, :, :] - S2_BAND_MEANS[band]) / S2_BAND_STDS[band])
-        """
+    grid = torch.tensor(grid, dtype=torch.float32)        
     return grid
 
 def preprocessGridForFCN(grid, time_slice):
+    grid = moveTimeToStart(grid)
+    grid = torch.tensor(grid, dtype=torch.float32)
     grid = takeTimeSlice(grid, time_slice)
     return grid
+
+
+def preprocessGridForUNet(grid, time_slice = None):
+    grid, _, _ = sample_timeseries(grid, MIN_TIMESTAMPS)
+    grid = moveTimeToStart(grid)
+    grid = torch.tensor(grid, dtype=torch.float32)
     
+    if time_slice is None:
+        grid = mergeTimeBandChannels(grid)
+    else:
+        grid = takeTimeSlice(grid, time_slice)
+    return grid
+
 
 def truncateToSmallestLength(batch):
     """ Truncates len of all sequences to MIN_TIMESTAMPS.
@@ -272,12 +317,14 @@ def truncateToSmallestLength(batch):
     """
     batch_X = [item[0] for item in batch]
     batch_y = [item[1] for item in batch]
-
+    
     for i in range(len(batch_X)):
         if len(batch_X[i].shape)>3:
             batch_X[i], _, _ = sample_timeseries(batch_X[i], MIN_TIMESTAMPS, timestamps_first=True)
-        
+    
     return [torch.stack(batch_X), torch.stack(batch_y)]
+
+
 
 def padToVariableLength(batch):
     """ Pads all sequences to same length (variable per batch).

@@ -340,7 +340,7 @@ def get_train_parser():
                         default=1)
     
     parser.add_argument('--time_slice', type=int,
-                        help="which time slice for training FCN",
+                        help="which time slice for training FCN/UNet",
                         default=None)    
     parser.add_argument('--weight_decay', type=float,
                         help="l2 regularization weight")
