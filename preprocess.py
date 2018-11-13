@@ -183,11 +183,14 @@ def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None
     if model_name == "bidir_clstm":
         return preprocessGridForCLSTM(grid, transform, rot)
     
-    if model_name == "fcn":
-        return preprocessGridForFCN(grid, time_slice, transform, rot)
+    elif model_name == "fcn":
+        return preprocessGridForFCN(grid, time_slice)
     
     if model_name == "unet":
         return preprocessGridForUNet(grid, time_slice)
+
+    elif model_name == "fcn_crnn":
+        return preprocessGridForFCNCRNN(grid, transform, rot)
 
     raise ValueError(f'Model: {model_name} unsupported')
 
@@ -207,7 +210,7 @@ def preprocess_label(label, model_name, num_classes=None, transform=False, rot=N
         assert not num_classes is None
         return preprocessLabelForCLSTM(label, num_classes, transform, rot)
     
-    if model_name == "fcn":
+    elif model_name == "fcn":
         assert not num_classes is None
 
         return preprocessLabelForFCN(label, num_classes, transform, rot)
@@ -215,6 +218,10 @@ def preprocess_label(label, model_name, num_classes=None, transform=False, rot=N
     if model_name == "unet":
         assert not num_classes is None
         return preprocessLabelForUNet(label, num_classes)
+
+    elif model_name == "fcn_crnn":
+        assert not num_classes is None
+        return preprocessLabelForFCNCRNN(label, num_classes)
 
     raise ValueError(f'Model: {model_name} unsupported')
     
@@ -249,8 +256,13 @@ def preprocessLabelForFCN(label, num_classes, transform, rot):
     label = torch.tensor(label, dtype=torch.float32)
     return label
 
-
 def preprocessLabelForUNet(label, num_classes):
+    label = onehot_mask(label, num_classes)
+    label = np.transpose(label, [2, 0, 1])
+    label = torch.tensor(label, dtype=torch.float32)
+    return label
+
+def preprocessLabelForFCNCRNN(label, num_classes):
     """ Converts to onehot encoding and shifts channels to be first dim.
 
     Args:
@@ -277,14 +289,6 @@ def preprocessGridForCLSTM(grid, transform, rot):
         grid = grid[:, :, :, ::-1]
         grid = np.rot90(grid, k=rot, axes=(2, 3))
     grid = torch.tensor(grid.copy(), dtype=torch.float32)
-    normalize = transforms.Normalize([0] * grid.shape[1], [1] * grid.shape[1])
-    for timestamp in range(grid.shape[0]):
-        grid[timestamp] = normalize(grid[timestamp])
-    
-    """
-    for band in range(grid.shape[1]):
-        grid[:, band, :, :] = ((grid[:, band, :, :] - S2_BAND_MEANS[band]) / S2_BAND_STDS[band])
-        """
     return grid
 
 def preprocessGridForFCN(grid, time_slice, transform, rot):
@@ -306,6 +310,14 @@ def preprocessGridForUNet(grid, time_slice = None):
         grid = takeTimeSlice(grid, time_slice)
     return grid 
    
+def preprocessGridForFCNCRNN(grid, transform, rot):
+    grid = moveTimeToStart(grid)
+    if transform:
+        grid = grid[:, :, :, ::-1]
+        grid = np.rot90(grid, k=rot, axes=(2, 3))
+    grid = torch.tensor(grid.copy(), dtype=torch.float32)
+    return grid
+
 def moveTimeToStart(arr):
     """ Moves time axis to the first dim.
         
@@ -342,7 +354,6 @@ def truncateToSmallestLength(batch):
     """
     batch_X = [item[0] for item in batch]
     batch_y = [item[1] for item in batch]
-    
     for i in range(len(batch_X)):
         if len(batch_X[i].shape)>3:
             batch_X[i], _, _ = sample_timeseries(batch_X[i], MIN_TIMESTAMPS, timestamps_first=True)

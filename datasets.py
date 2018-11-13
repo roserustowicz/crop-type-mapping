@@ -10,7 +10,8 @@ import pickle
 import h5py
 import numpy as np
 import os
-from preprocess import *
+
+import preprocess
 from constants import *
 from random import shuffle
 
@@ -42,17 +43,17 @@ class CropTypeDS(Dataset):
             s2 = None
             if self.use_s1:
                 s1 = data['s1'][self.grid_list[idx]][:2, :, :]
-                s1 = normalization(s1, 's1')
+                s1 = preprocess.normalization(s1, 's1')
             if self.use_s2:
                 s2 = data['s2'][self.grid_list[idx]][()]
-                s2 = normalization(s2, 's2')
+                s2 = preprocess.normalization(s2, 's2')
             
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
-            grid = concat_s1_s2(s1, s2)
-            grid = preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
+            grid = preprocess.concat_s1_s2(s1, s2)
+            grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
             label = data['labels'][self.grid_list[idx]][()]
-            label = preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
+            label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
 
         return grid, label
       
@@ -65,7 +66,7 @@ class GridDataLoader(DataLoader):
                                              shuffle=args.shuffle,
                                              num_workers=args.num_workers,
                                              pin_memory=True,
-                                             collate_fn=truncateToSmallestLength)
+                                             collate_fn=preprocess.truncateToSmallestLength)
 
 
 def get_dataloaders(grid_dir, country, dataset, args):
