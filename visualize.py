@@ -75,26 +75,24 @@ def record_batch(targets, preds, num_classes, split, vis_data, vis):
 def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
     """
     """
-    losses = [x for x in all_metrics[f'{split}_loss'] if x is not None]
-    accs = [x for x in all_metrics[f'{split}_acc'] if x is not None]
     f1s = [x for x in all_metrics[f'{split}_f1'] if x is not None]
+    if f1s is not None: f1_epoch = np.mean(f1s)
+    if all_metrics[f'{split}_loss'] is not None: loss_epoch = all_metrics[f'{split}_loss'] / all_metrics[f'{split}_pix']
+    if all_metrics[f'{split}_acc'] is not None: acc_epoch = all_metrics[f'{split}_acc'] / all_metrics[f'{split}_pix']
 
-    if losses is not None: loss_batch = np.mean(losses)
-    if accs is not None: acc_batch = np.mean(accs)
-    if f1s is not None: f1_batch = np.mean(f1s)
-
-    vis_data[f'{split}_loss'].append(loss_batch)
-    vis_data[f'{split}_acc'].append(acc_batch)
-    vis_data[f'{split}_f1'].append(f1_batch)
+    vis_data[f'{split}_loss'].append(loss_epoch)
+    vis_data[f'{split}_acc'].append(acc_epoch)
+    vis_data[f'{split}_f1'].append(f1_epoch)
 
     visdom_plot_metric('loss', split, f'{split} Loss', 'Epoch', 'Loss', vis_data, vis)
     visdom_plot_metric('acc', split, f'{split} Accuracy', 'Epoch', 'Accuracy', vis_data, vis)
     visdom_plot_metric('f1', split, f'{split} f1-score', 'Epoch', 'f1-score', vis_data, vis)
                
     fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], CM_CLASSES,
-                                     normalize=False,
+                                     normalize=True,
                                      title='{} confusion matrix, epoch {}'.format(split, epoch_num),
                                      cmap=plt.cm.Blues)
+
     vis.matplot(fig, win=f'{split} CM')
 
 def visualize_rgb(argmax_array, num_classes, class_colors=None): 
