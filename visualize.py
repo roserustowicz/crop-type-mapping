@@ -89,7 +89,7 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
     visdom_plot_metric('f1', split, f'{split} f1-score', 'Epoch', 'f1-score', vis_data, vis)
                
     fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], CM_CLASSES,
-                                     normalize=True,
+                                     normalize=False,
                                      title='{} confusion matrix, epoch {}'.format(split, epoch_num),
                                      cmap=plt.cm.Blues)
 
