@@ -2,7 +2,7 @@ import numpy as np
 import torch.nn as nn
 import torch
 
-LOSS_WEIGHT = np.array([1/0.1795, 1/0.6005, 1/0.1701, 1/0.1219, 1/0.0391])
+LOSS_WEIGHT = np.array([5.57, 1.67, 5.88, 8.20, 25.57])
 LOSS_WEIGHT = torch.tensor(LOSS_WEIGHT)
 LOSS_WEIGHT = LOSS_WEIGHT.type(torch.FloatTensor).cuda()
 
