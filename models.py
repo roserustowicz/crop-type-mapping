@@ -282,16 +282,19 @@ class UNet(nn.Module):
         final = torch.log(final)
         return final
 
-def make_fcn_clstm_model(n_channel, input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
-    fcn_crnn = FCN_CRNN(n_channel, input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
+def make_fcn_clstm_model(fcn_input_size, fcn_model, rnn_input_size, rnn_model, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
+    fcn_crnn = FCN_CRNN(fcn_input_size, fcn_model, rnn_input_size, rnn_model, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
     return fcn_crnn
 
 class FCN_CRNN(nn.Module):
-    def __init__(self, fcn_input_size, rnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
+    def __init__(self, fcn_input_size, fcn_model, rnn_input_size, rnn_model, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
         super(FCN_CRNN, self).__init__()
-        
-        self.fcn = simple_CNN(fcn_input_size)
-        self.crnn = CLSTMSegmenter(rnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
+        if fcn_model == 'simple_cnn':
+            self.fcn = simple_CNN(fcn_input_size, rnn_input_size[1])
+        elif fcn_model == 'fcn8':
+            self.fcn = make_fcn_model(rnn_input_size[1], fcn_input_size[1])
+        if rnn_model == 'clstm': 
+            self.crnn = CLSTMSegmenter(rnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
 
     def forward(self, input_tensor):
         batch, timestamps, bands, rows, cols = input_tensor.size()
@@ -301,16 +304,17 @@ class FCN_CRNN(nn.Module):
         print('fcn output: ', fcn_output.shape) 
  
         crnn_input = fcn_output.view(batch, timestamps, -1, rows, cols)
+        print('crnn input: ', crnn_input.shape)
         preds = self.crnn(crnn_input)
+        print('preds: ', preds.shape)
         return preds
     
 class simple_CNN(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size, fcn_out_feats):
         """ input_size is batch, time_steps, channels, height, width
         """
         super(simple_CNN, self).__init__()
-        print('init: ', input_size[1], 64, 3) 
-        self.conv1 = nn.Conv2d(input_size[1], 64, 3, padding=1) 
+        self.conv1 = nn.Conv2d(input_size[1], fcn_out_feats, 3, padding=1) 
     def forward(self, x):
         h = x.cuda()
         print('h: ', h.shape)
@@ -702,7 +706,8 @@ def get_model(model_name, **kwargs):
         else:
             raise ValueError("S1 / S2 usage not specified in args!")
 
-        model = make_fcn_clstm_model(input_size=(MIN_TIMESTAMPS, num_bands, GRID_SIZE, GRID_SIZE), 
+        model = make_fcn_clstm_model(fcn_input_size=(MIN_TIMESTAMPS, num_bands, GRID_SIZE, GRID_SIZE), 
+                                     rnn_input_size=(MIN_TIMESTAMPS, kwargs.get('fcn_out_feats'), GRID_SIZE, GRID_SIZE),
                                      hidden_dims=kwargs.get('hidden_dims'), 
                                      lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
                                      conv_kernel_size=kwargs.get('conv_kernel_size'), 

@@ -356,7 +356,8 @@ def get_train_parser():
                         default=3)
     parser.add_argument('--env_name', type=str, default=None,
                          help="Environment name for visdom visualization")
-    parser.add_argument('--snapshot', type=bool, default=False, 
-                         help="If true, create a visdom panel of predictions for each epoch")
+    # Args for FCN CRNN model
+    parser.add_argument('--fcn_out_feats', type=int, default=64,
+                         help="Number of output features from fcn to be fed into CLSTM")
 
     return parser
