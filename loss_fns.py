@@ -21,6 +21,7 @@ def focal_loss(y_true, y_pred, reduction, gamma=2):
 
     y_true = preprocess.reshapeForLoss(y_true)
     num_examples = torch.sum(y_true, dtype=torch.float32).cuda()
+    
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
     y_true = y_true.type(torch.LongTensor).cuda()
