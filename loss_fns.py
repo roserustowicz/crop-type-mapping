@@ -37,7 +37,6 @@ def focal_loss(y_true, y_pred, reduction, gamma=2):
     focal_loss = focal_loss.view(-1)
     y = focal_loss * nll_loss
     loss = torch.sum(focal_loss * nll_loss)
-    print('loss num examples: ', num_examples)
     if reduction == "sum":
         if num_examples == 0:
             return None, 0

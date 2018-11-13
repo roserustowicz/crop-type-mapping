@@ -30,7 +30,6 @@ def get_accuracy(y_pred, y_true, reduction='avg'):
     # Get metrics for accuracy
     total_correct = np.sum([y_true.numpy() == y_pred.cpu().numpy()])
     num_pixels = y_pred.shape[0]
-    print('acc num pixels: ') 
     if reduction == 'avg':
         if num_pixels == 0:
             return None
