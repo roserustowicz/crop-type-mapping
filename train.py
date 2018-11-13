@@ -26,7 +26,7 @@ def evaluate_split(model, model_name, split_loader, device):
             inputs.to(device)
             targets.to(device)
             preds = model(inputs)   
-            batch_loss, batch_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
+            batch_loss, _, _, batch_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
             total_loss += batch_loss.item()
             total_correct += batch_correct
             total_pixels += num_pixels
@@ -99,9 +99,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         for i in range(args.epochs):
             for param_group in optimizer.param_groups:
                 print(param_group['lr'])
-            val_loss = 0
-            val_acc = 0
-            val_num_pixels = 0
             
             all_metrics = {'train_loss': 0, 'train_acc': 0, 'train_pix': 0, 'train_f1': [], 
                        'train_cm': np.zeros((args.num_classes, args.num_classes)).astype(int),
@@ -133,11 +130,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         
                         elif split == 'val':
                             loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
-                            if cm_cur is not None:
-                                # If there are valid pixels, update info for val
-                                val_loss += loss.item()
-                                val_acc += total_correct
-                                val_num_pixels += num_pixels
                         
                         if cm_cur is not None:
                             # If there are valid pixels, update metrics
@@ -152,9 +144,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     batch_num += 1
 
                 if split == 'val':
-                    val_loss = val_loss / val_num_pixels
+                    val_loss = all_metrics['val_loss'] / all_metrics['val_pix']
                     lr_scheduler.step(val_loss)
-                    val_acc = val_acc / val_num_pixels
+                    val_acc = all_metrics['val_acc'] / all_metrics['val_pix']
                     
                     if val_acc > best_val_acc:
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
