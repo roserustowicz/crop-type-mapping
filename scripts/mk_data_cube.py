@@ -62,7 +62,7 @@ def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_
             files = [os.path.join(cur_path, f) for f in os.listdir(cur_path) if f.endswith('.tif')]
             if country == 'ghana':
                 grid_numbers = [f.split('_')[-2] for f in files]
-            elif country == 'tanzania':
+            elif country in ['tanzania', 'southsudan']:
                 grid_numbers = [f.split('_')[-3] for f in files]
             grid_numbers.sort()
  
@@ -112,7 +112,7 @@ def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_
                                 data_array[:, :, :, idx] = src.read()
                             if country == 'ghana':
                                 dates.append(fname.split('/')[-1][-14:-4])
-                            elif country == 'tanzania':
+                            elif country in ['tanzania', 'southsudan']:
                                 tmp = fname.split('/')[-1].split('_')[:-1]+['.tif']
                                 dates.append(tmp[-2])
                             if 's1' in source: 
@@ -120,7 +120,7 @@ def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_
 
                 if out_format == 'npy':
                     tmp = fname.split('/')
-                    if country == 'tanzania': 
+                    if country in ['tanzania', 'southsudan']: 
                         tmp[-1] = tmp[-1].split('_')[:-1]
                         tmp[-1] = "_".join(tmp[-1])+'.tif'
                     tmp[-1] = tmp[-1][:-15].replace('asc_', '').replace('desc_', '')
@@ -153,8 +153,8 @@ def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_
 if __name__ == '__main__':
 
     home = '/home/data'
-    countries = ['tanzania']
-    sources = ['s2']
+    countries = ['southsudan']
+    sources = ['s1']
     lbl_dir = 'raster'
     verbose = 1
     out_format = 'npy'
