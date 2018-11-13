@@ -33,7 +33,7 @@ def evaluate_split(model, model_name, split_loader, device):
 
     return total_loss / total_pixels, total_correct / total_pixels
 
-def evaluate(preds, labels, loss_fn, reduction):
+def evaluate(preds, labels, loss_fn, reduction, loss_weight):
     """ Evalautes loss and metrics for predictions vs labels.
 
     Args:
@@ -42,6 +42,7 @@ def evaluate(preds, labels, loss_fn, reduction):
         loss_fn - (function) function that takes preds and labels and outputs some loss metric
         reduction - (str) "avg" or "sum", where "avg" calculates the average accuracy for each batch
                                           where "sum" tracks total correct and total pixels separately
+        loss_weight - (bool) whether we use weighted loss function or not
 
     Returns:
         loss - (float) the loss the model incurs
@@ -55,11 +56,11 @@ def evaluate(preds, labels, loss_fn, reduction):
     cm = metrics.get_cm(preds, labels)
 
     if reduction == "avg":
-        loss = loss_fn(labels, preds, reduction)
+        loss = loss_fn(labels, preds, reduction, loss_weight)
         accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, f1, accuracy
     elif reduction == "sum":
-        loss, _ = loss_fn(labels, preds, reduction)
+        loss, _ = loss_fn(labels, preds, reduction, loss_weight)
         total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, f1, total_correct, num_pixels
 
@@ -118,7 +119,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         preds = model(inputs)   
                         
                         if split == 'train':
-                            loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
+                            loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight)
                             if cm_cur is not None:        
                                 # If there are valid pixels, update weights
                                 optimizer.zero_grad()
@@ -129,7 +130,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                 vis_data['train_gradnorm'].append(gradnorm)
                         
                         elif split == 'val':
-                            loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
+                            loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight)
                         
                         if cm_cur is not None:
                             # If there are valid pixels, update metrics

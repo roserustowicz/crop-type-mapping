@@ -1,4 +1,10 @@
 import numpy as np
+import torch.nn as nn
+import torch
+
+LOSS_WEIGHT = np.array([1/0.1795, 1/0.6005, 1/0.1701, 1/0.1219, 1/0.0391])
+LOSS_WEIGHT = torch.tensor(LOSS_WEIGHT)
+LOSS_WEIGHT = LOSS_WEIGHT.type(torch.FloatTensor).cuda()
 
 DATA_FILE_PATH = "/home/data"
 CROP_LABELS = ['maize','groundnut', 'rice', 'soya bean', 'sorghum', 'yam', 'sesame', 'beans', 'sunflower', 'chick peas', 'wheat', 'other']

@@ -341,10 +341,16 @@ def get_train_parser():
     
     parser.add_argument('--time_slice', type=int,
                         help="which time slice for training FCN/UNet",
-                        default=None)    
+                        default=None)   
+    
     parser.add_argument('--weight_decay', type=float,
                         help="l2 regularization weight",
                         default=0)
+    
+    parser.add_argument('--loss_weight', type=bool,
+                        help="weighted cross entropy loss",
+                        default=False)
+    
     parser.add_argument('--lr_decay', type=float,
                         help="Factor to multiply lr by on decay",
                         default=.5)
