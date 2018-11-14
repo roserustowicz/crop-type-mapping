@@ -26,7 +26,7 @@ from constants import *
 from ast import literal_eval
 
 def generate_int_power_HP(base, minVal, maxVal):
-    exp = np.random.randint(minVal, maxVal)
+    exp = np.random.randint(minVal, maxVal + 1)
     return base ** exp
 
 def generate_real_power_HP(base, minVal, maxVal):
@@ -34,7 +34,7 @@ def generate_real_power_HP(base, minVal, maxVal):
     return base ** exp
 
 def generate_int_HP(minVal, maxVal):
-    return np.random.randint(minVal, maxVal)
+    return np.random.randint(minVal, maxVal + 1)
 
 def generate_float_HP(minVal, maxVal):
     return np.random.uniform(minVal, maxVal)
@@ -61,6 +61,7 @@ if __name__ ==  "__main__":
                         help="Tuple containing (base, min exp, max exp). Picks weight decay between base ** min exp to base ** max exp on a logarithmic scale.")
     search_parser.add_argument('--momentum_range', type=str2tuple)
     search_parser.add_argument('--optimizer_range', type=str2tuple)
+    search_parser.add_argument('--crnn_num_layers_range', type=str2tuple)
     search_parser.add_argument('--num_samples', type=int,
                         help="number of random searches to perform")
     search_parser.add_argument('--epochs', type=int,
