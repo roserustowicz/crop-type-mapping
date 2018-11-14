@@ -16,7 +16,7 @@ import numpy as np
 from constants import *
 import visualize
 
-def evaluate_split(model, model_name, split_loader, device):
+def evaluate_split(model, model_name, split_loader, device, loss_weight, gamma):
     total_correct = 0
     total_loss = 0
     total_pixels = 0
@@ -26,14 +26,14 @@ def evaluate_split(model, model_name, split_loader, device):
             inputs.to(device)
             targets.to(device)
             preds = model(inputs)   
-            batch_loss, _, _, batch_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum")
+            batch_loss, _, _, batch_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight=loss_weight)
             total_loss += batch_loss.item()
             total_correct += batch_correct
             total_pixels += num_pixels
 
     return total_loss / total_pixels, total_correct / total_pixels
 
-def evaluate(preds, labels, loss_fn, reduction, loss_weight):
+def evaluate(preds, labels, loss_fn, reduction, loss_weight, gamma):
     """ Evalautes loss and metrics for predictions vs labels.
 
     Args:
@@ -56,11 +56,11 @@ def evaluate(preds, labels, loss_fn, reduction, loss_weight):
     cm = metrics.get_cm(preds, labels)
 
     if reduction == "avg":
-        loss = loss_fn(labels, preds, reduction, loss_weight)
+        loss = loss_fn(labels, preds, reduction, loss_weight, gamma)
         accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, f1, accuracy
     elif reduction == "sum":
-        loss, _ = loss_fn(labels, preds, reduction, loss_weight)
+        loss, _ = loss_fn(labels, preds, reduction, loss_weight, gamma)
         total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, f1, total_correct, num_pixels
 
@@ -98,8 +98,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         best_val_acc = 0
 
         for i in range(args.epochs):
-            for param_group in optimizer.param_groups:
-                print(param_group['lr'])
             
             all_metrics = {'train_loss': 0, 'train_acc': 0, 'train_pix': 0, 'train_f1': [], 
                        'train_cm': np.zeros((args.num_classes, args.num_classes)).astype(int),
@@ -119,7 +117,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         preds = model(inputs)   
                         
                         if split == 'train':
-                            loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight)
+                            loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight, gamma=args.gamma)
                             if cm_cur is not None:        
                                 # If there are valid pixels, update weights
                                 optimizer.zero_grad()
@@ -130,7 +128,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                 vis_data['train_gradnorm'].append(gradnorm)
                         
                         elif split == 'val':
-                            loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight)
+                            loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight, gamma=args.gamma)
                         
                         if cm_cur is not None:
                             # If there are valid pixels, update metrics

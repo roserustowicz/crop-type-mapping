@@ -62,6 +62,7 @@ if __name__ ==  "__main__":
     search_parser.add_argument('--momentum_range', type=str2tuple)
     search_parser.add_argument('--optimizer_range', type=str2tuple)
     search_parser.add_argument('--crnn_num_layers_range', type=str2tuple)
+    search_parser.add_argument('--gamma_range', type=str2tuple)
     search_parser.add_argument('--num_samples', type=int,
                         help="number of random searches to perform")
     search_parser.add_argument('--epochs', type=int,
@@ -122,17 +123,20 @@ if __name__ ==  "__main__":
         train_args.name = experiment_name
         print("="*100)
         print(f"TRAINING: {experiment_name}")
-        train.train(model, train_args.model_name, train_args, dataloaders=dataloaders) 
-        print(f"FINISHED TRAINING") 
-        for state_dict_name in os.listdir(train_args.save_dir):
-            if (experiment_name + "_best") in state_dict_name:
-                model.load_state_dict(torch.load(os.path.join(train_args.save_dir, state_dict_name)))
-                loss, acc = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device)
-                print(f"Best Performance: \n\t loss: {loss} \n\t acc: {acc}\n")
-                experiments[experiment_name] = [loss, acc]
-                for hp in hps:
-                    hps[hp].append([train_args.__dict__[hp], loss, acc])
-                break
+        try: 
+            train.train(model, train_args.model_name, train_args, dataloaders=dataloaders) 
+            print(f"FINISHED TRAINING") 
+            for state_dict_name in os.listdir(train_args.save_dir):
+                if (experiment_name + "_best") in state_dict_name:
+                    model.load_state_dict(torch.load(os.path.join(train_args.save_dir, state_dict_name)))
+                    loss, acc = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.gamma)
+                    print(f"Best Performance: \n\t loss: {loss} \n\t acc: {acc}\n")
+                    experiments[experiment_name] = [loss, acc]
+                    for hp in hps:
+                        hps[hp].append([train_args.__dict__[hp], loss, acc])
+                    break
+        except:
+            print("CRASHED!")
 
         torch.cuda.empty_cache()
    

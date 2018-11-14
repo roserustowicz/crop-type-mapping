@@ -4,7 +4,7 @@ import torch
 
 LOSS_WEIGHT = np.array([5.57, 1.67, 5.88, 8.20, 25.57])
 LOSS_WEIGHT = torch.tensor(LOSS_WEIGHT)
-LOSS_WEIGHT = LOSS_WEIGHT.type(torch.FloatTensor).cuda()
+LOSS_WEIGHT = 1 - 1 / LOSS_WEIGHT.type(torch.FloatTensor).cuda()
 
 DATA_FILE_PATH = "/home/data"
 CROP_LABELS = ['maize','groundnut', 'rice', 'soya bean', 'sorghum', 'yam', 'sesame', 'beans', 'sunflower', 'chick peas', 'wheat', 'other']
@@ -23,7 +23,7 @@ NROW = 10
 
 INT_POWER_EXP = ["hidden_dims"]
 REAL_POWER_EXP = ["weight_decay", "lr"]
-INT_HP = ['batch_size', 'crnn_num_layers']
+INT_HP = ['batch_size', 'crnn_num_layers', 'gamma']
 FLOAT_HP = ['momentum']
 STRING_HP = ['optimizer']
 
