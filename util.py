@@ -349,8 +349,10 @@ def get_train_parser():
     
     parser.add_argument('--loss_weight', type=bool,
                         help="weighted cross entropy loss",
-                        default=False)
-    
+                        default=True)
+    parser.add_argument('--gamma', type=int,
+                        help="weighting factor for focal loss",
+                        default=2)
     parser.add_argument('--lr_decay', type=float,
                         help="Factor to multiply lr by on decay",
                         default=.5)
