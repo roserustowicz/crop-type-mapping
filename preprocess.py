@@ -106,6 +106,17 @@ def onehot_mask(mask, num_classes):
     mask[mask > num_classes] = 0
     return np.eye(num_classes+1)[mask][:, :, 1:] 
 
+def doy2stack(doy_vec, in_shp):
+    """
+    in_shp
+    """
+    b, r, c, t = in_shp
+    assert t == len(doy_vec)
+
+    doy = torch.from_numpy(doy_vec)
+    stack = doy.unsqueeze(0).expand(c, t).unsqueeze(0).expand(r, c, t).unsqueeze(0)
+    return stack
+
 def retrieve_label(grid_name, country):
     """ Return the label of the grid specified by grid_name.
 
@@ -191,6 +202,28 @@ def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None
 
     elif model_name == "fcn_crnn":
         return preprocessGridForFCNCRNN(grid, transform, rot)
+
+    raise ValueError(f'Model: {model_name} unsupported')
+
+def preprocess_clouds(clouds, model_name, time_slice=None, transform=False, rot=None):
+    """ Returns a preprocessed version of the cloudmask based on the model.
+
+    Args:
+        clouds - (npy array) cloudmasks for s2 imagery of the grid
+        model_name - (string) type of model (ex: "C-LSTM")
+        time_slice - (int) which timestamp to be used in FCN
+    """
+    if model_name == "bidir_clstm":
+        return preprocessCloudsForCLSTM(clouds, transform, rot)
+    
+    elif model_name == "fcn":
+        return preprocessCloudsForFCN(clouds, time_slice)
+    
+    if model_name == "unet":
+        return preprocessCloudsForUNet(clouds, time_slice)
+
+    elif model_name == "fcn_crnn":
+        return preprocessCloudsForFCNCRNN(clouds, transform, rot)
 
     raise ValueError(f'Model: {model_name} unsupported')
 
@@ -318,6 +351,45 @@ def preprocessGridForFCNCRNN(grid, transform, rot):
     grid = torch.tensor(grid.copy(), dtype=torch.float32)
     return grid
 
+def preprocessCloudsForCLSTM(clouds, transform, rot):
+    clouds = np.expand_dims(clouds, 0)
+    #clouds = moveTimeToStart(clouds)
+    #if transform:
+    #    clouds = clouds[:, :, :, ::-1]
+    #    clouds = np.rot90(clouds, k=rot, axes=(2, 3))
+    #clouds = torch.tensor(clouds.copy(), dtype=torch.float32)
+    return clouds
+
+def preprocessCloudsForFCN(clouds, time_slice, transform, rot):
+    clouds = np.expand_dims(clouds, 0)
+    clouds = moveTimeToStart(clouds)
+    if transform:
+        clouds = clouds[:, :, :, ::-1]
+        clouds = np.rot90(clouds, k=rot, axes=(2, 3))
+    clouds = takeTimeSlice(clouds, time_slice)
+    return clouds
+    
+def preprocessCloudsForUNet(clouds, time_slice = None):
+    clouds = np.expand_dims(clouds, 0)
+    clouds, _, _ = sample_timeseries(clouds, MIN_TIMESTAMPS)
+    clouds = moveTimeToStart(clouds)
+    clouds = torch.tensor(clouds, dtype=torch.float32)
+    
+    if time_slice is None:
+        clouds = mergeTimeBandChannels(clouds)
+    else:
+        clouds = takeTimeSlice(clouds, time_slice)
+    return clouds 
+   
+def preprocessCloudsForFCNCRNN(clouds, transform, rot):
+    clouds = np.expand_dims(clouds, 0)
+    clouds = moveTimeToStart(clouds)
+    if transform:
+        clouds = clouds[:, :, :, ::-1]
+        clouds = np.rot90(grid, k=rot, axes=(2, 3))
+    clouds = torch.tensor(clouds.copy(), dtype=torch.float32)
+    return clouds
+
 def moveTimeToStart(arr):
     """ Moves time axis to the first dim.
         
@@ -416,13 +488,13 @@ def remap_cloud_stack(cloud_stack):
     remapped_cloud_stack[cloud_stack == 3] = 1
     return remapped_cloud_stack
 
-def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False):
+def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False, use_clouds=True):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
       num_samples - (int) number of samples to sample from the img_stack (and cloud_stack)
                      and must be <= the number of timestamps
-      dates - (list) list of dates that correspond to the timestamps in the img_stack and
+      dates - (numpy array) vector of dates that correspond to the timestamps in the img_stack and
                      cloud_stack
       cloud_stack - (numpy array) [rows x cols x timestamps], temporal stack of cloud masks
       reverse - (boolean) take 1 - probabilities, encourages cloudy images to be sampled
@@ -430,7 +502,7 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
       verbose - 
       timestamps_first - 
       least_cloudy - (bool) if true, take the least cloudy images rather than sampling with probability
-
+      use_clouds - (bool) if clouds are used as input, whether or not to use them for sampling
     Returns:
       sampled_img_stack - (numpy array) [bands x rows x cols x num_samples], temporal stack
                           of sampled images
@@ -461,8 +533,8 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     # Given a stack of cloud masks, remap it and use to compute scores
     if isinstance(cloud_stack,np.ndarray):
         remapped_cloud_stack = remap_cloud_stack(cloud_stack)
+    if isinstance(cloud_stack,np.ndarray) and use_clouds:
         scores = np.mean(remapped_cloud_stack, axis=(0, 1))
-
     else:
         if verbose:
             print('NO INPUT CLOUD MASKS. USING RANDOM SAMPLING!')
@@ -489,11 +561,11 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     else:
         sampled_img_stack = img_stack[:, :, :, samples]
     
-    samples_list = list(samples)
+    #samples_list = list(samples)
     sampled_dates = None
     
-    if not dates is None:
-        sampled_dates = [dates[i] for i in samples_list]
+    if dates is not None:
+        sampled_dates = dates[samples] #[dates[i] for i in samples_list]
 
     if isinstance(cloud_stack, np.ndarray):
         if remap_clouds:
@@ -504,7 +576,6 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     else:
         return sampled_img_stack, sampled_dates, None    
 
-    
     
 def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytime', random_sample = True, num_timestamp = 25, reverse = False, seed = 0):
     """

@@ -31,8 +31,13 @@ class CropTypeDS(Dataset):
         self.num_classes = args.num_classes
         self.split = split
         self.apply_transforms = args.apply_transforms
+        self.use_clouds = args.use_clouds
+        self.include_clouds = args.include_clouds
+        self.include_doy = args.include_doy
         ## Timeslice for FCN
         self.timeslice = args.time_slice
+        self.seed = args.seed
+        self.least_cloudy = args.least_cloudy
 
     def __len__(self):
         return self.num_grids
@@ -41,20 +46,57 @@ class CropTypeDS(Dataset):
         with h5py.File(self.hdf5_filepath, 'r') as data:
             s1 = None
             s2 = None
+            cloudmasks = None
+            s1_doy = None
+            s2_doy = None
+
             if self.use_s1:
                 s1 = data['s1'][self.grid_list[idx]][:2, :, :]
                 s1 = preprocess.normalization(s1, 's1')
+                if self.include_doy:
+                    s1_doy = data['s1_dates'][self.grid_list[idx]][()]
+                s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed)
+
             if self.use_s2:
                 s2 = data['s2'][self.grid_list[idx]][()]
                 s2 = preprocess.normalization(s2, 's2')
-            
+                if self.include_clouds:
+                    cloudmasks = data['cloudmasks'][self.grid_list[idx]][()]
+                if self.include_doy:
+                    s2_doy = data['s2_dates'][self.grid_list[idx]][()]
+                s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, MIN_TIMESTAMPS, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, use_clouds=self.use_clouds)
+
+                if cloudmasks is not None and self.include_clouds:
+                    cloudmasks = preprocess.preprocess_clouds(cloudmasks, self.model_name, self.timeslice)
+                    s2 = np.concatenate((s2, cloudmasks), 0)
+
+                if s2_doy is not None and self.include_doy:
+                    print('s2 shape doy stuff: ', s2.shape)
+                    doy_stack = preprocess.doy2stack(s2_doy, s2.shape)
+
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
+            
+            
+            
             grid = preprocess.concat_s1_s2(s1, s2)
             grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
+            
+            print('clouds1: ', cloudmasks.shape)
+
+            print('doy stack: ', doy_stack.shape)
+ 
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
-
+            
+            print('s1: ', s1.shape) 
+            print('s1 doy: ', s1_doy.shape)
+            print('s2: ', s2.shape) 
+            print('s2 doy: ', s2_doy.shape)
+            print('clouds2: ', cloudmasks.shape)
+            print('grid2: ', grid.shape)
+            print('label: ', label.shape)
+            adsf
         return grid, label
       
 class GridDataLoader(DataLoader):

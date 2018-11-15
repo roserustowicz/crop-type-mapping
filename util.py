@@ -325,20 +325,6 @@ def get_train_parser():
                         default='./models')
     parser.add_argument('--name', type=str,
                         help="Name of experiment. Used to uniquely save the model. Defaults to current time + model name if not set.")
-    # Args for CLSTM model
-    parser.add_argument('--hidden_dims', type=int, 
-                        help="Number of channels in hidden state used in convolutional RNN",
-                        default=4)
-    parser.add_argument('--crnn_kernel_sizes', type=int,
-                        help="Convolutional kernel size used within a recurrent cell",
-                        default=3)
-    parser.add_argument('--conv_kernel_size', type=int,
-                        help="Convolutional kernel size used within a convolutional layer",
-                        default=3)
-    parser.add_argument('--crnn_num_layers', type=int,
-                        help="Number of convolutional RNN cells to stack",
-                        default=1)
-    
     parser.add_argument('--time_slice', type=int,
                         help="which time slice for training FCN/UNet",
                         default=None)   
@@ -362,6 +348,29 @@ def get_train_parser():
                         default=3)
     parser.add_argument('--env_name', type=str, default=None,
                          help="Environment name for visdom visualization")
+    parser.add_argument('--seed', type=int, default=None,
+                         help="Random seed to use for reproducability")
+    parser.add_argument('--use_clouds', type=bool, default=True,
+                         help="Use clouds for sampling Sentinel-2 dates")
+    parser.add_argument('--include_clouds', type=bool, default=True,
+                         help="Include clouds as input feature")
+    parser.add_argument('--least_cloudy', type=bool, default=False,
+                         help="Whether to use least cloudy samples (True) or sample from cloudiness (False)")
+    parser.add_argument('--include_doy', type=bool, default=True,
+                         help="Include day of year as input feature")
+    # Args for CLSTM model
+    parser.add_argument('--hidden_dims', type=int, 
+                        help="Number of channels in hidden state used in convolutional RNN",
+                        default=4)
+    parser.add_argument('--crnn_kernel_sizes', type=int,
+                        help="Convolutional kernel size used within a recurrent cell",
+                        default=3)
+    parser.add_argument('--conv_kernel_size', type=int,
+                        help="Convolutional kernel size used within a convolutional layer",
+                        default=3)
+    parser.add_argument('--crnn_num_layers', type=int,
+                        help="Number of convolutional RNN cells to stack",
+                        default=1)
     # Args for FCN CRNN model
     parser.add_argument('--fcn_out_feats', type=int, default=64,
                          help="Number of output features from fcn to be fed into CLSTM")
@@ -369,5 +378,5 @@ def get_train_parser():
                          help="Model to use for fcn part of fcn + crnn")
     parser.add_argument('--crnn_model_name', type=str, default='clstm',
                          help="Model to use for crnn part of fcn + crnn")
-
+   
     return parser
