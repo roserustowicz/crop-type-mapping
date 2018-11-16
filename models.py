@@ -333,7 +333,6 @@ class FCN8s_croptype(nn.Module):
     '''
     def __init__(self, n_class=5, n_channel = 11):
         super(FCN8s_croptype, self).__init__()
-        
         # conv1
         self.conv1_1_croptype = nn.Conv2d(n_channel, 64, 3, padding=100)
         self.relu1_1 = nn.ReLU(inplace=True)

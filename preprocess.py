@@ -450,7 +450,6 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     else:
         sampled_img_stack = img_stack[:, :, :, samples]
     
-    #samples_list = list(samples)
     sampled_dates = None
     
     if dates is not None:
@@ -530,7 +529,6 @@ def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytim
             time_fnames = [satellite+'_'+country+'_'+gridded_ID+'.json' for gridded_ID in gridded_IDs]
             time_json = [json.loads(open(os.path.join(gridded_dir,f),'r').read())['dates'] for f in time_fnames]
             
-
             # keep num of timestamps >=25
             gridded_IDs = [gridded_IDs[idx] for idx in good_grid]
             gridded_fnames = [gridded_fnames[idx] for idx in good_grid]
