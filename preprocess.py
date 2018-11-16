@@ -113,6 +113,8 @@ def doy2stack(doy_vec, in_shp):
     b, r, c, t = in_shp
     assert t == len(doy_vec)
 
+    # normalize
+    doy_vec = (doy_vec - 177.5) / 177.5
     doy = torch.from_numpy(doy_vec)
     stack = doy.unsqueeze(0).expand(c, t).unsqueeze(0).expand(r, c, t).unsqueeze(0)
     return stack
@@ -214,7 +216,7 @@ def preprocess_clouds(clouds, model_name, time_slice=None, transform=False, rot=
         time_slice - (int) which timestamp to be used in FCN
     """
     if model_name == "bidir_clstm":
-        return preprocessCloudsForCLSTM(clouds, transform, rot)
+        return preprocessCloudsForCLSTM(clouds)
     
     elif model_name == "fcn":
         return preprocessCloudsForFCN(clouds, time_slice)
@@ -351,43 +353,10 @@ def preprocessGridForFCNCRNN(grid, transform, rot):
     grid = torch.tensor(grid.copy(), dtype=torch.float32)
     return grid
 
-def preprocessCloudsForCLSTM(clouds, transform, rot):
+def preprocessCloudsForCLSTM(clouds):
     clouds = np.expand_dims(clouds, 0)
-    #clouds = moveTimeToStart(clouds)
-    #if transform:
-    #    clouds = clouds[:, :, :, ::-1]
-    #    clouds = np.rot90(clouds, k=rot, axes=(2, 3))
-    #clouds = torch.tensor(clouds.copy(), dtype=torch.float32)
-    return clouds
-
-def preprocessCloudsForFCN(clouds, time_slice, transform, rot):
-    clouds = np.expand_dims(clouds, 0)
-    clouds = moveTimeToStart(clouds)
-    if transform:
-        clouds = clouds[:, :, :, ::-1]
-        clouds = np.rot90(clouds, k=rot, axes=(2, 3))
-    clouds = takeTimeSlice(clouds, time_slice)
-    return clouds
-    
-def preprocessCloudsForUNet(clouds, time_slice = None):
-    clouds = np.expand_dims(clouds, 0)
-    clouds, _, _ = sample_timeseries(clouds, MIN_TIMESTAMPS)
-    clouds = moveTimeToStart(clouds)
-    clouds = torch.tensor(clouds, dtype=torch.float32)
-    
-    if time_slice is None:
-        clouds = mergeTimeBandChannels(clouds)
-    else:
-        clouds = takeTimeSlice(clouds, time_slice)
-    return clouds 
-   
-def preprocessCloudsForFCNCRNN(clouds, transform, rot):
-    clouds = np.expand_dims(clouds, 0)
-    clouds = moveTimeToStart(clouds)
-    if transform:
-        clouds = clouds[:, :, :, ::-1]
-        clouds = np.rot90(grid, k=rot, axes=(2, 3))
-    clouds = torch.tensor(clouds.copy(), dtype=torch.float32)
+    # normalize
+    clouds = (clouds - 1.5)/1.5
     return clouds
 
 def moveTimeToStart(arr):

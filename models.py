@@ -645,24 +645,37 @@ class CLSTMSegmenter(nn.Module):
 
         return preds
 
+def get_num_bands(kwargs):
+    num_bands = -1
+    added_doy = 0
+    added_clouds = 0
+
+    if kwargs.get('include_doy'):
+        added_doy = 1
+    if kwargs.get('include_clouds'): 
+        added_clouds = 1
+
+    if kwargs.get('use_s1') and kwargs.get('use_s2'):
+        num_bands = S1_NUM_BANDS + S2_NUM_BANDS + 2*added_doy + added_clouds
+    elif kwargs.get('use_s1'):
+        num_bands = S1_NUM_BANDS + added_doy + added_clouds
+    elif kwargs.get('use_s2'):
+        num_bands = S2_NUM_BANDS + added_doy + added_clouds
+    else:
+        raise ValueError("S1 / S2 usage not specified in args!")
+    return num_bands
+
 def get_model(model_name, **kwargs):
     model = None
+
     if model_name == 'random_forest':
         model = make_rf_model(random_state=kwargs.get('random_state', None),
                                         n_jobs=kwargs.get('n_jobs', -1),
                                         n_estimators=kwargs.get('n_estimators', 50))
 
     elif model_name == 'bidir_clstm':
-        num_bands = -1
-        if kwargs.get('use_s1') and kwargs.get('use_s2'):
-            num_bands = S1_NUM_BANDS + S2_NUM_BANDS
-        elif kwargs.get('use_s1'):
-            num_bands = S1_NUM_BANDS
-        elif kwargs.get('use_s2'):
-            num_bands = S2_NUM_BANDS
-        else:
-            raise ValueError("S1 / S2 usage not specified in args!")
-        
+        num_bands = get_num_bands(kwargs)
+
         # TODO: change the timestamps passed in to be more flexible (i.e allow specify variable length / fixed / truncuate / pad)
         # TODO: don't hardcode values
         model = make_bidir_clstm_model(input_size=(MIN_TIMESTAMPS, num_bands, GRID_SIZE, GRID_SIZE), 
@@ -672,28 +685,11 @@ def get_model(model_name, **kwargs):
                                        lstm_num_layers=kwargs.get('crnn_num_layers'),
                                        num_classes=kwargs.get('num_classes'))
     elif model_name == 'fcn':
-        num_bands = -1
-        if kwargs.get('use_s1') and kwargs.get('use_s2'):
-            num_bands = S1_NUM_BANDS + S2_NUM_BANDS
-        elif kwargs.get('use_s1'):
-            num_bands = S1_NUM_BANDS
-        elif kwargs.get('use_s2'):
-            num_bands = S2_NUM_BANDS
-        else:
-            raise ValueError("S1 / S2 usage not specified in args!")
-        
+        num_bands = get_num_bands(kwargs)
         model = make_fcn_model(n_class=kwargs.get('num_classes'), n_channel = num_bands, freeze=True)
     
     elif model_name == 'unet':
-        num_bands = -1
-        if kwargs.get('use_s1') and kwargs.get('use_s2'):
-            num_bands = S1_NUM_BANDS + S2_NUM_BANDS
-        elif kwargs.get('use_s1'):
-            num_bands = S1_NUM_BANDS
-        elif kwargs.get('use_s2'):
-            num_bands = S2_NUM_BANDS
-        else:
-            raise ValueError("S1 / S2 usage not specified in args!")
+        num_bands = get_num_bands(kwargs)
         
         if kwargs.get('time_slice') is None:
             model = make_UNet_model(n_class=kwargs.get('num_classes'), n_channel = num_bands*MIN_TIMESTAMPS)
@@ -701,15 +697,7 @@ def get_model(model_name, **kwargs):
             model = make_UNet_model(n_class=kwargs.get('num_classes'), n_channel = num_bands)
     
     elif model_name == 'fcn_crnn':
-        num_bands = -1
-        if kwargs.get('use_s1') and kwargs.get('use_s2'):
-            num_bands = S1_NUM_BANDS + S2_NUM_BANDS
-        elif kwargs.get('use_s1'):
-            num_bands = S1_NUM_BANDS
-        elif kwargs.get('use_s2'):
-            num_bands = S2_NUM_BANDS
-        else:
-            raise ValueError("S1 / S2 usage not specified in args!")
+        num_bands = get_num_bands(kwargs)
 
         model = make_fcn_clstm_model(fcn_input_size=(MIN_TIMESTAMPS, num_bands, GRID_SIZE, GRID_SIZE), 
                                      fcn_model_name=kwargs.get('fcn_model_name'),

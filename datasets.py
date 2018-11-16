@@ -56,6 +56,11 @@ class CropTypeDS(Dataset):
                 if self.include_doy:
                     s1_doy = data['s1_dates'][self.grid_list[idx]][()]
                 s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed)
+                
+                # Concatenate DOY bands
+                if s1_doy is not None and self.include_doy:
+                    doy_stack = preprocess.doy2stack(s1_doy, s1.shape)
+                    s1 = np.concatenate((s1, doy_stack), 0)
 
             if self.use_s2:
                 s2 = data['s2'][self.grid_list[idx]][()]
@@ -66,37 +71,25 @@ class CropTypeDS(Dataset):
                     s2_doy = data['s2_dates'][self.grid_list[idx]][()]
                 s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, MIN_TIMESTAMPS, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, use_clouds=self.use_clouds)
 
+                # Concatenate cloud mask bands
                 if cloudmasks is not None and self.include_clouds:
                     cloudmasks = preprocess.preprocess_clouds(cloudmasks, self.model_name, self.timeslice)
                     s2 = np.concatenate((s2, cloudmasks), 0)
 
+                # Concatenate DOY bands
                 if s2_doy is not None and self.include_doy:
-                    print('s2 shape doy stuff: ', s2.shape)
                     doy_stack = preprocess.doy2stack(s2_doy, s2.shape)
+                    s2 = np.concatenate((s2, doy_stack), 0)
 
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
             
-            
-            
             grid = preprocess.concat_s1_s2(s1, s2)
             grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
             
-            print('clouds1: ', cloudmasks.shape)
-
-            print('doy stack: ', doy_stack.shape)
- 
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
             
-            print('s1: ', s1.shape) 
-            print('s1 doy: ', s1_doy.shape)
-            print('s2: ', s2.shape) 
-            print('s2 doy: ', s2_doy.shape)
-            print('clouds2: ', cloudmasks.shape)
-            print('grid2: ', grid.shape)
-            print('label: ', label.shape)
-            adsf
         return grid, label
       
 class GridDataLoader(DataLoader):
