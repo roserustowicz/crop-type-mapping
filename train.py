@@ -112,7 +112,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 # TODO: Currently hardcoded to use padded inputs for an RNN model
                 #       consider generalizing somehow so the training script can be
                 #       more generic
-                for inputs, targets in dl:
+                for inputs, targets, cloudmasks in dl:
                     with torch.set_grad_enabled(True):
                         inputs.to(args.device)
                         targets.to(args.device)
@@ -140,7 +140,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             all_metrics[f'{split}_pix'] += num_pixels
                             all_metrics[f'{split}_f1'].append(f1)
         
-                    visualize.record_batch(targets, preds, args.num_classes, split, vis_data, vis)
+                    visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_clouds, args.include_doy, args.use_s1, args.use_s2)
 
                     batch_num += 1
 

@@ -89,8 +89,8 @@ class CropTypeDS(Dataset):
             
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
-            
-        return grid, label
+
+        return grid, label, cloudmasks
       
 class GridDataLoader(DataLoader):
 
@@ -100,9 +100,8 @@ class GridDataLoader(DataLoader):
                                              batch_size=args.batch_size,
                                              shuffle=args.shuffle,
                                              num_workers=args.num_workers,
-                                             pin_memory=True,
-                                             collate_fn=preprocess.truncateToSmallestLength)
-
+                                             pin_memory=True) #,
+                                             #collate_fn=preprocess.truncateToSmallestLength)
 
 def get_dataloaders(grid_dir, country, dataset, args):
     dataloaders = {}

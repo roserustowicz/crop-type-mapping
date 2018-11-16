@@ -45,11 +45,28 @@ def visdom_plot_images(vis, imgs, win):
     vis.images(imgs, nrow=NROW, win=win, 
                opts={'title': win})
 
-def record_batch(targets, preds, num_classes, split, vis_data, vis):
+def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2):
     # Create and show mask for labeled areas
     label_mask = np.sum(targets.numpy(), axis=1)
     label_mask = np.expand_dims(label_mask, axis=1)
     visdom_plot_images(vis, label_mask, 'Label Masks')
+
+    # Show best inputs judging from cloud masks
+    if clouds is not None:
+        best = np.argmax(np.mean(np.mean(np.squeeze(clouds.numpy()), axis=1), axis=1), axis=1)
+    else:
+        best = np.randint(0, high=inputs.shape[1], size=(inputs.shape[0].))
+
+    add_doy = 0
+    if use_s2 and use_s1:
+        if include_doy: 
+            add_doy = 1
+        boi = inputs[:, :, 2+add_doy:5+add_doy, :, :]
+    elif use_s1:
+        boi = inputs[:, :, 0:2, :, :]
+    elif use_s2:
+        boi = inputs[:, :, 0:3, :, :]
+    # TODO: process boi (bands of interest)
 
     # Show targets (labels)
     disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
