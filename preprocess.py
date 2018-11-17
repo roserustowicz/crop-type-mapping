@@ -451,10 +451,10 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     else:
         sampled_img_stack = img_stack[:, :, :, samples]
     
+    # Samples dates
     sampled_dates = None
-    
     if dates is not None:
-        sampled_dates = dates[samples] #[dates[i] for i in samples_list]
+        sampled_dates = dates[samples] 
 
     if isinstance(cloud_stack, np.ndarray):
         if remap_clouds:
