@@ -102,8 +102,7 @@ class GridDataLoader(DataLoader):
                                              batch_size=args.batch_size,
                                              shuffle=args.shuffle,
                                              num_workers=args.num_workers,
-                                             pin_memory=True) #,
-                                             #collate_fn=preprocess.truncateToSmallestLength)
+                                             pin_memory=True)
 
 def get_dataloaders(grid_dir, country, dataset, args):
     dataloaders = {}

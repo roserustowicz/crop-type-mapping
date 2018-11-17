@@ -116,6 +116,7 @@ def doy2stack(doy_vec, in_shp):
     # normalize
     doy_vec = (doy_vec - 177.5) / 177.5
     doy = torch.from_numpy(doy_vec)
+    # create feature bands filled with the doy values
     stack = doy.unsqueeze(0).expand(c, t).unsqueeze(0).expand(r, c, t).unsqueeze(0)
     return stack
 

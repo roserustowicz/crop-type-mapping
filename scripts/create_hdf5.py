@@ -9,8 +9,21 @@ import rasterio
 import argparse
 import numpy as np
 import json
+import sys
 
-from datetime import datetime
+sys.path.insert(0, '../')
+import util
+
+def get_grid_num(filename, ext, group_name):
+    if ext == 'json' and group_name in ['s1_dates', 's2_dates']:
+        grid_num = filename.split('_')[-1]
+    elif ext == 'npy' and group_name in ['s1', 's2', 'labels'] and 'mask' not in filename:
+        grid_num = filename.split('_')[-1] if group_name not in ['labels'] else filename.split('_')[-2]
+    elif ext == 'npy' and group_name == 'cloudmasks' and 'mask' in filename:
+        grid_num = filename.split('_')[-2]
+    else:
+        grid_num = None
+    return grid_num
 
 def create_hdf5(data_dir, output_dir):
     """ Creates a hdf5 representation of the data.
@@ -36,13 +49,8 @@ def create_hdf5(data_dir, output_dir):
         for filepath in os.listdir(os.path.join(data_dir, actual_dir_name)):
             filename, ext = filepath.split('.')
             # get grid num to use as the object's file name
-            if ext == 'json' and group_name in ['s1_dates', 's2_dates']:
-                grid_num = filename.split('_')[-1]
-            elif ext == 'npy' and group_name in ['s1', 's2', 'labels'] and 'mask' not in filename:
-                grid_num = filename.split('_')[-1] if group_name not in ['labels'] else filename.split('_')[-2]
-            elif ext == 'npy' and group_name == 'cloudmasks' and 'mask' in filename:
-                grid_num = filename.split('_')[-2]
-            else: continue
+            grid_num = get_grid_num(filename, ext, group_name)
+            if grid_num is None: continue
             # load in data
             if ext == 'npy':
                 data = np.load(os.path.join(data_dir, actual_dir_name, filepath))
@@ -50,14 +58,8 @@ def create_hdf5(data_dir, output_dir):
                 # open json of dates
                 with open(os.path.join(data_dir, actual_dir_name, filepath)) as f:
                     dates = json.load(f)['dates']
-                data = []
-                # convert each date to doy
-                for date in dates:
-                    y, m, d = date.split('-')
-                    doy = datetime(int(y), int(m), int(d)).timetuple().tm_yday
-                    data.append(doy)
-                # save dates as npy array
-                data = np.array(data)
+                data = util.dates2doy(dates)
+ 
             # create file name
             hdf5_filename = f'/{group_name}/{grid_num}'
             hdf5_file.create_dataset(hdf5_filename, data=data, dtype='i2', chunks=True)

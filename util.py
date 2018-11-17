@@ -10,7 +10,19 @@ import argparse
 import pickle
 import pandas as pd
 import time
+from datetime import datetime
 from sklearn.model_selection import GroupShuffleSplit
+
+def dates2doy(dates):
+    data = []
+    # convert each date to doy
+    for date in dates:
+        y, m, d = date.split('-')
+        doy = datetime(int(y), int(m), int(d)).timetuple().tm_yday
+        data.append(doy)
+    # save dates as npy array
+    data = np.array(data)
+    return data
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
