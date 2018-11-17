@@ -106,6 +106,20 @@ def onehot_mask(mask, num_classes):
     mask[mask > num_classes] = 0
     return np.eye(num_classes+1)[mask][:, :, 1:] 
 
+def doy2stack(doy_vec, in_shp):
+    """
+    in_shp
+    """
+    b, r, c, t = in_shp
+    assert t == len(doy_vec)
+
+    # normalize
+    doy_vec = (doy_vec - 177.5) / 177.5
+    doy = torch.from_numpy(doy_vec)
+    # create feature bands filled with the doy values
+    stack = doy.unsqueeze(0).expand(c, t).unsqueeze(0).expand(r, c, t).unsqueeze(0)
+    return stack
+
 def retrieve_label(grid_name, country):
     """ Return the label of the grid specified by grid_name.
 
@@ -176,22 +190,29 @@ def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None
 
     Args:
         grid - (npy array) concatenation of the s1 and s2 values of the grid
-        model_name - (string) type of model (ex: "C-LSTM")
+        model_name - (string) type of model (ex: "bidir_clstm")
         time_slice - (int) which timestamp to be used in FCN
     """
 
-    if model_name == "bidir_clstm":
-        return preprocessGridForCLSTM(grid, transform, rot)
+    if model_name in ["bidir_clstm", "fcn_crnn", "fcn"]:
+        return preprocessGrid(grid, transform, rot, time_slice)
     
-    elif model_name == "fcn":
-        return preprocessGridForFCN(grid, time_slice)
+    elif model_name == "unet":
+        return preprocessGridForUNet(grid, transform, rot, time_slice)
+
+    raise ValueError(f'Model: {model_name} unsupported')
+
+def preprocess_clouds(clouds, model_name, time_slice=None, transform=False, rot=None):
+    """ Returns a preprocessed version of the cloudmask based on the model.
+
+    Args:
+        clouds - (npy array) cloudmasks for s2 imagery of the grid
+        model_name - (string) type of model (ex: "C-LSTM")
+        time_slice - (int) which timestamp to be used in FCN
+    """
+    if model_name in ["bidir_clstm", "fcn", "unet", "fcn_crnn"]:
+        return preprocessClouds(clouds)
     
-    if model_name == "unet":
-        return preprocessGridForUNet(grid, time_slice)
-
-    elif model_name == "fcn_crnn":
-        return preprocessGridForFCNCRNN(grid, transform, rot)
-
     raise ValueError(f'Model: {model_name} unsupported')
 
 def preprocess_label(label, model_name, num_classes=None, transform=False, rot=None):
@@ -206,26 +227,13 @@ def preprocess_label(label, model_name, num_classes=None, transform=False, rot=N
     Returns:
         (npy arr) [num_classes x 64 x 64]
     """
-    if model_name == "bidir_clstm":
+    if model_name in ["bidir_clstm", "fcn", "fcn_crnn", "unet"]:
         assert not num_classes is None
-        return preprocessLabelForCLSTM(label, num_classes, transform, rot)
+        return preprocessLabel(label, num_classes, transform, rot)
     
-    elif model_name == "fcn":
-        assert not num_classes is None
-
-        return preprocessLabelForFCN(label, num_classes, transform, rot)
-    
-    if model_name == "unet":
-        assert not num_classes is None
-        return preprocessLabelForUNet(label, num_classes)
-
-    elif model_name == "fcn_crnn":
-        assert not num_classes is None
-        return preprocessLabelForFCNCRNN(label, num_classes)
-
     raise ValueError(f'Model: {model_name} unsupported')
     
-def preprocessLabelForCLSTM(label, num_classes, transform, rot):
+def preprocessLabel(label, num_classes, transform, rot):
     """ Converts to onehot encoding and shifts channels to be first dim.
 
     Args:
@@ -240,40 +248,6 @@ def preprocessLabelForCLSTM(label, num_classes, transform, rot):
     label = torch.tensor(label.copy(), dtype=torch.float32)
     return label
 
-def preprocessLabelForFCN(label, num_classes, transform, rot):
-    """ Converts to onehot encoding and shifts channels to be first dim.
-
-    Args:
-        label - (npy arr) [64x64] categorical labels for each pixel
-        num_classes - (npy arr) number of classes 
-    """
-    if transform:
-        label = np.fliplr(label)
-        label = np.rot90(label, k=rot)
-
-    label = onehot_mask(label, num_classes)
-    label = np.transpose(label, [2, 0, 1])
-    label = torch.tensor(label, dtype=torch.float32)
-    return label
-
-def preprocessLabelForUNet(label, num_classes):
-    label = onehot_mask(label, num_classes)
-    label = np.transpose(label, [2, 0, 1])
-    label = torch.tensor(label, dtype=torch.float32)
-    return label
-
-def preprocessLabelForFCNCRNN(label, num_classes):
-    """ Converts to onehot encoding and shifts channels to be first dim.
-
-    Args:
-        label - (npy arr) [64x64] categorical labels for each pixel
-        num_classes - (npy arr) number of classes 
-    """
-    label = onehot_mask(label, num_classes)
-    label = np.transpose(label, [2, 0, 1])
-    label = torch.tensor(label, dtype=torch.float32)
-    return label
-
 def saveGridAsImg(grid, fname):
     minval = 1100
     maxval = 2100
@@ -283,40 +257,28 @@ def saveGridAsImg(grid, fname):
     grid_as_img = toImg(torch.squeeze(grid[0, [2, 1, 0]]))
     grid_as_img.save(fname)
 
-def preprocessGridForCLSTM(grid, transform, rot):
+def preprocessGrid(grid, transform, rot, time_slice=None):
     grid = moveTimeToStart(grid)
     if transform:
         grid = grid[:, :, :, ::-1]
         grid = np.rot90(grid, k=rot, axes=(2, 3))
     grid = torch.tensor(grid.copy(), dtype=torch.float32)
+
+    if time_slice is not None:
+        grid = takeTimeSlice(grid, time_slice)
     return grid
 
-def preprocessGridForFCN(grid, time_slice, transform, rot):
-    grid = moveTimeToStart(grid)
-    if transform:
-        grid = grid[:, :, :, ::-1]
-        grid = np.rot90(grid, k=rot, axes=(2, 3))
-    grid = takeTimeSlice(grid, time_slice)
-    return grid
-    
-def preprocessGridForUNet(grid, time_slice = None):
-    grid, _, _ = sample_timeseries(grid, MIN_TIMESTAMPS)
-    grid = moveTimeToStart(grid)
-    grid = torch.tensor(grid, dtype=torch.float32)
-    
+def preprocessGridForUNet(grid, transform, rot, time_slice=None):
+    grid = preprocessGrid(grid, transform, rot, time_slice) 
     if time_slice is None:
         grid = mergeTimeBandChannels(grid)
-    else:
-        grid = takeTimeSlice(grid, time_slice)
     return grid 
    
-def preprocessGridForFCNCRNN(grid, transform, rot):
-    grid = moveTimeToStart(grid)
-    if transform:
-        grid = grid[:, :, :, ::-1]
-        grid = np.rot90(grid, k=rot, axes=(2, 3))
-    grid = torch.tensor(grid.copy(), dtype=torch.float32)
-    return grid
+def preprocessClouds(clouds):
+    clouds = np.expand_dims(clouds, 0)
+    # normalize to -1, 1
+    clouds = (clouds - 1.5)/1.5
+    return clouds
 
 def moveTimeToStart(arr):
     """ Moves time axis to the first dim.
@@ -416,13 +378,13 @@ def remap_cloud_stack(cloud_stack):
     remapped_cloud_stack[cloud_stack == 3] = 1
     return remapped_cloud_stack
 
-def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False):
+def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False, use_clouds=True):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
       num_samples - (int) number of samples to sample from the img_stack (and cloud_stack)
                      and must be <= the number of timestamps
-      dates - (list) list of dates that correspond to the timestamps in the img_stack and
+      dates - (numpy array) vector of dates that correspond to the timestamps in the img_stack and
                      cloud_stack
       cloud_stack - (numpy array) [rows x cols x timestamps], temporal stack of cloud masks
       reverse - (boolean) take 1 - probabilities, encourages cloudy images to be sampled
@@ -430,7 +392,7 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
       verbose - 
       timestamps_first - 
       least_cloudy - (bool) if true, take the least cloudy images rather than sampling with probability
-
+      use_clouds - (bool) if clouds are used as input, whether or not to use them for sampling
     Returns:
       sampled_img_stack - (numpy array) [bands x rows x cols x num_samples], temporal stack
                           of sampled images
@@ -461,8 +423,8 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     # Given a stack of cloud masks, remap it and use to compute scores
     if isinstance(cloud_stack,np.ndarray):
         remapped_cloud_stack = remap_cloud_stack(cloud_stack)
+    if isinstance(cloud_stack,np.ndarray) and use_clouds:
         scores = np.mean(remapped_cloud_stack, axis=(0, 1))
-
     else:
         if verbose:
             print('NO INPUT CLOUD MASKS. USING RANDOM SAMPLING!')
@@ -489,11 +451,10 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     else:
         sampled_img_stack = img_stack[:, :, :, samples]
     
-    samples_list = list(samples)
+    # Samples dates
     sampled_dates = None
-    
-    if not dates is None:
-        sampled_dates = [dates[i] for i in samples_list]
+    if dates is not None:
+        sampled_dates = dates[samples] 
 
     if isinstance(cloud_stack, np.ndarray):
         if remap_clouds:
@@ -504,7 +465,6 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     else:
         return sampled_img_stack, sampled_dates, None    
 
-    
     
 def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytime', random_sample = True, num_timestamp = 25, reverse = False, seed = 0):
     """
@@ -570,7 +530,6 @@ def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytim
             time_fnames = [satellite+'_'+country+'_'+gridded_ID+'.json' for gridded_ID in gridded_IDs]
             time_json = [json.loads(open(os.path.join(gridded_dir,f),'r').read())['dates'] for f in time_fnames]
             
-
             # keep num of timestamps >=25
             gridded_IDs = [gridded_IDs[idx] for idx in good_grid]
             gridded_fnames = [gridded_fnames[idx] for idx in good_grid]

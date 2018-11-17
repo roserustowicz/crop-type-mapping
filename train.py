@@ -90,9 +90,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     'train_f1': [], 'val_f1': [], 
                     'train_gradnorm': []}
         
-        vis = visualize.setup_visdom(args.env_name, args.model_name)
+        vis = visualize.setup_visdom(args.env_name, model_name)
 
-        loss_fn = loss_fns.get_loss_fn(args.model_name)
+        loss_fn = loss_fns.get_loss_fn(model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)
         best_val_acc = 0
@@ -112,7 +112,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 # TODO: Currently hardcoded to use padded inputs for an RNN model
                 #       consider generalizing somehow so the training script can be
                 #       more generic
-                for inputs, targets in dl:
+                for inputs, targets, cloudmasks in dl:
                     with torch.set_grad_enabled(True):
                         inputs.to(args.device)
                         targets.to(args.device)
@@ -140,7 +140,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             all_metrics[f'{split}_pix'] += num_pixels
                             all_metrics[f'{split}_f1'].append(f1)
         
-                    visualize.record_batch(targets, preds, args.num_classes, split, vis_data, vis)
+                    visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
 
                     batch_num += 1
 
