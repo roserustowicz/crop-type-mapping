@@ -39,7 +39,10 @@ def get_accuracy(y_pred, y_true, reduction='avg'):
         return total_correct, num_pixels
 
 
-def get_f1score(y_pred, y_true):
+def get_f1score(y_pred, y_true, average='macro'):
+    """
+    average - micro (all results together), macro (per class unweighted avg), None (per class scores)
+    """
     # Reshape truth labels into [N, num_classes]
     y_true = preprocess.reshapeForLoss(y_true)
 
@@ -52,7 +55,7 @@ def get_f1score(y_pred, y_true):
     if y_true.shape[0] == 0:
         return None
     else: 
-        return f1_score(y_true, y_pred, labels=CM_LABELS, average='micro') 
+        return f1_score(y_true, y_pred, labels=CM_LABELS, average=average) 
 
 
 def get_cm(y_pred, y_true):
