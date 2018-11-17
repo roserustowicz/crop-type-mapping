@@ -651,7 +651,7 @@ def get_num_bands(kwargs):
 
     if kwargs.get('include_doy'):
         added_doy = 1
-    if kwargs.get('include_clouds'): 
+    if kwargs.get('include_clouds') and kwargs.get('use_s2'): 
         added_clouds = 1
 
     if kwargs.get('use_s1') and kwargs.get('use_s2'):

@@ -89,7 +89,9 @@ class CropTypeDS(Dataset):
             
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
-
+        
+        if cloudmasks is None:
+            cloudmasks = False
         return grid, label, cloudmasks
       
 class GridDataLoader(DataLoader):

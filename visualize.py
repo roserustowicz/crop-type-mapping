@@ -1,4 +1,5 @@
 """
+import random
 
 File for visualizing model performance.
 
@@ -34,7 +35,6 @@ def visdom_plot_metric(metric_name, split, title, x_label, y_label, vis_data, vi
                    'xlabel': x_label,
                    'ylabel': y_label})
     
-
 def visdom_plot_images(vis, imgs, win):
     """
     Plot image panel in visdom
@@ -45,28 +45,61 @@ def visdom_plot_images(vis, imgs, win):
     vis.images(imgs, nrow=NROW, win=win, 
                opts={'title': win})
 
-def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2):
+def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice):
     # Create and show mask for labeled areas
     label_mask = np.sum(targets.numpy(), axis=1)
     label_mask = np.expand_dims(label_mask, axis=1)
     visdom_plot_images(vis, label_mask, 'Label Masks')
 
     # Show best inputs judging from cloud masks
-    if clouds is not None:
+    if torch.sum(clouds) != 0 and len(clouds.shape) > 1: 
         best = np.argmax(np.mean(np.mean(np.squeeze(clouds.numpy()), axis=1), axis=1), axis=1)
     else:
-        best = np.randint(0, high=inputs.shape[1], size=(inputs.shape[0].))
+        best = np.random.randint(0, high=MIN_TIMESTAMPS, size=(inputs.shape[0],))
 
+    boi = []
     add_doy = 0
     if use_s2 and use_s1:
         if include_doy: 
             add_doy = 1
-        boi = inputs[:, :, 2+add_doy:5+add_doy, :, :]
+        if model_name in ['fcn_crnn', 'bidir_clstm']:
+            for idx, b in enumerate(best):
+                boi.append(inputs[idx, b, 2+add_doy:5+add_doy, :, :].unsqueeze(0))
+            boi = torch.cat(boi, dim=0)
+        elif model_name in ['fcn', 'unet'] and time_slice is not None:
+            boi = inputs[:, 2+add_doy:5+add_doy, :, :]
+        elif model_name in ['unet'] and time_slice is None:
+            inputs = inputs.view(inputs.shape[0], MIN_TIMESTAMPS, -1, inputs.shape[2], inputs.shape[3])  
+            for idx, b in enumerate(best):
+                boi.append(inputs[idx, b, 2+add_doy:5+add_doy, :, :].unsqueeze(0))
+            boi = torch.cat(boi, dim=0)
     elif use_s1:
-        boi = inputs[:, :, 0:2, :, :]
+        if model_name in ['fcn_crnn', 'bidir_clstm']:
+            for idx, b in enumerate(best):
+                boi.append(torch.cat((inputs[idx, b, 0:2, :, :], inputs[idx, b, 0, :, :].unsqueeze(0)), dim=0).unsqueeze(0))
+            boi = torch.cat(boi, dim=0)
+        elif model_name in ['fcn', 'unet'] and time_slice is not None:
+            boi = torch.cat((inputs[:, 0:2, :, :], inputs[:, 0, :, :].unsqueeze(1)), dim=1)
+        elif model_name in ['unet'] and time_slice is None:
+            inputs = inputs.view(inputs.shape[0], MIN_TIMESTAMPS, -1, inputs.shape[2], inputs.shape[3])  
+            for idx, b in enumerate(best):
+                boi.append(torch.cat((inputs[idx, b, 0:2, :, :], inputs[idx, b, 0, :, :].unsqueeze(0)), dim=0).unsqueeze(0))
+            boi = torch.cat(boi, dim=0)
     elif use_s2:
-        boi = inputs[:, :, 0:3, :, :]
-    # TODO: process boi (bands of interest)
+        if model_name in ['fcn_crnn', 'bidir_clstm']:
+            for idx, b in enumerate(best):
+                boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
+            boi = torch.cat(boi, dim=0)
+        elif model_name in ['fcn', 'unet'] and time_slice is not None:
+            boi = inputs[:, 0:3, :, :]
+        elif model_name in ['unet'] and time_slice is None:
+            inputs = inputs.view(inputs.shape[0], MIN_TIMESTAMPS, -1, inputs.shape[2], inputs.shape[3]) 
+            for idx, b in enumerate(best):
+                boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
+            boi = torch.cat(boi, dim=0)
+    
+    # Show boi (bands of interest)
+    visdom_plot_images(vis, boi, 'Input Images') 
 
     # Show targets (labels)
     disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
