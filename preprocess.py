@@ -189,7 +189,7 @@ def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None
 
     Args:
         grid - (npy array) concatenation of the s1 and s2 values of the grid
-        model_name - (string) type of model (ex: "C-LSTM")
+        model_name - (string) type of model (ex: "bidir_clstm")
         time_slice - (int) which timestamp to be used in FCN
     """
 
