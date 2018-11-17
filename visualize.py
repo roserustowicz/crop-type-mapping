@@ -46,6 +46,8 @@ def visdom_plot_images(vis, imgs, win):
                opts={'title': win})
 
 def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice):
+    """ Record values and images for batch in visdom
+    """
     # Create and show mask for labeled areas
     label_mask = np.sum(targets.numpy(), axis=1)
     label_mask = np.expand_dims(label_mask, axis=1)
@@ -99,7 +101,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
                 boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
     
-    # Clip and show bands of interest
+    # Clip and show input bands of interest
     boi = clip_boi(boi)
     visdom_plot_images(vis, boi, 'Input Images') 
 
@@ -124,6 +126,8 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
         visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
 
 def clip_boi(boi):
+    """ Clip bands of interest outside of 2*std per imagei sample
+    """
     for sample in range(boi.shape[0]):
         sample_mean = torch.mean(boi[sample, :, :, :])
         sample_std = torch.std(boi[sample, :, :, :])
@@ -137,7 +141,7 @@ def clip_boi(boi):
     return boi
 
 def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
-    """
+    """ Record values for epoch in visdom
     """
     f1s = [x for x in all_metrics[f'{split}_f1'] if x is not None]
     if f1s is not None: f1_epoch = np.mean(f1s)
