@@ -57,6 +57,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
     else:
         best = np.random.randint(0, high=MIN_TIMESTAMPS, size=(inputs.shape[0],))
 
+    # Get bands of interest (boi)
     boi = []
     add_doy = 0
     if use_s2 and use_s1:
@@ -98,7 +99,8 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
                 boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
     
-    # Show boi (bands of interest)
+    # Clip and show bands of interest
+    boi = clip_boi(boi)
     visdom_plot_images(vis, boi, 'Input Images') 
 
     # Show targets (labels)
@@ -121,6 +123,18 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
     if split == 'train':
         visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
 
+def clip_boi(boi):
+    for sample in range(boi.shape[0]):
+        sample_mean = torch.mean(boi[sample, :, :, :])
+        sample_std = torch.std(boi[sample, :, :, :])
+        min_clip = sample_mean - 2*sample_std
+        max_clip = sample_mean + 2*sample_std
+
+        boi[sample, :, :, :][boi[sample, :, :, :] < min_clip] = min_clip
+        boi[sample, :, :, :][boi[sample, :, :, :] > max_clip] = max_clip
+    
+        boi[sample, :, :, :] = (boi[sample, :, :, :] - min_clip)/(max_clip - min_clip)
+    return boi
 
 def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
     """
