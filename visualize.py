@@ -171,7 +171,7 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
     visdom_plot_metric('loss', split, f'{split} Loss', 'Epoch', 'Loss', vis_data, vis)
     visdom_plot_metric('acc', split, f'{split} Accuracy', 'Epoch', 'Accuracy', vis_data, vis)
     visdom_plot_metric('f1', split, f'{split} f1-score', 'Epoch', 'f1-score', vis_data, vis)
-    visdom_plot_many_metrics('classf1', split, f'{split} per class f1-score', 'Epoch', 'per class f1-score', vis_data, vis)
+    visdom_plot_many_metrics('classf1', split, f'{split} per class f1-score', 'Epoch', CM_CLASSES, 'per class f1-score', vis_data, vis)
                
     fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], CM_CLASSES,
                                      normalize=False,
