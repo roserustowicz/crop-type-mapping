@@ -2,59 +2,79 @@ import pandas as pd
 import pickle
 import numpy as np
 import json
+import operator
 import os
+import sys
 import rasterio
-from random import shuffle
 import random
-from collections import defaultdict
-from shutil import copyfile
 import argparse
 import pickle
-from queue import Queue
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
-# constants used throughout
-CROP_MAPPING = np.load('/home/data/crop_dict.npy').item()
-CROP_MAPPING = {v.lower(): k for k, v in CROP_MAPPING.items()}
-UNLABELED = 0
-OTHER_CROP = 6
+from constants import *
+from random import shuffle
+from queue import Queue
+from collections import defaultdict
+from shutil import copyfile
+
+
+def correctSouthSudanLabels(crop):
+    if '/' in crop:
+        return 'Intercrop'
+    elif 'Sorghum' in crop:
+        return 'Sorghum'
+    else:
+        return crop
+
+def standardize_csv(csv, country):
+    # for south sudan which uses LC instead of crop
+    if country == 'southsudan':
+        csv['crop'] = csv['LC']
+        csv['geom_id'] = csv['ID']
+        csv['crop'] = csv['crop'].apply(correctSouthSudanLabels)
+    return csv
+    
 
 def get_crop_from_field_id(csv, field_id):
-    """ Return the crop grown at `field_id`. """
-    return csv[csv['geom_id'] == field_id]['crop']
+    field = csv[csv['geom_id'] == field_id]
+    if field.empty:
+        return None
+    return field.iloc[0]['crop']
+    
+def get_crop_labels(country):
+    if country == 'southsudan':
+        return SOUTHSUDAN_CROPS
+    if country == 'ghana':
+        return GHANA_CROPS
+    raise ValueError(f"Country: {country} not supported!")
+    
+def load_csv_for_split(csvname, crop_labels, valid_fields, country):
+    """ Preprocesses the csv for datasplitting purposes.
 
-
-def cp_files(data_split, prefix, source, dest, suffix):
-    """ Copies the files in a data split from a source to a dest.
+    Removes intercrop, relabels all crops not in crop_labels as other, and shuffles the csv.
 
     Args:
-        data_split - (dictionary of lists of ints)  a dictionary mapping a split to a list of the grids in that split
-        prefix - (string) any prefix necessary to append before the grid number, currently used to distinguish between s1 and s2
-        source - (string) the home directory of the data
-        dest - (string) the directory to copy the data to
-        suffix - (string) a subdirectory to further divide each split, currently used to subdivide each split into s1 and s2
+        csvname - (string) name of the csv file
+        crop_labels - (list of strings) contains all crops under consideration
+        valid_fields - (list of ints) contains all available field_nums (npy files exist)
+
+    Returns:
+        csv - (pandas df) preprocessed csv with intercrop removed, crops relabeled, and invalid / missing fields removed
 
     """
-
-    for split in ['train', 'val', 'test']:
-        for grid in data_split[split]:
-            for ext in ['.npy', '.json']:
-                filename = prefix + grid + ext
-                full_path_file = os.path.join(source, filename)
-                if os.path.isfile(full_path_file):
-                    full_path_dest = os.path.join(dest, split, suffix, filename)
-                    if not os.path.isfile(full_path_dest):
-                        copyfile(full_path_file, full_path_dest)
-                # adds cloud masks
-                if suffix == "s2":
-                    cloud_mask_path = os.path.join(source, prefix + grid + "_mask.npy")
-                    if os.path.isfile(full_path_file):
-                        cloud_path_dest = os.path.join(dest, split, suffix, prefix + grid + "_mask.npy")
-                        copyfile(cloud_mask_path, cloud_path_dest)
-
+    # read in csv and rename crops not in `crop_labels`
+    csv = pd.read_csv(csvname)
+    csv = standardize_csv(csv, country)
+    csv['crop'] = csv['crop'].apply(lambda x: x.lower())
+    csv = csv[csv['crop'] != 'intercrop'] # remove intercrop
+    csv['crop'] = csv['crop'].apply(lambda x: x if x in crop_labels else 'other')
+    csv = csv[csv['geom_id'].isin(valid_fields)]
+    # shuffle to ensure no bias for earlier fields
+    csv = csv.sample(frac=1, random_state=0)
+    return csv
 
 def get_field_grid_mappings(raster_dir, npy_dir, country):
     """ Returns mappings from fields to grids and grids to fields.
-
     Args:
         raster_dir - (string) directory containing the rasters
         npy_dir - (string) directory containing the numpy representation of the grids
@@ -68,16 +88,14 @@ def get_field_grid_mappings(raster_dir, npy_dir, country):
     field_to_grids = defaultdict(set)
     grid_to_fields = defaultdict(set)
     # iterate through the npy files
-    for grid_fn in os.listdir(npy_dir):
-        grid_no, file_type = grid_fn.split('_')[-1].split('.')
-        if file_type != 'npy': continue
-        mask_name = country + "_64x64_" + grid_no + ".tif"
+    for mask_name in os.listdir(raster_dir):
+        grid_no, ext = mask_name.split('_')[-1].split('.')
         with rasterio.open(os.path.join(raster_dir, mask_name)) as mask_data:
             mask = mask_data.read()
         # need to separate the mask from the data
         fields = np.unique(mask)
         for field in fields:
-            if field == UNLABELED: continue # not a field, just a place holder
+            if field == 0: continue # not a field, just a place holder
             field_to_grids[field].add(grid_no)
             grid_to_fields[grid_no].add(field)
 
@@ -85,7 +103,7 @@ def get_field_grid_mappings(raster_dir, npy_dir, country):
 
     return field_to_grids, grid_to_fields
 
-def create_clusters(csv, field_to_grids, grid_to_fields, raster_dir, verbose=False):
+def create_clusters(csv, field_to_grids, grid_to_fields, raster_dir, crop_mapping, verbose=False):
     """ Returns a division of fields and grids such that there is no overlap.
 
     For each cluster,
@@ -97,6 +115,7 @@ def create_clusters(csv, field_to_grids, grid_to_fields, raster_dir, verbose=Fal
         field_to_grids - (map: int->list of ints) mapping from a field to a list of all grids the field appears in
         grid_to_fields - (map: int->list of ints) mapping from a grid num to a list of all fields within that grid
         raster_dir - (string) name of directory containing rasters masks
+        crop_mapping - (map: crop -> numerical label)
         verbose - (bool) true / false for printing more information (mainly error checking)
 
     Returns:
@@ -117,26 +136,28 @@ def create_clusters(csv, field_to_grids, grid_to_fields, raster_dir, verbose=Fal
 
             while(not grids_to_add.empty()):
                 cur_grid = grids_to_add.get()
+                if cur_grid in seen: continue
                 new_cluster['grids'].add(cur_grid)
                 seen.add(cur_grid)
                 mask_name = country + "_64x64_" + cur_grid + ".tif"
                 with rasterio.open(os.path.join(raster_dir, mask_name)) as mask_data:
                     mask = mask_data.read()
+                    
                 # add the amount of crop this field contributes to the cluster total
                 fields, counts = np.unique(mask, return_counts=True)
                 for i, field in enumerate(fields):
                     if field == 0: continue
                     crop = get_crop_from_field_id(csv, field)
-                    if crop.empty:
+                    if crop is None:
                         missing.append(field)
                         continue
-                    crop = OTHER_CROP if crop.item() == 'other' else CROP_MAPPING[crop.item()]
+                    crop = 6 if crop == 'other' else crop_mapping[crop]
+                    if crop >= 6: continue # ignore everything that's not a top 5 crop
                     new_cluster['crop_counts'][crop] +=  counts[i]
                     new_cluster['fields'].add(field)
                     for potential_grid in field_to_grids[field]:
-                        if potential_grid not in seen:
-                            seen.add(potential_grid)
-                            grids_to_add.put(potential_grid)
+                        grids_to_add.put(potential_grid)
+                        
             if new_cluster['fields'] != set():
                 clusters.append(new_cluster)
 
@@ -154,29 +175,6 @@ def create_clusters(csv, field_to_grids, grid_to_fields, raster_dir, verbose=Fal
     return clusters, missing
 
 
-def load_csv_for_split(csvname, crop_labels, valid_fields):
-    """ Preprocesses the csv for datasplitting purposes.
-
-    Removes intercrop, relabels all crops not in crop_labels as other, and shuffles the csv.
-
-    Args:
-        csvname - (string) name of the csv file
-        crop_labels - (list of strings) contains all crops under consideration
-        valid_fields - (list of ints) contains all available field_nums (npy files exist)
-
-    Returns:
-        csv - (pandas df) preprocessed csv with intercrop removed, crops relabeled, and invalid / missing fields removed
-
-    """
-    # read in csv and rename crops not in `crop_labels`
-    csv = pd.read_csv(csvname)
-    csv = csv[csv['crop'] != 'Intercrop'] # remove intercrop
-    csv['crop'] = csv['crop'].apply(lambda x: x.lower())
-    csv.at[~csv['crop'].isin(crop_labels[:-1]), 'crop'] = 'other'
-    csv = csv[csv['id'].isin(valid_fields)]
-    # shuffle to ensure no bias for earlier fields
-    csv = csv.sample(frac=1, random_state=0)
-    return csv
 
 def split_evenly(seed, clusters, target_area=1e3, verbose=False):
     """ Returns a split of the data such that each class has equalish area.
@@ -205,7 +203,7 @@ def split_evenly(seed, clusters, target_area=1e3, verbose=False):
     for cluster in clusters:
         available = ['train', 'val', 'test']
         for crop in cluster['crop_counts']:
-            if crop in [UNLABELED, OTHER_CROP]: continue
+            if crop not in range(1, 6): continue
             crop_count = cluster['crop_counts'][crop]
             # times 1.05 to give more leeway, not sure if that's the right idea
             if area_per_split['train'][crop] + crop_count > target_area * 1.05:
@@ -224,6 +222,7 @@ def split_evenly(seed, clusters, target_area=1e3, verbose=False):
             cluster_splits[split].append(cluster)
 
     if verbose:
+        print("EVEN SPLITS: ")
         for split in ['train', 'val', 'test']:
             print(area_per_split[split])
 
@@ -317,7 +316,7 @@ def dist_split(seed, clusters, targets, verbose=False):
         available = ['train', 'val', 'test']
 
         for crop in cluster['crop_counts']:
-            if crop >= OTHER_CROP: continue
+            if crop >= 6: continue
             crop_count = cluster['crop_counts'][crop]
             if area_per_split['train'][crop] + crop_count > targets['train'][crop]:
                 if 'train' in available: available.remove('train')
@@ -382,9 +381,6 @@ def save_grid_splits(grid_splits, out_dir, prefix):
         with open(os.path.join(out_dir, prefix + split), "wb") as outfile:
             pickle.dump(grid_splits[split], outfile)
 
-
-
-
 def check_pixel_counts(mask_dir, country, csv, grid_splits):
     """ For each class, prints the number of pixels in each split.
 
@@ -405,11 +401,13 @@ def check_pixel_counts(mask_dir, country, csv, grid_splits):
             crops, counts = np.unique(mask, return_counts=True)
             for i, crop in enumerate(crops):
                 if crop == 0: continue
-                crop = min(crop, OTHER_CROP)
+                crop = min(crop, 6)
                 pixel_counts[crop] += counts[i]
         print(f"FOR SPLIT {split}: ")
-        for crop in pixel_counts:
-            print(f"\tCROP: {crop} has {pixel_counts[crop]} pixels ")
+        for crop, pixels in sorted(pixel_counts.items(), key= lambda kv: kv[1]):
+            print(f"\tCROP: {crop} has {pixels} pixels ")
+
+
 
 
 if __name__ == '__main__':
@@ -435,7 +433,15 @@ if __name__ == '__main__':
     parser.add_argument('--out_dir', type=str,
                         help='Path to directory outputs should be stored in.',
                         default='/home/data/')
-
+    parser.add_argument('--small_seed', type=int,
+                        help='Random seed to use for small splitting',
+                        default=0)
+    parser.add_argument('--full_seed', type=int,
+                        help='Random seed to use for full splitting',
+                        default=0)
+    parser.add_argument('--small_target', type=int,
+                        help='Desired number of pixels of each class in small',
+                        default=1e3)
 
     args = parser.parse_args()
 
@@ -445,26 +451,25 @@ if __name__ == '__main__':
     country = args.country
     out_dir = args.out_dir
 
+    crop_mapping = np.load(f'/home/data/{country}/{country}_crop_dict.npy').item()
+    crop_mapping = {v.lower(): k for k, v in crop_mapping.items()}
     # create maps
     field_to_grids, grid_to_fields = get_field_grid_mappings(raster_dir, npy_dir, country)
     # gets valid fields
     valid_fields = field_to_grids.keys()
-    crop_labels  = ['maize','groundnut', 'rice', 'soya bean', 'yam', 'other'] # should be stored in constants.py eventually
+    crop_labels  = get_crop_labels(country) 
     csvname = f'/home/data/{country}/{country}_crop.csv'
-    # prepares csv for splits
-    csv = load_csv_for_split(csvname, crop_labels, valid_fields)
-    # creates clusters
-    clusters, missing = create_clusters(csv, field_to_grids, grid_to_fields, raster_dir, args.verbose)
-    even_cluster_splits = split_evenly(1, clusters, verbose=args.verbose)
+    csv = load_csv_for_split(csvname, crop_labels, valid_fields, country)
+    clusters, missing = create_clusters(csv, field_to_grids, grid_to_fields, raster_dir, crop_mapping, args.verbose)
+    even_cluster_splits = split_evenly(args.small_seed, clusters, target_area=args.small_target, verbose=args.verbose)
     even_grid_splits = create_grid_splits(even_cluster_splits)
-
     if args.verbose:
         check_pixel_counts(mask_dir, country, csv, even_grid_splits)
     if args.save:
         save_grid_splits(even_grid_splits, out_dir=out_dir, prefix=f"{country}_small_")
 
     dist_targets = create_dist_split_targets(csv, clusters)
-    dist_cluster_splits = dist_split(16, clusters, dist_targets, verbose=args.verbose)
+    dist_cluster_splits = dist_split(args.full_seed, clusters, dist_targets, verbose=args.verbose)
 
     dist_grid_splits = create_grid_splits(dist_cluster_splits)
     if args.verbose:

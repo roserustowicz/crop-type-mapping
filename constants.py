@@ -37,3 +37,6 @@ S2_BAND_STDS = np.array([2232.5334052935987, 2147.2823093704483, 2244.5187602951
 
 CM_CLASSES = ['groundnut', 'maize', 'rice', 'soyabean', 'yam']
 CM_LABELS = [0, 1, 2, 3, 4]
+
+GHANA_CROPS = ['maize','groundnut', 'rice', 'soya bean', 'yam']
+SOUTHSUDAN_CROPS = ['sorghum', 'maize', 'rice', 'groundnut', 'sesame']
