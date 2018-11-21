@@ -3,7 +3,6 @@ Wrapper script for performing random search.
 
 run with:
 
-python random_search.py --model_name bidir_clstm --dataset small --epochs 1 --batch_size_range="(4, 24)" --lr_range="(-5, -1)" --hidden_dims_range="(4, 7)" --weight_decay_range="(-5, 0)" --num_samples=3 --logfile=test.log
 
 python random_search.py --model_name bidir_clstm --dataset small --epochs 1 --batch_size_range="(4, 24)" --lr_range="(10, -5, -1)" --hidden_dims_range="(2, 3, 7)" --weight_decay_range="(10, -5, 0)" --momentum_range="(.5, .999)" --optimizer_range="('adam', 'sgd')" --num_samples=3 --logfile=mytest.log
 
@@ -26,7 +25,7 @@ from constants import *
 from ast import literal_eval
 
 def generate_int_power_HP(base, minVal, maxVal):
-    exp = np.random.randint(minVal, maxVal)
+    exp = np.random.randint(minVal, maxVal + 1)
     return base ** exp
 
 def generate_real_power_HP(base, minVal, maxVal):
@@ -34,7 +33,7 @@ def generate_real_power_HP(base, minVal, maxVal):
     return base ** exp
 
 def generate_int_HP(minVal, maxVal):
-    return np.random.randint(minVal, maxVal)
+    return np.random.randint(minVal, maxVal + 1)
 
 def generate_float_HP(minVal, maxVal):
     return np.random.uniform(minVal, maxVal)
@@ -61,6 +60,9 @@ if __name__ ==  "__main__":
                         help="Tuple containing (base, min exp, max exp). Picks weight decay between base ** min exp to base ** max exp on a logarithmic scale.")
     search_parser.add_argument('--momentum_range', type=str2tuple)
     search_parser.add_argument('--optimizer_range', type=str2tuple)
+    search_parser.add_argument('--crnn_num_layers_range', type=str2tuple)
+    search_parser.add_argument('--gamma_range', type=str2tuple)
+    search_parser.add_argument('--weight_scale_range', type=str2tuple)
     search_parser.add_argument('--num_samples', type=int,
                         help="number of random searches to perform")
     search_parser.add_argument('--epochs', type=int,
@@ -121,17 +123,21 @@ if __name__ ==  "__main__":
         train_args.name = experiment_name
         print("="*100)
         print(f"TRAINING: {experiment_name}")
-        train.train(model, train_args.model_name, train_args, dataloaders=dataloaders) 
-        print(f"FINISHED TRAINING") 
-        for state_dict_name in os.listdir(train_args.save_dir):
-            if (experiment_name + "_best") in state_dict_name:
-                model.load_state_dict(torch.load(os.path.join(train_args.save_dir, state_dict_name)))
-                loss, acc = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device)
-                print(f"Best Performance: \n\t loss: {loss} \n\t acc: {acc}\n")
-                experiments[experiment_name] = [loss, acc]
-                for hp in hps:
-                    hps[hp].append([train_args.__dict__[hp], loss, acc])
-                break
+        try: 
+            train.train(model, train_args.model_name, train_args, dataloaders=dataloaders) 
+            print(f"FINISHED TRAINING") 
+            for state_dict_name in os.listdir(train_args.save_dir):
+                if (experiment_name + "_best") in state_dict_name:
+                    model.load_state_dict(torch.load(os.path.join(train_args.save_dir, state_dict_name)))
+                    loss, acc = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma)
+                    print(f"Best Performance: \n\t loss: {loss} \n\t acc: {acc}\n")
+                    experiments[experiment_name] = [loss, acc]
+                    for hp in hps:
+                        hps[hp].append([train_args.__dict__[hp], loss, acc])
+                    break
+        except Exception as e:
+            print("CRASHED!")
+            print(e)
 
         torch.cuda.empty_cache()
    

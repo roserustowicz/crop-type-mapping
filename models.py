@@ -215,10 +215,10 @@ class _EncoderBlock(nn.Module):
         super(_EncoderBlock, self).__init__()
         layers = [
             nn.Conv2d(in_channels, out_channels, kernel_size=3),
-            nn.BatchNorm2d(out_channels),
+            nn.GroupNorm(out_channels // 16, out_channels),
             nn.ReLU(inplace=True),
             nn.Conv2d(out_channels, out_channels, kernel_size=3),
-            nn.BatchNorm2d(out_channels),
+            nn.GroupNorm(out_channels // 16, out_channels),
             nn.ReLU(inplace=True),
         ]
         if dropout:
