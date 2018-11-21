@@ -38,7 +38,7 @@ def get_accuracy(y_pred, y_true, reduction='avg'):
     else:
         return total_correct, num_pixels
 
-
+'''
 def get_f1score(y_pred, y_true, average='macro'):
     """
     average - micro (all results together), macro (per class unweighted avg), None (per class scores)
@@ -56,7 +56,26 @@ def get_f1score(y_pred, y_true, average='macro'):
         return None
     else: 
         return f1_score(y_true, y_pred, labels=CM_LABELS, average=average) 
+'''
 
+def get_f1score(cm, average=True):
+    """ Calculate f1 score from a confusion matrix
+    Args:
+      cm - (np array) input confusion matrix
+      avg - (bool) if true, compute average of all classes
+                   if false, return separately per class
+    """
+    # calculate per class f1 score
+    f1 = np.zeros(cm.shape[0])
+    for cls in range(cm.shape[0]):
+        try:
+            f1[cls] = 2.*cm[cls, cls]/(np.sum(cm[cls, :])+np.sum(cm[:, cls]))
+        except:
+            pass
+    # average across classes
+    if average:
+        f1 = np.mean(f1)
+    return f1
 
 def get_cm(y_pred, y_true):
     """
