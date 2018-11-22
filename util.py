@@ -345,7 +345,7 @@ def get_train_parser():
                         help="l2 regularization weight",
                         default=0)
     
-    parser.add_argument('--loss_weight', type=bool,
+    parser.add_argument('--loss_weight', type=str2bool,
                         help="weighted cross entropy loss",
                         default=True)
     parser.add_argument('--gamma', type=int,
@@ -357,7 +357,7 @@ def get_train_parser():
     parser.add_argument('--lr_decay', type=float,
                         help="Factor to multiply lr by on decay",
                         default=.5)
-    parser.add_argument('--apply_transforms', type=bool,
+    parser.add_argument('--apply_transforms', type=str2bool,
                         help="Apply horizontal flipping / rotation",
                         default=True)
     parser.add_argument('--patience', type=int,
@@ -367,14 +367,13 @@ def get_train_parser():
                          help="Environment name for visdom visualization")
     parser.add_argument('--seed', type=int, default=None,
                          help="Random seed to use for reproducability")
-    parser.add_argument('--use_clouds', type=bool, default=True,
+    parser.add_argument('--use_clouds', type=str2bool, default=True,
                          help="Use clouds for sampling Sentinel-2 dates")
-    #parser.add_argument('--include_clouds', type=bool, default=False,
-    #                     help="Include clouds as input feature")
-    parser.add_argument('--include_clouds', default=True, action='store_false')
-    parser.add_argument('--least_cloudy', type=bool, default=False,
+    parser.add_argument('--include_clouds', type=str2bool, default=False,
+                         help="Include clouds as input feature")
+    parser.add_argument('--least_cloudy', type=str2bool, default=False,
                          help="Whether to use least cloudy samples (True) or sample from cloudiness (False)")
-    parser.add_argument('--include_doy', type=bool, default=True,
+    parser.add_argument('--include_doy', type=str2bool, default=True,
                          help="Include day of year as input feature")
     # Args for CLSTM model
     parser.add_argument('--hidden_dims', type=int, 
