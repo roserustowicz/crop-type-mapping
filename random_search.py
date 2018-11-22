@@ -3,8 +3,7 @@ Wrapper script for performing random search.
 
 run with:
 
-
-python random_search.py --model_name bidir_clstm --dataset small --epochs 1 --batch_size_range="(4, 24)" --lr_range="(10, -5, -1)" --hidden_dims_range="(2, 3, 7)" --weight_decay_range="(10, -5, 0)" --momentum_range="(.5, .999)" --optimizer_range="('adam', 'sgd')" --num_samples=3 --logfile=mytest.log
+python random_search.py --model_name bidir_clstm --dataset small --epochs 1 --batch_size_range="(1, 5)" --lr_range="(10, -5, -1)" --hidden_dims_range="(2, 3, 7)" --weight_decay_range="(10, -5, 0)" --momentum_range="(.5, .999)" --optimizer_range="('adam', 'sgd')" --num_samples=3 --patience_range="(1, 5)" --use_s1_range="()" --use_s2_range="()" --apply_transforms_range="()" --sample_w_clouds_range="()" --include_clouds_range="()" --include_doy_range="()" --bidirectional_range="()"
 
 """
 
@@ -41,6 +40,9 @@ def generate_float_HP(minVal, maxVal):
 def generate_string_HP(choices):
     return np.random.choice(choices)
 
+def generate_bool_HP():
+    return np.random.choice([True, False])
+
 def str2tuple(arg):
     return literal_eval(arg)
 
@@ -50,28 +52,19 @@ if __name__ ==  "__main__":
     search_parser = argparse.ArgumentParser()
     search_parser.add_argument('--model_name', type=str)
     search_parser.add_argument('--dataset', type=str)
-    search_parser.add_argument('--lr_range', type=str2tuple,
-                        help="Tuple containing (base, min exp, max exp). Picks learning rates from base ** min exp to base ** max exp on a logarithmic scale.")
-    search_parser.add_argument('--batch_size_range', type=str2tuple,
-                        help="Tuple containing (min bs, max bs). Picks bs uniformly between (min bs, max bs).") 
-    search_parser.add_argument('--hidden_dims_range', type=str2tuple,
-                        help="Tuple containing (base, min exp, max exp). Picks number of channels from base ** min exp to base ** max exp.")
-    search_parser.add_argument('--weight_decay_range', type=str2tuple,
-                        help="Tuple containing (base, min exp, max exp). Picks weight decay between base ** min exp to base ** max exp on a logarithmic scale.")
-    search_parser.add_argument('--momentum_range', type=str2tuple)
-    search_parser.add_argument('--optimizer_range', type=str2tuple)
-    search_parser.add_argument('--crnn_num_layers_range', type=str2tuple)
-    search_parser.add_argument('--gamma_range', type=str2tuple)
-    search_parser.add_argument('--weight_scale_range', type=str2tuple)
     search_parser.add_argument('--num_samples', type=int,
                         help="number of random searches to perform")
     search_parser.add_argument('--epochs', type=int,
                         help="number of epochs to train the model for")
     search_parser.add_argument('--logfile', type=str,
                         help="file to write logs to; if not specified, prints to terminal")
-
+    for hp_type in HPS:
+        for hp in hp_type:
+            search_parser.add_argument('--' + hp + "_range", type=str2tuple)
+    
     search_range = search_parser.parse_args()
     #TODO: VERY HACKY, SWITCH TO USING PYTHON LOGGING MODULE OR ACTUALLY USING WRITE CALLS
+    # CURRENTLY CHANGES STDOUT OF THE PROGRAM
     old_stdout = sys.stdout
     if search_range.logfile is not None:
         logfile = open(search_range.logfile, "w")
@@ -106,6 +99,8 @@ if __name__ ==  "__main__":
                 hp_val = generate_float_HP(vars(search_range)[arg][0], vars(search_range)[arg][1])
             elif hp in STRING_HP:
                 hp_val = generate_string_HP(vars(search_range)[arg])
+            elif hp in BOOL_HP:
+                hp_val = generate_bool_HP()
             else:
                 raise ValueError(f"HP {hp} unsupported") 
 
