@@ -174,9 +174,9 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
     else:
         vis_data[f'{split}_classf1'] = np.vstack((vis_data[f'{split}_classf1'], metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False)))
 
-    visdom_plot_metric('loss', split, f'{split} Loss', 'Epoch', 'Loss', vis_data, vis)
-    visdom_plot_metric('acc', split, f'{split} Accuracy', 'Epoch', 'Accuracy', vis_data, vis)
-    visdom_plot_metric('f1', split, f'{split} f1-score', 'Epoch', 'f1-score', vis_data, vis)
+    for cur_metric in ['loss', 'acc', 'f1']:
+        visdom_plot_metric(cur_metric, split f'{split} {cur_metric}', 'Epoch', cur_metric, vis_data, vis)
+    
     visdom_plot_many_metrics('classf1', split, f'{split} per class f1-score', 'Epoch', 'per class f1-score', CM_CLASSES, vis_data, vis)
                
     fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], CM_CLASSES,

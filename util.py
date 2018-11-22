@@ -286,7 +286,7 @@ def get_train_parser():
                         required=True)
     parser.add_argument('--hdf5_filepath', type=str,
                         help="full path to hdf5 data file",
-                        default="/home/data/ghana/data.hdf5")
+                        default="/home/data/ghana/data_v2.hdf5")
     parser.add_argument('--dataset', type=str,
                         help="Full or small?",
                         choices=('full', 'small'),
@@ -369,8 +369,9 @@ def get_train_parser():
                          help="Random seed to use for reproducability")
     parser.add_argument('--use_clouds', type=bool, default=True,
                          help="Use clouds for sampling Sentinel-2 dates")
-    parser.add_argument('--include_clouds', type=bool, default=True,
-                         help="Include clouds as input feature")
+    #parser.add_argument('--include_clouds', type=bool, default=False,
+    #                     help="Include clouds as input feature")
+    parser.add_argument('--include_clouds', default=True, action='store_false')
     parser.add_argument('--least_cloudy', type=bool, default=False,
                          help="Whether to use least cloudy samples (True) or sample from cloudiness (False)")
     parser.add_argument('--include_doy', type=bool, default=True,

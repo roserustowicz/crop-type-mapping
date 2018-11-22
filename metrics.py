@@ -48,10 +48,7 @@ def get_f1score(cm, avg=True):
     # calculate per class f1 score
     f1 = np.zeros(cm.shape[0])
     for cls in range(cm.shape[0]):
-        try:
-            f1[cls] = 2.*cm[cls, cls]/(np.sum(cm[cls, :])+np.sum(cm[:, cls]))
-        except:
-            pass
+        f1[cls] = 2.*cm[cls, cls]/(np.sum(cm[cls, :])+np.sum(cm[:, cls]))
     # average across classes
     if avg:
         f1 = np.mean(f1)

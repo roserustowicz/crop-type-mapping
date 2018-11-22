@@ -38,6 +38,7 @@ class CropTypeDS(Dataset):
         self.timeslice = args.time_slice
         self.seed = args.seed
         self.least_cloudy = args.least_cloudy
+        print(args.include_clouds)
 
     def __len__(self):
         return self.num_grids
@@ -69,6 +70,7 @@ class CropTypeDS(Dataset):
                     cloudmasks = data['cloudmasks'][self.grid_list[idx]][()]
                 if self.include_doy:
                     s2_doy = data['s2_dates'][self.grid_list[idx]][()]
+                print('length: ', s2_doy.shape)
                 s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, MIN_TIMESTAMPS, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, use_clouds=self.use_clouds)
 
                 # Concatenate cloud mask bands
