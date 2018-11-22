@@ -6,8 +6,10 @@ File for visualizing model performance.
 """
 
 import numpy as np
+import os 
 import matplotlib.pyplot as plt
 import visdom
+from torchvision.utils import save_image
 
 import metrics
 import preprocess
@@ -21,6 +23,41 @@ def setup_visdom(env_name, model_name):
     else:
         env_name = env_name
     return visdom.Visdom(port=8097, env=env_name)
+
+def visdom_save_metric(metric_name, split, title, x_label, y_label, vis_data, save_dir):
+    """
+    Args: 
+      metric_name - "loss", "acc", "f1"
+    """
+    Y=np.array(vis_data['{}_{}'.format(split, metric_name)])
+    X=np.array(range(len(vis_data['{}_{}'.format(split, metric_name)])))
+
+    plt.figure()
+    plt.plot(X, Y)
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend(['{}_{}'.format(split, metric_name)])
+    plt.savefig(os.path.join(save_dir, title + '.png'))
+    plt.close()
+
+def visdom_save_many_metrics(metric_name, split, title, x_label, y_label, legend_lbls, vis_data, save_dir):
+    """
+    Args: 
+      metric_name - "loss", "acc", "f1"
+    """
+ 
+    Y = vis_data['{}_{}'.format(split, metric_name)]
+    X = np.array([range(len(vis_data['{}_{}'.format(split, metric_name)]))] * Y.shape[1]).T 
+
+    plt.figure()
+    plt.plot(X, Y)
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend(legend_lbls)
+    plt.savefig(os.path.join(save_dir, title + '.png'))
+    plt.close()
 
 def visdom_plot_metric(metric_name, split, title, x_label, y_label, vis_data, vis):
     """
@@ -64,7 +101,7 @@ def visdom_plot_images(vis, imgs, win):
     vis.images(imgs, nrow=NROW, win=win, 
                opts={'title': win})
 
-def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice):
+def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None):
     """ Record values and images for batch in visdom
     """
     # Create and show mask for labeled areas
@@ -144,6 +181,18 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
     if split == 'train':
         visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
 
+    if save:
+        save_dir = save_dir.replace(" ", "")
+        save_dir = save_dir.replace(":", "")
+        
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        save_image(torch.from_numpy(label_mask), os.path.join(save_dir, 'label_masks.png'), nrow=NROW, normalize=True) 
+        save_image(boi, os.path.join(save_dir, 'inputs.png'), nrow=NROW, normalize=True)
+        save_image(torch.from_numpy(disp_targets), os.path.join(save_dir, 'targets.png'), nrow=NROW, normalize=True) 
+        save_image(torch.from_numpy(disp_preds), os.path.join(save_dir, 'preds.png'), nrow=NROW, normalize=True)
+        save_image(torch.from_numpy(disp_preds_w_mask), os.path.join(save_dir, 'preds_w_masks.png'), nrow=NROW, normalize=True)
+
 def clip_boi(boi):
     """ Clip bands of interest outside of 2*std per imagei sample
     """
@@ -159,7 +208,7 @@ def clip_boi(boi):
         boi[sample, :, :, :] = (boi[sample, :, :, :] - min_clip)/(max_clip - min_clip)
     return boi
 
-def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
+def record_epoch(all_metrics, split, vis_data, vis, epoch_num, save=False, save_dir=None):
     """ Record values for epoch in visdom
     """
     if all_metrics[f'{split}_loss'] is not None: loss_epoch = all_metrics[f'{split}_loss'] / all_metrics[f'{split}_pix']
@@ -176,15 +225,24 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
 
     for cur_metric in ['loss', 'acc', 'f1']:
         visdom_plot_metric(cur_metric, split, f'{split} {cur_metric}', 'Epoch', cur_metric, vis_data, vis)
-    
-    visdom_plot_many_metrics('classf1', split, f'{split} per class f1-score', 'Epoch', 'per class f1-score', CM_CLASSES, vis_data, vis)
-               
+        if save:
+            save_dir = save_dir.replace(" ", "")
+            save_dir = save_dir.replace(":", "")        
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir) 
+            visdom_save_metric(cur_metric, split, f'{split}{cur_metric}', 'Epoch', cur_metric, vis_data, save_dir)
+
+    visdom_plot_many_metrics('classf1', split, f'{split}_per_class_f1-score', 'Epoch', 'per class f1-score', CM_CLASSES, vis_data, vis)
+
     fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], CM_CLASSES,
                                      normalize=False,
                                      title='{} confusion matrix, epoch {}'.format(split, epoch_num),
                                      cmap=plt.cm.Blues)
 
     vis.matplot(fig, win=f'{split} CM')
+    if save: 
+        visdom_save_many_metrics('classf1', split, f'{split}_per_class_f1', 'Epoch', 'per class f1-score', CM_CLASSES, vis_data, save_dir)               
+        fig.savefig(os.path.join(save_dir, 'cm.png')) 
 
 def visualize_rgb(argmax_array, num_classes, class_colors=None): 
     mask = []
