@@ -242,7 +242,7 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num, save=False, save_
     vis.matplot(fig, win=f'{split} CM')
     if save: 
         visdom_save_many_metrics('classf1', split, f'{split}_per_class_f1', 'Epoch', 'per class f1-score', CM_CLASSES, vis_data, save_dir)               
-        fig.savefig(os.path.join(save_dir, 'cm.png')) 
+        fig.savefig(os.path.join(save_dir, f'{split}_cm.png')) 
 
 def visualize_rgb(argmax_array, num_classes, class_colors=None): 
     mask = []

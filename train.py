@@ -158,6 +158,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
                             visualize.record_epoch(all_metrics, split, vis_data, vis, i, save=True, 
                                                    save_dir=os.path.join(args.save_dir, args.name + "_best"))               
+                            
+                            visualize.record_epoch(all_metrics, 'train', vis_data, vis, i, save=True, 
+                                                   save_dir=os.path.join(args.save_dir, args.name + "_best"))               
  
                 visualize.record_epoch(all_metrics, split, vis_data, vis, i)
 
