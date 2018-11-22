@@ -106,8 +106,9 @@ def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_
                             data_array[grid_idx, :, :, :, idx] = src.read()
                         elif out_format == 'npy':
                             if 's1' in source and filter_s1:
-                                s1_subset = src.read()[2:, :, :]
-                                data_array[:, :, :, idx] = s1_subset
+                                s1_subset = src.read()[3:, :, :]
+                                data_array[0:2, :, :, idx] = s1_subset
+                                data_array[2, :, :, idx] = s1_subset[1,:, :] / s1_subset[0,:, :]
                             else:
                                 data_array[:, :, :, idx] = src.read()
                             if country == 'ghana':
@@ -153,9 +154,9 @@ def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_
 if __name__ == '__main__':
 
     home = '/home/data'
-    countries = ['southsudan']
+    countries = ['ghana']
     sources = ['s1']
-    lbl_dir = 'raster'
+    lbl_dir = 's1'
     verbose = 1
     out_format = 'npy'
     filter_s1 = 1
