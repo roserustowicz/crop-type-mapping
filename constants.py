@@ -21,11 +21,14 @@ S1_DIR = "s1_npy"
 S2_DIR = "s2_64x64_npy"
 NROW = 8
 
-INT_POWER_EXP = ["hidden_dims", 'weight_scale']
+INT_POWER_EXP = ["hidden_dims"]
 REAL_POWER_EXP = ["weight_decay", "lr"]
-INT_HP = ['batch_size', 'crnn_num_layers', 'gamma']
-FLOAT_HP = ['momentum']
+INT_HP = ['batch_size', 'crnn_num_layers', 'gamma', 'patience']
+FLOAT_HP = ['momentum', 'weight_scale']
 STRING_HP = ['optimizer']
+BOOL_HP = ['use_s1', 'use_s2', 'apply_transforms', 'sample_w_clouds', 'include_clouds', 'include_doy', 'bidirectional']
+
+HPS = [INT_POWER_EXP, REAL_POWER_EXP, INT_HP, FLOAT_HP, STRING_HP, BOOL_HP]
 
 S1_BAND_MEANS = np.array([-11.411486013023465, -17.94899228790914])
 
