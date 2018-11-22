@@ -107,9 +107,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             for split in ['train', 'val']:
                 dl = dataloaders[split]
                 batch_num = 0
-                # TODO: Currently hardcoded to use padded inputs for an RNN model
-                #       consider generalizing somehow so the training script can be
-                #       more generic
                 for inputs, targets, cloudmasks in dl:
                     with torch.set_grad_enabled(True):
                         inputs.to(args.device)
@@ -126,6 +123,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
                                 gradnorm = torch.norm(list(model.parameters())[0].grad)
                                 vis_data['train_gradnorm'].append(gradnorm)
+    
                         
                         elif split == 'val':
                             loss, cm_cur, f1, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
