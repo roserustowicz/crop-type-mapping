@@ -51,7 +51,7 @@ class CropTypeDS(Dataset):
             s2_doy = None
 
             if self.use_s1:
-                s1 = data['s1'][self.grid_list[idx]][:2, :, :]
+                s1 = data['s1'][self.grid_list[idx]]
                 s1 = preprocess.normalization(s1, 's1')
                 if self.include_doy:
                     s1_doy = data['s1_dates'][self.grid_list[idx]][()]
