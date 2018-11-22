@@ -378,7 +378,7 @@ def remap_cloud_stack(cloud_stack):
     remapped_cloud_stack[cloud_stack == 3] = 1
     return remapped_cloud_stack
 
-def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False, use_clouds=True):
+def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False, sample_w_clouds=True):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
@@ -392,7 +392,7 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
       verbose - 
       timestamps_first - 
       least_cloudy - (bool) if true, take the least cloudy images rather than sampling with probability
-      use_clouds - (bool) if clouds are used as input, whether or not to use them for sampling
+      sample_w_clouds - (bool) if clouds are used as input, whether or not to use them for sampling
     Returns:
       sampled_img_stack - (numpy array) [bands x rows x cols x num_samples], temporal stack
                           of sampled images
@@ -423,7 +423,7 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     # Given a stack of cloud masks, remap it and use to compute scores
     if isinstance(cloud_stack,np.ndarray):
         remapped_cloud_stack = remap_cloud_stack(cloud_stack)
-    if isinstance(cloud_stack,np.ndarray) and use_clouds:
+    if isinstance(cloud_stack,np.ndarray) and sample_w_clouds:
         scores = np.mean(remapped_cloud_stack, axis=(0, 1))
     else:
         if verbose:
