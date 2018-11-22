@@ -335,7 +335,7 @@ def get_train_parser():
     parser.add_argument('--save_dir', type=str,
                         help="Directory to save the models in. If unspecified, saves the model to ./models.",
                         default='./models')
-    parser.add_argument('--save_best', type=str2bool, default=False,
+    parser.add_argument('--save_best', type=str2bool, default=True,
                         help="Whether to save plots and images for best epoch according to validation f1-score")
     parser.add_argument('--name', type=str,
                         help="Name of experiment. Used to uniquely save the model. Defaults to current time + model name if not set.")

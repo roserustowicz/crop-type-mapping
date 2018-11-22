@@ -156,13 +156,13 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                                    args.use_s2, model_name, args.time_slice, save=True, 
                                                    save_dir=os.path.join(args.save_dir, args.name + "_best"))
 
-                            visualize.record_epoch(all_metrics, split, vis_data, vis, i, save=True, 
+                            visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country, save=True, 
                                                    save_dir=os.path.join(args.save_dir, args.name + "_best"))               
                             
-                            visualize.record_epoch(all_metrics, 'train', vis_data, vis, i, save=True, 
+                            visualize.record_epoch(all_metrics, 'train', vis_data, vis, i, args.country, save=True, 
                                                    save_dir=os.path.join(args.save_dir, args.name + "_best"))               
  
-                visualize.record_epoch(all_metrics, split, vis_data, vis, i)
+                visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country)
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")

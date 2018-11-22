@@ -208,9 +208,14 @@ def clip_boi(boi):
         boi[sample, :, :, :] = (boi[sample, :, :, :] - min_clip)/(max_clip - min_clip)
     return boi
 
-def record_epoch(all_metrics, split, vis_data, vis, epoch_num, save=False, save_dir=None):
+def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=False, save_dir=None):
     """ Record values for epoch in visdom
     """
+    if country == 'ghana':
+        class_names = GHANA_CROPS
+    elif country == 'southsudan':
+        class_names = SOUTHSUDAN_CROPS
+
     if all_metrics[f'{split}_loss'] is not None: loss_epoch = all_metrics[f'{split}_loss'] / all_metrics[f'{split}_pix']
     if all_metrics[f'{split}_correct'] is not None: acc_epoch = all_metrics[f'{split}_correct'] / all_metrics[f'{split}_pix']
 
@@ -232,16 +237,16 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num, save=False, save_
                 os.makedirs(save_dir) 
             visdom_save_metric(cur_metric, split, f'{split}{cur_metric}', 'Epoch', cur_metric, vis_data, save_dir)
 
-    visdom_plot_many_metrics('classf1', split, f'{split}_per_class_f1-score', 'Epoch', 'per class f1-score', CM_CLASSES, vis_data, vis)
+    visdom_plot_many_metrics('classf1', split, f'{split}_per_class_f1-score', 'Epoch', 'per class f1-score', class_names, vis_data, vis)
 
-    fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], CM_CLASSES,
+    fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], class_names,
                                      normalize=False,
                                      title='{} confusion matrix, epoch {}'.format(split, epoch_num),
                                      cmap=plt.cm.Blues)
 
     vis.matplot(fig, win=f'{split} CM')
     if save: 
-        visdom_save_many_metrics('classf1', split, f'{split}_per_class_f1', 'Epoch', 'per class f1-score', CM_CLASSES, vis_data, save_dir)               
+        visdom_save_many_metrics('classf1', split, f'{split}_per_class_f1', 'Epoch', 'per class f1-score', class_names, vis_data, save_dir)               
         fig.savefig(os.path.join(save_dir, f'{split}_cm.png')) 
 
 def visualize_rgb(argmax_array, num_classes, class_colors=None): 
