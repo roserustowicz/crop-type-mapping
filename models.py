@@ -204,8 +204,8 @@ def make_UNet_model(n_class, n_channel, for_fcn=False):
         
     return model
 
-def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
-    model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
+def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional):
+    model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
     model = model.cuda()
 
     return model
@@ -296,7 +296,9 @@ class UNet(nn.Module):
 
 
 class FCN_CRNN(nn.Module):
-    def __init__(self, fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
+    def __init__(self, fcn_input_size, fcn_model_name, 
+                       crnn_input_size, crnn_model_name, 
+                       hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional):
         super(FCN_CRNN, self).__init__()
         if fcn_model_name == 'simpleCNN':
             self.fcn = simple_CNN(fcn_input_size, crnn_input_size[1])
@@ -305,7 +307,7 @@ class FCN_CRNN(nn.Module):
         elif fcn_model_name == 'unet':
             self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], for_fcn=True)
         if crnn_model_name == 'clstm': 
-            self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
+            self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
 
     def forward(self, input_tensor):
         batch, timestamps, bands, rows, cols = input_tensor.size()
@@ -641,7 +643,7 @@ class CLSTMSegmenter(nn.Module):
         layer_output_list, last_state_list = self.clstm(inputs)
         final_state = last_state_list[0][0]
         if self.bidirectional:
-            rev_inputs = torch.tensor(inputs.cpu().numpy()[::-1].copy(), dtype=torch.float32).cuda()
+            rev_inputs = torch.tensor(inputs.cpu().detach().numpy()[::-1].copy(), dtype=torch.float32).cuda()
             rev_layer_output_list, rev_last_state_list = self.clstm(rev_inputs)
             final_state = torch.cat([final_state, rev_last_state_list[0][0]], dim=1)
         scores = self.conv(final_state)
@@ -713,7 +715,8 @@ def get_model(model_name, **kwargs):
                                      lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
                                      conv_kernel_size=kwargs.get('conv_kernel_size'), 
                                      lstm_num_layers=kwargs.get('crnn_num_layers'), 
-                                     num_classes=kwargs.get('num_classes'))
+                                     num_classes=kwargs.get('num_classes'),
+                                     bidirectional=kwargs.get('bidirectional'))
   
     return model
 
