@@ -26,7 +26,7 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
             inputs.to(device)
             targets.to(device)
             preds = model(inputs)   
-            batch_loss, batch_cm, _, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", weight_scale=weight_scale, loss_weight=loss_weight, gamma=gamma)
+            batch_loss, batch_cm, _, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
             total_loss += batch_loss.item()
             total_pixels += num_pixels
             total_cm += batch_cm
