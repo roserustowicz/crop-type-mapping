@@ -129,11 +129,11 @@ if __name__ ==  "__main__":
             for state_dict_name in os.listdir(train_args.save_dir):
                 if (experiment_name + "_best") in state_dict_name:
                     model.load_state_dict(torch.load(os.path.join(train_args.save_dir, state_dict_name)))
-                    loss, acc = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma)
-                    print(f"Best Performance: \n\t loss: {loss} \n\t acc: {acc}\n")
-                    experiments[experiment_name] = [loss, acc]
+                    loss, f1 = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma)
+                    print(f"Best Performance: \n\t loss: {loss} \n\t f1: {f1}\n")
+                    experiments[experiment_name] = [loss, f1]
                     for hp in hps:
-                        hps[hp].append([train_args.__dict__[hp], loss, acc])
+                        hps[hp].append([train_args.__dict__[hp], loss, f1])
                     break
         except Exception as e:
             print("CRASHED!")
