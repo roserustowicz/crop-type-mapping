@@ -388,6 +388,9 @@ def get_train_parser():
     parser.add_argument('--crnn_num_layers', type=int,
                         help="Number of convolutional RNN cells to stack",
                         default=1)
+    parser.add_argument('--bidirectional', type=str2bool,
+                        help='Use bidirectional?',
+                        default=False)
     # Args for FCN CRNN model
     parser.add_argument('--fcn_out_feats', type=int, default=64,
                          help="Number of output features from fcn to be fed into CLSTM")
