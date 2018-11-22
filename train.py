@@ -100,9 +100,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
         for i in range(args.epochs):
             
-            all_metrics = {'train_loss': 0, 'train_acc': 0, 'train_pix': 0,
+            all_metrics = {'train_loss': 0, 'train_correct': 0, 'train_pix': 0,
                        'train_cm': np.zeros((args.num_classes, args.num_classes)).astype(int),
-                       'val_loss': 0, 'val_acc': 0, 'val_pix': 0, 
+                       'val_loss': 0, 'val_correct': 0, 'val_pix': 0, 
                        'val_cm': np.zeros((args.num_classes, args.num_classes)).astype(int)}
 
             for split in ['train', 'val']:
@@ -135,7 +135,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             # If there are valid pixels, update metrics
                             all_metrics[f'{split}_cm'] += cm_cur
                             all_metrics[f'{split}_loss'] += loss.data
-                            all_metrics[f'{split}_acc'] += total_correct
+                            all_metrics[f'{split}_correct'] += total_correct
                             all_metrics[f'{split}_pix'] += num_pixels
         
                     visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
@@ -145,7 +145,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 if split == 'val':
                     val_loss = all_metrics['val_loss'] / all_metrics['val_pix']
                     lr_scheduler.step(val_loss)
-                    val_acc = all_metrics['val_acc'] / all_metrics['val_pix']
+                    val_acc = all_metrics['val_correct'] / all_metrics['val_pix']
                     
                     if val_acc > best_val_acc:
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
