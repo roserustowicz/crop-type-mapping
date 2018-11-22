@@ -414,13 +414,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--raster_dir', type=str,
                         help='Path to directory containing rasters.',
-                        default='/home/data/ghana/raster_64x64/')
+                        default='/home/data/ghana/raster/')
     parser.add_argument('--mask_dir', type=str,
                         help='Path to directory containing npy mask.',
-                        default='/home/data/ghana/raster_64x64_npy/')
+                        default='/home/data/ghana/raster_npy/')
     parser.add_argument('--npy_dir', type=str,
                         help='Path to directory containing numpy volumes of grids.',
-                        default='/home/data/ghana/s1_64x64_npy/')
+                        default='/home/data/ghana/s1_npy/')
     parser.add_argument('--country', type=str,
                         help='Country to use',
                         default='ghana')

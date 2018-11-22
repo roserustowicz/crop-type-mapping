@@ -20,6 +20,7 @@ def focal_loss(y_true, y_pred, reduction, loss_weight=False, weight_scale=1, gam
     """ 
     y_true = preprocess.reshapeForLoss(y_true)
     num_examples = torch.sum(y_true, dtype=torch.float32).cuda()
+    
 
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
@@ -41,6 +42,7 @@ def focal_loss(y_true, y_pred, reduction, loss_weight=False, weight_scale=1, gam
     loss = torch.sum(focal_loss * nll_loss)
     if reduction == "sum":
         if num_examples == 0:
+            print(num_examples)
             return None, 0
         else:
             return loss, num_examples

@@ -16,12 +16,12 @@ import numpy as np
 from constants import *
 import visualize
 
-def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma):
+def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes):
     total_loss = 0
     total_pixels = 0
-    total_cm = np.zeros((args.num_classes, args.num_classes)).astype(int) 
+    total_cm = np.zeros((num_classes, num_classes)).astype(int) 
     loss_fn = loss_fns.get_loss_fn(model_name)
-    for inputs, targets in split_loader:
+    for inputs, targets, cloudmasks in split_loader:
         with torch.set_grad_enabled(False):
             inputs.to(device)
             targets.to(device)
