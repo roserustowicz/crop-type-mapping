@@ -4,12 +4,12 @@ Wrapper script for performing random search.
 run with:
 
 
-python random_search.py --model_name bidir_clstm --dataset small --epochs 1 --batch_size_range="(1, 5)" --lr_range="(10, -5, -1)" --hidden_dims_range="(2, 3, 7)" --weight_decay_range="(10, -5, 0)" --momentum_range="(.5, .999)" --optimizer_range="('adam', 'sgd')" --num_samples=3 --patience_range="(1, 5)" --use_s1_range="()" --use_s2_range="()" --apply_transforms_range="()" --sample_w_clouds_range="()" --include_clouds_range="()" --include_doy_range="()" --bidirectional_range="()"
-n random_search.py --model_name bidir_clstm --dataset small --epochs 1 --batch_size_range="(1, 5)" --crnn_num_layers_range="(1, 1)" --lr_range="(10, -5, -1)" --hidden_dims_range="(2, 3, 7)" --weight_scale_range="(.5, 2)" --gamma_range="(0, 2)" --weight_decay_range="(10, -5, 0)" --momentum_range="(.5, .999)" --optimizer_range="('adam', 'sgd')" --num_samples=3 --patience_range="(1, 5)" --use_s1_range="()" --use_s2_range="()" --apply_transforms_range="()" --sample_w_clouds_range="()" --include_clouds_range="()" --include_doy_range="()" --bidirectional_range="()"
+python random_search.py --model_name bidir_clstm --dataset small --epochs 1 --batch_size_range="(1, 5)" --crnn_num_layers_range="(1, 1)" --lr_range="(10, -5, -1)" --hidden_dims_range="(2, 3, 7)" --weight_scale_range="(.5, 2)" --gamma_range="(0, 2)" --weight_decay_range="(10, -5, 0)" --momentum_range="(.5, .999)" --optimizer_range="('adam', 'sgd')" --num_samples=3 --patience_range="(1, 5)" --use_s1_range="()" --use_s2_range="()" --apply_transforms_range="()" --sample_w_clouds_range="()" --include_clouds_range="()" --include_doy_range="()" --bidirectional_range="()"
 """
 
 
 import argparse
+import datetime
 import os
 import train 
 import pickle
@@ -47,6 +47,40 @@ def generate_bool_HP():
 def str2tuple(arg):
     return literal_eval(arg)
 
+def recordMetadata(args, experiment_name, hps, loss, f1):
+    with open(os.path.join(args.save_dir, experiment_name + ".log"), 'w') as f:
+        f.write('HYPERPARAMETERS:\n')
+        for hp in hps:
+            hp_val = args.__dict__[hp]
+            if type(hp_val) == float:
+                hp_val = '%.3f'%hp_val 
+            f.write(f'{hp}:{hp_val}\n')
+        f.write(f"Best Performance: \n\t loss: {loss} \n\t f1: {f1}\n")
+
+def generate_hps(train_args, search_range):
+    for arg in vars(search_range):
+        if "range" not in arg: continue
+        hp = arg[:arg.find("range") - 1]
+        if hp in INT_POWER_EXP:
+            hp_val = generate_int_power_HP(vars(search_range)[arg][0], vars(search_range)[arg][1], vars(search_range)[arg][2])
+        elif hp in REAL_POWER_EXP:
+            hp_val = generate_real_power_HP(vars(search_range)[arg][0], vars(search_range)[arg][1], vars(search_range)[arg][2])
+        elif hp in INT_HP:
+            hp_val = generate_int_HP(vars(search_range)[arg][0], vars(search_range)[arg][1])
+        elif hp in FLOAT_HP:
+            hp_val = generate_float_HP(vars(search_range)[arg][0], vars(search_range)[arg][1])
+        elif hp in STRING_HP:
+            hp_val = generate_string_HP(vars(search_range)[arg])
+        elif hp in BOOL_HP:
+            hp_val = generate_bool_HP()
+        else:
+            raise ValueError(f"HP {hp} unsupported") 
+
+        train_args.__dict__[hp] = hp_val
+
+    if not train_args.__dict__['use_s1'] and not train_args.__dict__['use_s2']:
+        train_args.__dict__[np.random.choice(['use_s1', 'use_s2'])] = True
+
 if __name__ ==  "__main__":
     # get all ranges of values
 
@@ -73,7 +107,7 @@ if __name__ ==  "__main__":
 
     hps = {}
     for arg in vars(search_range):
-        if "range" not in arg: continue
+        if "range" not in arg: continue 
         hp = arg[:arg.find("range") - 1]
         hps[hp] = [] 
 
@@ -86,51 +120,36 @@ if __name__ ==  "__main__":
         train_parser = util.get_train_parser()
         train_args = train_parser.parse_args(['--model_name', search_range.model_name, '--dataset', search_range.dataset])
 
-        # build argparse args by parsing args and then setting empty fields to specified ones above
-        for arg in vars(search_range):
-            if "range" not in arg: continue
-            hp = arg[:arg.find("range") - 1]
-            if hp in INT_POWER_EXP:
-                hp_val = generate_int_power_HP(vars(search_range)[arg][0], vars(search_range)[arg][1], vars(search_range)[arg][2])
-            elif hp in REAL_POWER_EXP:
-                hp_val = generate_real_power_HP(vars(search_range)[arg][0], vars(search_range)[arg][1], vars(search_range)[arg][2])
-            elif hp in INT_HP:
-                hp_val = generate_int_HP(vars(search_range)[arg][0], vars(search_range)[arg][1])
-            elif hp in FLOAT_HP:
-                hp_val = generate_float_HP(vars(search_range)[arg][0], vars(search_range)[arg][1])
-            elif hp in STRING_HP:
-                hp_val = generate_string_HP(vars(search_range)[arg])
-            elif hp in BOOL_HP:
-                hp_val = generate_bool_HP()
-            else:
-                raise ValueError(f"HP {hp} unsupported") 
-
-            train_args.__dict__[hp] = hp_val
-
+        generate_hps(train_args, search_range) 
         train_args.epochs = search_range.epochs
-
         dataloaders = datasets.get_dataloaders(train_args.grid_dir, train_args.country, train_args.dataset, train_args)
         
         model = models.get_model(**vars(train_args))
         model.to(train_args.device)
-        experiment_name = f"model:{train_args.model_name}_dataset:{train_args.dataset}_epochs:{search_range.epochs}"
-        for hp in hps:
-            experiment_name += f"_{hp}:{train_args.__dict__[hp]}"
+        experiment_name = f"model:{train_args.model_name}_dataset:{train_args.dataset}_epochs:{search_range.epochs}_sample_no:{sample_no}"
+
         train_args.name = experiment_name
         print("="*100)
         print(f"TRAINING: {experiment_name}")
+        for hp in hps:
+            print(hp, train_args.__dict__[hp])
         try: 
             train.train(model, train_args.model_name, train_args, dataloaders=dataloaders) 
-            print(f"FINISHED TRAINING") 
+            print("FINISHED TRAINING") 
             for state_dict_name in os.listdir(train_args.save_dir):
                 if (experiment_name + "_best") in state_dict_name:
                     model.load_state_dict(torch.load(os.path.join(train_args.save_dir, state_dict_name)))
-                    loss, f1 = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma)
+                    loss, f1 = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, train_args.num_classes)
                     print(f"Best Performance: \n\t loss: {loss} \n\t f1: {f1}\n")
+
+                    recordMetadata(train_args, experiment_name, hps, loss, f1)
+
                     experiments[experiment_name] = [loss, f1]
                     for hp in hps:
                         hps[hp].append([train_args.__dict__[hp], loss, f1])
                     break
+
+
         except Exception as e:
             print("CRASHED!")
             print(e)
@@ -138,6 +157,7 @@ if __name__ ==  "__main__":
         torch.cuda.empty_cache()
    
     print("SUMMARY")
+
     for key, value in sorted(experiments.items(), key=lambda x: x[1][1], reverse=True):
         print(key, "\t", value[0], "\t", value[1])
     
