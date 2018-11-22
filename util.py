@@ -367,7 +367,7 @@ def get_train_parser():
                          help="Environment name for visdom visualization")
     parser.add_argument('--seed', type=int, default=None,
                          help="Random seed to use for reproducability")
-    parser.add_argument('--use_clouds', type=str2bool, default=True,
+    parser.add_argument('--sample_w_clouds', type=str2bool, default=True,
                          help="Use clouds for sampling Sentinel-2 dates")
     parser.add_argument('--include_clouds', type=str2bool, default=True,
                          help="Include clouds as input feature")
