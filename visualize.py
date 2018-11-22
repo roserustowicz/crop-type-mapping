@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import visdom
 
+import metrics
 import preprocess
 import util
 from constants import * 
@@ -40,9 +41,12 @@ def visdom_plot_many_metrics(metric_name, split, title, x_label, y_label, legend
     Args: 
       metric_name - "loss", "acc", "f1"
     """
-    #Y = np.vstack(vis_data['{}_{}'.format(split, metric_name)])
-    vis.line(Y=np.vstack(vis_data['{}_{}'.format(split, metric_name)]),
-             X=np.array(range(len(vis_data['{}_{}'.format(split, metric_name)]))),
+ 
+    Y = vis_data['{}_{}'.format(split, metric_name)]
+    X = np.array([range(len(vis_data['{}_{}'.format(split, metric_name)]))] * Y.shape[1]).T 
+
+    vis.line(Y=Y,
+             X=X,
              win=title,
              opts={'legend': legend_lbls,
                    'markers': False, 
@@ -158,20 +162,22 @@ def clip_boi(boi):
 def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
     """ Record values for epoch in visdom
     """
-    #f1s = [x for x in all_metrics[f'{split}_f1'] if x is not None]
-    #if f1s is not None: f1_epoch = np.mean(f1s)
     if all_metrics[f'{split}_loss'] is not None: loss_epoch = all_metrics[f'{split}_loss'] / all_metrics[f'{split}_pix']
     if all_metrics[f'{split}_acc'] is not None: acc_epoch = all_metrics[f'{split}_acc'] / all_metrics[f'{split}_pix']
 
     vis_data[f'{split}_loss'].append(loss_epoch)
     vis_data[f'{split}_acc'].append(acc_epoch)
     vis_data[f'{split}_f1'].append(metrics.get_f1score(all_metrics[f'{split}_cm'], avg=True))
-    vis_data[f'{split}_classf1'].append(metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False))
+    if vis_data[f'{split}_classf1'] is None:
+        vis_data[f'{split}_classf1'] = metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False)
+        vis_data[f'{split}_classf1'] = np.vstack(vis_data[f'{split}_classf1']).T
+    else:
+        vis_data[f'{split}_classf1'] = np.vstack((vis_data[f'{split}_classf1'], metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False)))
 
     visdom_plot_metric('loss', split, f'{split} Loss', 'Epoch', 'Loss', vis_data, vis)
     visdom_plot_metric('acc', split, f'{split} Accuracy', 'Epoch', 'Accuracy', vis_data, vis)
     visdom_plot_metric('f1', split, f'{split} f1-score', 'Epoch', 'f1-score', vis_data, vis)
-    visdom_plot_many_metrics('classf1', split, f'{split} per class f1-score', 'Epoch', CM_CLASSES, 'per class f1-score', vis_data, vis)
+    visdom_plot_many_metrics('classf1', split, f'{split} per class f1-score', 'Epoch', 'per class f1-score', CM_CLASSES, vis_data, vis)
                
     fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], CM_CLASSES,
                                      normalize=False,
