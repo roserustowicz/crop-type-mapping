@@ -97,6 +97,8 @@ if __name__ ==  "__main__":
                         default="hp_results.pkl")
     search_parser.add_argument('--env_name', type=str,
                         default=None)
+    search_parser.add_argument('--gpu_id', type=int,
+                        default=0)
     for hp_type in HPS:
         for hp in hp_type:
             search_parser.add_argument('--' + hp + "_range", type=str2tuple)
@@ -122,7 +124,10 @@ if __name__ ==  "__main__":
 
         # build argparse args by parsing args and then setting empty fields to specified ones above
         train_parser = util.get_train_parser()
-        train_args = train_parser.parse_args(['--model_name', search_range.model_name, '--dataset', search_range.dataset, '--env_name', search_range.env_name])
+        train_args = train_parser.parse_args(['--model_name', search_range.model_name, 
+                                              '--dataset', search_range.dataset, 
+                                              '--env_name', search_range.env_name,
+                                              '--gpu_id', search_range.gpu_id])
 
         generate_hps(train_args, search_range) 
         train_args.epochs = search_range.epochs

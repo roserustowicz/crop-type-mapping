@@ -172,7 +172,7 @@ if __name__ == "__main__":
     parser = util.get_train_parser()
 
     args = parser.parse_args()
-
+    torch.cuda.set_device(args.gpu_id)
     # load in data generator
     dataloaders = datasets.get_dataloaders(args.grid_dir, args.country, args.dataset, args)
     
