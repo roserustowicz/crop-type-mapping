@@ -14,7 +14,7 @@ DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn']
 S1_NUM_BANDS = 3
 S2_NUM_BANDS = 10
 GRID_SIZE = 64
-MIN_TIMESTAMPS = 25
+MIN_TIMESTAMPS = 16
 
 LABEL_DIR = "raster_64x64_npy"
 S1_DIR = "s1_npy"
@@ -38,8 +38,6 @@ S2_BAND_MEANS = np.array([2626.4081074042033, 2520.2485066503864, 2615.775295850
 
 S2_BAND_STDS = np.array([2232.5334052935987, 2147.2823093704483, 2244.5187602951046, 2153.469486034919, 2129.289151884002, 2190.9747736567133, 2059.9788191903117, 2174.898225617082, 1237.3449495354944, 937.4064744674777])
 
-CM_CLASSES = ['groundnut', 'maize', 'rice', 'soyabean', 'yam']
 CM_LABELS = [0, 1, 2, 3, 4]
-
-GHANA_CROPS = ['maize','groundnut', 'rice', 'soya bean', 'yam']
+GHANA_CROPS = ['groundnut', 'maize', 'rice', 'soya bean', 'yam']
 SOUTHSUDAN_CROPS = ['sorghum', 'maize', 'rice', 'groundnut', 'sesame']

@@ -96,7 +96,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         loss_fn = loss_fns.get_loss_fn(model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)
-        best_val_acc = 0
+        best_val_f1 = 0
 
         for i in range(args.epochs):
             
@@ -136,20 +136,31 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             all_metrics[f'{split}_correct'] += total_correct
                             all_metrics[f'{split}_pix'] += num_pixels
         
-                    visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
+                    #visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
 
                     batch_num += 1
 
                 if split == 'val':
                     val_loss = all_metrics['val_loss'] / all_metrics['val_pix']
                     lr_scheduler.step(val_loss)
-                    val_acc = all_metrics['val_correct'] / all_metrics['val_pix']
-                    
-                    if val_acc > best_val_acc:
+                    val_f1 = metrics.get_f1score(all_metrics['val_cm'], avg=True)                 
+ 
+                    if val_f1 > best_val_f1:
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
-                        best_val_acc = val_acc
-                
-                visualize.record_epoch(all_metrics, split, vis_data, vis, i)
+                        best_val_f1 = val_f1
+                        if args.save_best: 
+                            visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, 
+                                                   split, vis_data, vis, args.include_doy, args.use_s1, 
+                                                   args.use_s2, model_name, args.time_slice, save=True, 
+                                                   save_dir=os.path.join(args.save_dir, args.name + "_best"))
+
+                            visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country, save=True, 
+                                                  save_dir=os.path.join(args.save_dir, args.name + "_best"))               
+                            
+                            visualize.record_epoch(all_metrics, 'train', vis_data, vis, i, args.country, save=True, 
+                                                  save_dir=os.path.join(args.save_dir, args.name + "_best"))               
+ 
+                visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country)
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
