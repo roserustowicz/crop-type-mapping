@@ -286,7 +286,7 @@ def get_train_parser():
                         required=True)
     parser.add_argument('--hdf5_filepath', type=str,
                         help="full path to hdf5 data file",
-                        default="/home/data/ghana/data_v2.hdf5")
+                        default="/home/data/ghana/data.hdf5")
     parser.add_argument('--dataset', type=str,
                         help="Full or small?",
                         choices=('full', 'small'),
