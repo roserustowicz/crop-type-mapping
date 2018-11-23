@@ -136,7 +136,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             all_metrics[f'{split}_correct'] += total_correct
                             all_metrics[f'{split}_pix'] += num_pixels
         
-                    visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
+                    #visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
 
                     batch_num += 1
 
@@ -155,10 +155,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                                    save_dir=os.path.join(args.save_dir, args.name + "_best"))
 
                             visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country, save=True, 
-                                                   save_dir=os.path.join(args.save_dir, args.name + "_best"))               
+                                                  save_dir=os.path.join(args.save_dir, args.name + "_best"))               
                             
                             visualize.record_epoch(all_metrics, 'train', vis_data, vis, i, args.country, save=True, 
-                                                   save_dir=os.path.join(args.save_dir, args.name + "_best"))               
+                                                  save_dir=os.path.join(args.save_dir, args.name + "_best"))               
  
                 visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country)
 
