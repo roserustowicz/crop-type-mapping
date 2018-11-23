@@ -92,6 +92,11 @@ if __name__ ==  "__main__":
                         help="number of epochs to train the model for")
     search_parser.add_argument('--logfile', type=str,
                         help="file to write logs to; if not specified, prints to terminal")
+    search_parser.add_argument('--hp_dict_name', type=str,
+                        help="name of hp dict, defaults to hp_results.pkl if unspecified",
+                        default="hp_results.pkl")
+    search_parser.add_argument('--env_name', type=str,
+                        default=None)
     for hp_type in HPS:
         for hp in hp_type:
             search_parser.add_argument('--' + hp + "_range", type=str2tuple)
@@ -117,7 +122,7 @@ if __name__ ==  "__main__":
 
         # build argparse args by parsing args and then setting empty fields to specified ones above
         train_parser = util.get_train_parser()
-        train_args = train_parser.parse_args(['--model_name', search_range.model_name, '--dataset', search_range.dataset])
+        train_args = train_parser.parse_args(['--model_name', search_range.model_name, '--dataset', search_range.dataset, '--env_name', search_range.env_name])
 
         generate_hps(train_args, search_range) 
         train_args.epochs = search_range.epochs
@@ -160,7 +165,7 @@ if __name__ ==  "__main__":
     for key, value in sorted(experiments.items(), key=lambda x: x[1][1], reverse=True):
         print(key, "\t", value[0], "\t", value[1])
     
-    with open("hps_results.pkl", "wb") as f:
+    with open(search_range.hp_dict_name, "wb") as f:
         pickle.dump(hps, f)
 
     sys.stdout = old_stdout
