@@ -49,14 +49,12 @@ class CropTypeDS(Dataset):
             cloudmasks = None
             s1_doy = None
             s2_doy = None
-
             if self.use_s1:
                 s1 = data['s1'][self.grid_list[idx]]
                 s1 = preprocess.normalization(s1, 's1')
                 if self.include_doy:
                     s1_doy = data['s1_dates'][self.grid_list[idx]][()]
                 s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed)
-                
                 # Concatenate DOY bands
                 if s1_doy is not None and self.include_doy:
                     doy_stack = preprocess.doy2stack(s1_doy, s1.shape)
@@ -83,7 +81,6 @@ class CropTypeDS(Dataset):
 
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
-            
             grid = preprocess.concat_s1_s2(s1, s2)
             grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
             
