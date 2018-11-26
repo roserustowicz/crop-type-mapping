@@ -129,7 +129,7 @@ def save_cloud_masks(s2_data_dir, model, verbose):
 if __name__ == '__main__':
     data_dir = '/home/data/clouds/'
     data_fname = 'clean_samples.csv'
-    s2_data_dir = '/home/data/tanzania/s2_npy'
+    s2_data_dir = '/home/data/southsudan/s2_npy'
     verbose = 1
     save = 1
 

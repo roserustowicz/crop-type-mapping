@@ -101,6 +101,8 @@ def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_
                         orbit = []
 
                 for idx, fname in enumerate(cur_grid_files):
+                    print('idx: ', idx)
+                    print('fname: ', fname)
                     with rasterio.open(fname) as src:
                         if out_format == 'pickle':
                             data_array[grid_idx, :, :, :, idx] = src.read()
@@ -155,7 +157,7 @@ if __name__ == '__main__':
 
     home = '/home/data'
     countries = ['southsudan']
-    sources = ['s1']
+    sources = ['s2']
     lbl_dir = 'raster'
     verbose = 1
     out_format = 'npy'
