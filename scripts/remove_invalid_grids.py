@@ -100,8 +100,8 @@ def remove_irrelevant_files(home, countries, sources, delete_list, dry_run, ext)
 if __name__ == '__main__':
 
     home = '/home/data'
-    countries = ['tanzania']
-    sources = ['s1', 's2']
+    countries = ['southsudan']
+    sources = ['s1_npy', 's2_npy']
     lbl_dir = 'raster'
     verbose = 1
     dry_run = 1

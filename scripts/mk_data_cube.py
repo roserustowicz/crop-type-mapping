@@ -155,9 +155,9 @@ def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_
 
 if __name__ == '__main__':
 
-    home = '/home/data'
+    home = '/home/data/'
     countries = ['southsudan']
-    sources = ['s2']
+    sources = ['s2_extra']
     lbl_dir = 'raster'
     verbose = 1
     out_format = 'npy'

@@ -40,116 +40,35 @@ class DL_model:
 
         base_dir = '/home/data/ghana/pixel_arrays'
         if dataset_type == 'small':
-            if source == 's1':
-                if use_pca:
-                    pass
-                else:
-                    if ordering == 'byband':
-                        self.X_train = np.load(base_dir + '/small/raw/s1/small_raw_s1_byband_Xtrain_g49.npy')        
-                        self.X_val = np.load(base_dir + '/small/raw/s1/small_raw_s1_byband_Xval_g57.npy')        
-                        self.X_test = np.load(base_dir + '/small/raw/s1/small_raw_s1_byband_Xtest_g62.npy') 
-                    elif ordering == 'bytime':
-                        self.X_train = np.load(base_dir + '/small/raw/s1/small_raw_s1_bytime_Xtrain_g49.npy')        
-                        self.X_val = np.load(base_dir + '/small/raw/s1/small_raw_s1_bytime_Xval_g57.npy')        
-                        self.X_test = np.load(base_dir + '/small/raw/s1/small_raw_s1_bytime_Xtest_g62.npy') 
-                    
-                    # Normalize by standard scalar
-                    scaler = StandardScaler()
-                    scaler.fit(self.X_train)
-                    self.X_train = scaler.transform(self.X_train)
-                    self.X_val = scaler.transform(self.X_val)
-                    self.X_test = scaler.transform(self.X_test)
-
-            elif source == 's2':
-                if use_pca:
-                    pass
-                else:
-                    if reverse_clouds:
-                        if ordering == 'bytime':
-                            self.X_train = np.load(base_dir + 
-                             '/small/raw/cloud_s2/reverse_true/small_raw_s2_cloud_mask_reverseTrue_bytime_Xtrain_g66.npy')
-                            self.X_val = np.load(base_dir + 
-                             '/small/raw/cloud_s2/reverse_true/small_raw_s2_cloud_mask_reverseTrue_bytime_Xval_g82.npy')
-                            self.X_test = np.load(base_dir + 
-                             '/small/raw/cloud_s2/reverse_true/small_raw_s2_cloud_mask_reverseTrue_bytime_Xtest_g80.npy')
-                    else:
-                        if ordering == 'bytime':
-                            self.X_train = np.load(base_dir + 
-                             '/small/raw/cloud_s2/reverse_false/small_raw_s2_cloud_mask_reverseFalse_bytime_Xtrain_g66.npy')
-                            self.X_val = np.load(base_dir + 
-                             '/small/raw/cloud_s2/reverse_false/small_raw_s2_cloud_mask_reverseFalse_bytime_Xval_g82.npy')
-                            self.X_test = np.load(base_dir + 
-                             '/small/raw/cloud_s2/reverse_false/small_raw_s2_cloud_mask_reverseFalse_bytime_Xtest_g80.npy')
-        
-                    self.y_train = np.load(base_dir + 
-                         '/small/raw/cloud_s2/reverse_false/small_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g66.npy')
-                    self.y_val = np.load(base_dir + 
-                         '/small/raw/cloud_s2/reverse_false/small_raw_s2_cloud_mask_reverseFalse_bytime_yval_g82.npy')
-                    self.y_test = np.load(base_dir + 
-                         '/small/raw/cloud_s2/reverse_false/small_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g80.npy')
-                    
-                    # Normalize by standard scalar
-                    scaler = StandardScaler()
-                    scaler.fit(self.X_train)
-                    self.X_train = scaler.transform(self.X_train)
-                    self.X_val = scaler.transform(self.X_val)
-                    self.X_test = scaler.transform(self.X_test)
-
-            elif source == 's1_s2':
-                if use_pca:
-                    pass 
-                else: 
-                    if ordering == 'bytime':
-                        # use np.hstack() to combine       
-                        s1_train = np.load(base_dir + '/small/raw/s1/small_raw_s1_bytime_Xtrain_g49.npy')
-                        s2_train = np.load(base_dir + '/small/raw/s2/small_raw_s2_bytime_Xtrain_g49.npy')
-                        self.X_train = np.hstack((s1_train, s2_train))
-
-                        s1_val = np.load(base_dir + '/small/raw/s1/small_raw_s1_bytime_Xval_g57.npy')
-                        s2_val = self.X_val = np.load(base_dir + '/small/raw/s2/small_raw_s2_bytime_Xval_g57.npy')
-                        self.X_val = np.hstack((s1_val, s2_val))
-
-                        s1_test = np.load(base_dir + '/small/raw/s1/small_raw_s1_bytime_Xtest_g62.npy')
-                        s2_test = np.load(base_dir + '/small/raw/s2/small_raw_s2_bytime_Xtest_g62.npy')
-                        self.X_test = np.hstack((s1_test, s2_test))
-                    
-                    # Normalize by standard scalar
-                    scaler = StandardScaler()
-                    scaler.fit(self.X_train)
-                    self.X_train = scaler.transform(self.X_train)
-                    self.X_val = scaler.transform(self.X_val)
-                    self.X_test = scaler.transform(self.X_test)
+            print('Small pixel arrays are not currently saved')
 
         elif dataset_type == 'full':
             if source == 's1': 
                 if use_pca:
                     pass
                 elif full_sampled:
-                    self.X_train = np.load(base_dir + 
-                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xtrain_g2321.npy')
-                    self.X_val = np.load(base_dir +
-                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xval_g305.npy')
-                    self.X_test = np.load(base_dir + 
-                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xtest_g364.npy')
-                    self.y_train = np.load(base_dir + 
-                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_ytrain_g2321.npy')
-                    self.y_val = np.load(base_dir +
-                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_yval_g305.npy')
-                    self.y_test = np.load(base_dir + 
-                        '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_ytest_g364.npy')
-                    #self.X_val = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xval_g305.npy')
-                    #self.X_test = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xtest_g364.npy')
-                    #self.y_val = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_yval_g305.npy')
-                    #self.y_test = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_ytest_g364.npy')
+                    pass
+                    #self.X_train = np.load(base_dir + 
+                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xtrain_g2321.npy')
+                    #self.X_val = np.load(base_dir +
+                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xval_g305.npy')
+                    #self.X_test = np.load(base_dir + 
+                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_Xtest_g364.npy')
+                    #self.y_train = np.load(base_dir + 
+                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_ytrain_g2321.npy')
+                    #self.y_val = np.load(base_dir +
+                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_yval_g305.npy')
+                    #self.y_test = np.load(base_dir + 
+                    #    '/full_balanced/raw/s1_sample/sampled/full_raw_s1_sample_bytime_ytest_g364.npy')
                 else:
                     if ordering == 'bytime':
-                        self.X_train = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xtrain_g2321.npy')
-                        self.X_val = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xval_g305.npy')
-                        self.X_test = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xtest_g364.npy')
+                        self.X_train = np.load(base_dir + '/full/raw/full_raw_s1_sample_bytime_Xtrain_g2260.npy')
+                        self.X_val = np.load(base_dir + '/full/raw/full_raw_s1_sample_bytime_Xval_g298.npy')
+                        self.X_test = np.load(base_dir + '/full/raw/full_raw_s1_sample_bytime_Xtest_g323.npy')
                             
-                    self.y_train = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_ytrain_g2321.npy')
-                    self.y_val = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_yval_g305.npy')
-                    self.y_test = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_ytest_g364.npy')
+                    self.y_train = np.load(base_dir + '/full/raw/full_raw_s1_sample_bytime_ytrain_g2260.npy')
+                    self.y_val = np.load(base_dir + '/full/raw/full_raw_s1_sample_bytime_yval_g298.npy')
+                    self.y_test = np.load(base_dir + '/full/raw/full_raw_s1_sample_bytime_ytest_g323.npy')
                     
                     # Normalize by standard scalar
                     scaler = StandardScaler()
@@ -162,55 +81,33 @@ class DL_model:
                 if use_pca:
                     pass
                 elif full_sampled:
-                    self.X_train = np.load(base_dir + 
-                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtrain_g2321.npy')
-                    self.X_val = np.load(base_dir +
-                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_Xval_g305.npy')
-                    self.X_test = np.load(base_dir + 
-                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtest_g364.npy')
-                    self.y_train = np.load(base_dir + 
-                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g2321.npy')
-                    self.y_val = np.load(base_dir +
-                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g305.npy')
-                    self.y_test = np.load(base_dir + 
-                        '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g364.npy')
-                    #self.X_val = np.load(base_dir + 
-                    #  '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xval_g305.npy')
+                    pass
+                    #self.X_train = np.load(base_dir + 
+                    #    '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtrain_g2321.npy')
+                    #self.X_val = np.load(base_dir +
+                    #    '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_Xval_g305.npy')
                     #self.X_test = np.load(base_dir + 
-                    #  '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtest_g364.npy')
-                    #self.y_val = np.load(base_dir + 
-                    #  '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g305.npy')
+                    #    '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtest_g364.npy')
+                    #self.y_train = np.load(base_dir + 
+                    #    '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g2321.npy')
+                    #self.y_val = np.load(base_dir +
+                    #    '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g305.npy')
                     #self.y_test = np.load(base_dir + 
-                    #  '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g364.npy')
+                    #    '/full_balanced/raw/s2_cloudsample/sampled/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g364.npy')
                 else:
-                    if reverse_clouds:
-                        if ordering == 'bytime':
-                            self.X_train = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_true/full_raw_s2_cloud_mask_reverseTrue_bytime_Xtrain_g2321.npy')
-                            self.X_val = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_true/full_raw_s2_cloud_mask_reverseTrue_bytime_Xval_g305.npy')
-                            self.X_test = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_true/full_raw_s2_cloud_mask_reverseTrue_bytime_Xtest_g364.npy')
-                            self.y_train = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g2321.npy')
-                            self.y_val = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g305.npy')
-                            self.y_test = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g364.npy')
-                    else:
-                        if ordering == 'bytime':
-                            self.X_train = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtrain_g2321.npy')
-                            self.X_val = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xval_g305.npy')
-                            self.X_test = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtest_g364.npy')
-                            self.y_train = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g2321.npy')
-                            self.y_val = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g305.npy')
-                            self.y_test = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g364.npy')
+                    if ordering == 'bytime':
+                        self.X_train = np.load(base_dir + 
+                          '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtrain_g2260.npy')
+                        self.X_val = np.load(base_dir + 
+                          '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_Xval_g298.npy')
+                        self.X_test = np.load(base_dir + 
+                          '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtest_g323.npy')
+                        self.y_train = np.load(base_dir + 
+                          '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g2260.npy')
+                        self.y_val = np.load(base_dir + 
+                          '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g298.npy')
+                        self.y_test = np.load(base_dir + 
+                          '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g323.npy')
 
                     # Normalize by standard scalar
                     scaler = StandardScaler()
@@ -224,38 +121,29 @@ class DL_model:
                     pass 
                 else:
                     # use np.hstack() to combine raw s1 and s2
-                    if reverse_clouds:  
-                        if ordering == 'bytime':                   
-                            s2_train = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_true/full_raw_s2_cloud_mask_reverseTrue_bytime_Xtrain_g2321.npy')
-                            s2_val = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_true/full_raw_s2_cloud_mask_reverseTrue_bytime_Xval_g305.npy')
-                            s2_test = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_true/full_raw_s2_cloud_mask_reverseTrue_bytime_Xtest_g364.npy')
-                    else:
-                        if ordering == 'bytime':
-                            s2_train = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtrain_g2321.npy')
-                            s2_val = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xval_g305.npy')
-                            s2_test = np.load(base_dir + 
-                              '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtest_g364.npy')
+                    if ordering == 'bytime':
+                        s2_train = np.load(base_dir + 
+                          '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtrain_g2260.npy')
+                        s2_val = np.load(base_dir + 
+                          '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_Xval_g298.npy')
+                        s2_test = np.load(base_dir + 
+                          '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_Xtest_g323.npy')
 
                     if ordering == 'bytime':
-                        s1_train = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xtrain_g2321.npy')
-                        s1_val = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xval_g305.npy')
-                        s1_test = np.load(base_dir + '/full/raw/sample_s1/full_raw_s1_sample_bytime_Xtest_g364.npy')
+                        s1_train = np.load(base_dir + '/full/raw/full_raw_s1_sample_bytime_Xtrain_g2260.npy')
+                        s1_val = np.load(base_dir + '/full/raw/full_raw_s1_sample_bytime_Xval_g298.npy')
+                        s1_test = np.load(base_dir + '/full/raw/full_raw_s1_sample_bytime_Xtest_g323.npy')
                    
                     self.X_train = np.hstack((s1_train, s2_train))
                     self.X_val = np.hstack((s1_val, s2_val))
                     self.X_test = np.hstack((s1_test, s2_test))
         
                     self.y_train = np.load(base_dir + 
-                      '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g2321.npy')
+                      '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_ytrain_g2260.npy')
                     self.y_val = np.load(base_dir + 
-                      '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g305.npy')
+                      '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_yval_g298.npy')
                     self.y_test = np.load(base_dir + 
-                      '/full/raw/cloud_s2/reverse_false/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g364.npy')
+                      '/full/raw/full_raw_s2_cloud_mask_reverseFalse_bytime_ytest_g323.npy')
                     
                     # Normalize by standard scalar
                     scaler = StandardScaler()
@@ -277,7 +165,7 @@ class DL_model:
             self.y_test = np.ones((2,5))
     
         if reshape_bands:
-            if 's1' in source: num_bands = 2
+            if 's1' in source: num_bands = 3
             elif 's2' in source: num_bands = 11
             self.X_train = reshape_channels(self.X_train, num_bands, ordering)
             self.X_val = reshape_channels(self.X_val, num_bands, ordering)
@@ -423,9 +311,6 @@ def plot(history, model_type, dataset_type, source, ordering, units, reg_strengt
 
 def main():
 
-    #filename = 'NN_full_sampled_reshapebands_valtestoriginal_results.txt'
-    #filename = 'CNN_full_reshapebands_results_earlystopping.txt' --> still need to do with 256
-
     filename = 'CNN_full_reshapebands_results_earlystopping_binary_lr0.0001.txt'
 
     model_type = 'cnn'
@@ -438,7 +323,7 @@ def main():
     reshape_bands = 1 
     binary = 1
 
-    for source in ['s1', 's2']:
+    for source in ['s1', 's2', 's1_s2']:
 
         f = open(filename,'a+')
             
