@@ -198,6 +198,9 @@ def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None
     
     elif model_name == "unet":
         return preprocessGridForUNet(grid, transform, rot, time_slice)
+    
+    elif model_name == "unet3d":
+        return preprocessGridForUNet3D(grid, transform, rot, time_slice)
 
     raise ValueError(f'Model: {model_name} unsupported')
 
@@ -209,7 +212,7 @@ def preprocess_clouds(clouds, model_name, time_slice=None, transform=False, rot=
         model_name - (string) type of model (ex: "C-LSTM")
         time_slice - (int) which timestamp to be used in FCN
     """
-    if model_name in ["bidir_clstm", "fcn", "unet", "fcn_crnn"]:
+    if model_name in ["bidir_clstm", "fcn", "unet", "fcn_crnn", "unet3d"]:
         return preprocessClouds(clouds)
     
     raise ValueError(f'Model: {model_name} unsupported')
@@ -226,7 +229,7 @@ def preprocess_label(label, model_name, num_classes=None, transform=False, rot=N
     Returns:
         (npy arr) [num_classes x 64 x 64]
     """
-    if model_name in ["bidir_clstm", "fcn", "fcn_crnn", "unet"]:
+    if model_name in ["bidir_clstm", "fcn", "fcn_crnn", "unet", "unet3d"]:
         assert not num_classes is None
         return preprocessLabel(label, num_classes, transform, rot)
     
@@ -266,6 +269,11 @@ def preprocessGrid(grid, transform, rot, time_slice=None):
     if time_slice is not None:
         grid = takeTimeSlice(grid, time_slice)
     return grid
+
+def preprocessGridForUNet3D(grid, transform, rot, time_slice=None):
+    grid = preprocessGrid(grid, transform, rot, time_slice) 
+    grid = np.transpose(grid, [1, 0, 2, 3])
+    return grid 
 
 def preprocessGridForUNet(grid, transform, rot, time_slice=None):
     grid = preprocessGrid(grid, transform, rot, time_slice) 

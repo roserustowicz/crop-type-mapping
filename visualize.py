@@ -120,7 +120,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
     if use_s2 and use_s1:
         if include_doy: 
             add_doy = 1
-        if model_name in ['fcn_crnn', 'bidir_clstm']:
+        if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
             for idx, b in enumerate(best):
                 boi.append(inputs[idx, b, 2+add_doy:5+add_doy, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
@@ -132,7 +132,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
                 boi.append(inputs[idx, b, 2+add_doy:5+add_doy, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
     elif use_s1:
-        if model_name in ['fcn_crnn', 'bidir_clstm']:
+        if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
             for idx, b in enumerate(best):
                 boi.append(torch.cat((inputs[idx, b, 0:2, :, :], inputs[idx, b, 0, :, :].unsqueeze(0)), dim=0).unsqueeze(0))
             boi = torch.cat(boi, dim=0)
@@ -144,7 +144,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
                 boi.append(torch.cat((inputs[idx, b, 0:2, :, :], inputs[idx, b, 0, :, :].unsqueeze(0)), dim=0).unsqueeze(0))
             boi = torch.cat(boi, dim=0)
     elif use_s2:
-        if model_name in ['fcn_crnn', 'bidir_clstm']:
+        if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
             for idx, b in enumerate(best):
                 boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
@@ -155,7 +155,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
             for idx, b in enumerate(best):
                 boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
-    
+            
     # Clip and show input bands of interest
     boi = clip_boi(boi)
     visdom_plot_images(vis, boi, 'Input Images') 
