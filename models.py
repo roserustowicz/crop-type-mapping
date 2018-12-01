@@ -12,6 +12,7 @@ given by:
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import models
 
 import numpy as np
 import yaml
@@ -198,14 +199,27 @@ def make_fcn_model(n_class, n_channel, freeze=True):
     
     return fcn8s
 
-def make_UNet_model(n_class, n_channel, for_fcn=False):
+def make_UNet_model(n_class, n_channel, for_fcn=False, pretrained = True):
     model = UNet(n_class, n_channel, for_fcn)
+    
+    if pretrained: 
+        pre_trained = models.vgg13(pretrained=True)
+        pre_trained_features = list(pre_trained.features)
+        model.enc1.encode[3] = pre_trained_features[2]
+        model.enc1.encode[6] = pre_trained_features[4]
+        model.enc2.encode[0] = pre_trained_features[5]
+        model.enc2.encode[3] = pre_trained_features[7]
+        model.enc2.encode[6] = pre_trained_features[9]
+        model.enc2.encode[6] = pre_trained_features[9]
+        model.center.decode[0] = pre_trained_features[10]
+        model.center.decode[3] = pre_trained_features[12]
+        
     model = model.cuda()
         
     return model
 
-def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional):
-    model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
+def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained):
+    model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained)
     model = model.cuda()
 
     return model
@@ -385,14 +399,14 @@ class UNet3D(nn.Module):
 class FCN_CRNN(nn.Module):
     def __init__(self, fcn_input_size, fcn_model_name, 
                        crnn_input_size, crnn_model_name, 
-                       hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional):
+                       hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained):
         super(FCN_CRNN, self).__init__()
         if fcn_model_name == 'simpleCNN':
             self.fcn = simple_CNN(fcn_input_size, crnn_input_size[1])
         elif fcn_model_name == 'fcn8':
             self.fcn = make_fcn_model(crnn_input_size[1], fcn_input_size[1], freeze=False)
         elif fcn_model_name == 'unet':
-            self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], for_fcn=True)
+            self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], for_fcn=True, pretrained = pretrained)
         if crnn_model_name == 'clstm': 
             self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
 
@@ -803,7 +817,8 @@ def get_model(model_name, **kwargs):
                                      conv_kernel_size=kwargs.get('conv_kernel_size'), 
                                      lstm_num_layers=kwargs.get('crnn_num_layers'), 
                                      num_classes=kwargs.get('num_classes'),
-                                     bidirectional=kwargs.get('bidirectional'))
+                                     bidirectional=kwargs.get('bidirectional'),                                       
+                                     pretrained = kwargs.get('pretrained'))
     elif model_name == 'unet3d':
         num_bands = get_num_bands(kwargs)
         model = make_UNet3D_model(n_class = kwargs.get('num_classes'), n_channel = num_bands)
