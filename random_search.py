@@ -40,8 +40,8 @@ def generate_float_HP(minVal, maxVal):
 def generate_string_HP(choices):
     return np.random.choice(choices)
 
-def generate_bool_HP():
-    return np.random.choice([True, False])
+def generate_bool_HP(choices):
+    return np.random.choice(choices)
 
 def str2tuple(arg):
     return literal_eval(arg)
@@ -71,7 +71,7 @@ def generate_hps(train_args, search_range):
         elif hp in STRING_HP:
             hp_val = generate_string_HP(vars(search_range)[arg])
         elif hp in BOOL_HP:
-            hp_val = generate_bool_HP()
+            hp_val = generate_bool_HP(vars(search_range)[arg])
         else:
             raise ValueError(f"HP {hp} unsupported") 
 
@@ -82,7 +82,6 @@ def generate_hps(train_args, search_range):
 
 if __name__ ==  "__main__":
     # get all ranges of values
-
     search_parser = argparse.ArgumentParser()
     search_parser.add_argument('--model_name', type=str)
     search_parser.add_argument('--dataset', type=str)
@@ -97,12 +96,17 @@ if __name__ ==  "__main__":
                         default="hp_results.pkl")
     search_parser.add_argument('--env_name', type=str,
                         default=None)
-    search_parser.add_argument('--gpu_id', type=int,
-                        default=0)
+    search_parser.add_argument('--num_classes', type=int,
+                        default=4)
+    search_parser.add_argument('--hdf5_filepath', type=str,
+                        default="data/ghana/data.hdf5")
+    search_parser.add_argument('--country', type=str,
+                        default="ghana")
+    search_parser.add_argument('--grid_dir', type=str,
+                        default="data/ghana")
     for hp_type in HPS:
         for hp in hp_type:
             search_parser.add_argument('--' + hp + "_range", type=str2tuple)
-    
     search_range = search_parser.parse_args()
     #TODO: VERY HACKY, SWITCH TO USING PYTHON LOGGING MODULE OR ACTUALLY USING WRITE CALLS
     # CURRENTLY CHANGES STDOUT OF THE PROGRAM
@@ -110,7 +114,7 @@ if __name__ ==  "__main__":
     if search_range.logfile is not None:
         logfile = open(search_range.logfile, "w")
         sys.stdout = logfile
-
+   
     hps = {}
     for arg in vars(search_range):
         if "range" not in arg: continue 
@@ -121,13 +125,15 @@ if __name__ ==  "__main__":
 
     # for some number of iterations
     for sample_no in range(search_range.num_samples):
-
         # build argparse args by parsing args and then setting empty fields to specified ones above
         train_parser = util.get_train_parser()
         train_args = train_parser.parse_args(['--model_name', search_range.model_name, 
                                               '--dataset', search_range.dataset, 
                                               '--env_name', search_range.env_name,
-                                              '--gpu_id', search_range.gpu_id])
+                                              '--num_classes', str(search_range.num_classes),
+                                              '--country', search_range.country,
+                                              '--grid_dir', search_range.grid_dir,
+                                              '--hdf5_filepath', search_range.hdf5_filepath])
 
         generate_hps(train_args, search_range) 
         train_args.epochs = search_range.epochs

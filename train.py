@@ -76,7 +76,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """
     if model_name in NON_DL_MODELS:
         if X is None: raise ValueError("X not provided!")
-        if  y is None: raise ValueError("y nor provided!")
+        if y is None: raise ValueError("y nor provided!")
         model.fit(X, y)
 
     elif model_name in DL_MODELS:
@@ -120,8 +120,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                 # If there are valid pixels, update weights
                                 optimizer.zero_grad()
                                 loss.backward()
+                                torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=100)
                                 optimizer.step()
-
                                 gradnorm = torch.norm(list(model.parameters())[0].grad)
                                 vis_data['train_gradnorm'].append(gradnorm)
     
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     parser = util.get_train_parser()
 
     args = parser.parse_args()
-    torch.cuda.set_device(args.gpu_id)
+    
     # load in data generator
     dataloaders = datasets.get_dataloaders(args.grid_dir, args.country, args.dataset, args)
     

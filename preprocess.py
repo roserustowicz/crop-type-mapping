@@ -30,12 +30,10 @@ def reshapeForLoss(y):
       [batch x classes x rows x cols] --> [batch x rows x cols x classes]
       and then reshape to [N x classes], where N = batch*rows*cols
     """
-
     # [batch x classes x rows x cols] --> [batch x rows x cols x classes]
     y = y.permute(0, 2, 3, 1)
     # [batch x rows x cols x classes] --> [batch*rows*cols x classes]
     y = y.contiguous().view(-1, y.shape[3])
-
     return y
 
 def maskForLoss(y_pred, y_true):
@@ -75,7 +73,6 @@ def maskForMetric(y_pred, y_true):
     """
     # Create mask for valid pixel locations
     loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
-
     # Take argmax for labels and targets
     _, y_true = torch.max(y_true, dim=1)
     _, y_pred = torch.max(y_pred, dim=1)
@@ -102,8 +99,10 @@ def onehot_mask(mask, num_classes):
       Returns a mask of size [64 x 64 x num_classes]. If a pixel was unlabeled, 
       it has 0's in all channels of the one hot mask at that pixel location.
     """
-
-    mask[mask > num_classes] = 0
+    if num_classes == 2:
+        mask[(mask != 2) & (mask > 0)] = 1
+    else:
+        mask[mask > num_classes] = 0
     return np.eye(num_classes+1)[mask][:, :, 1:] 
 
 def doy2stack(doy_vec, in_shp):

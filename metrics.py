@@ -67,12 +67,9 @@ def get_cm(y_pred, y_true):
     """ 
     # Reshape truth labels into [N, num_classes]
     y_true = preprocess.reshapeForLoss(y_true)
-    
     # Reshape predictions into [N, num_classes]
     y_pred = preprocess.reshapeForLoss(y_pred)
-   
     y_pred, y_true = preprocess.maskForMetric(y_pred, y_true)
- 
     if y_true.shape[0] == 0:
         return None
     else: 
