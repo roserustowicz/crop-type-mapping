@@ -312,10 +312,10 @@ def generate_string_HP(choices):
 
 def get_best_model():
 
-    filename = '20181201_CNN_best.txt'
+    filename = '20181201_NN_best.txt'
     class_weight = {0: 0.8205, 1: 0.4012, 2: 0.8299, 3: 0.8780}
 
-    model_type = 'cnn'
+    model_type = 'nn'
     dataset_type = 'full'
     use_pca = 0
     ordering = 'bytime'
