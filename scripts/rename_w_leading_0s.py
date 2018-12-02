@@ -60,10 +60,10 @@ if __name__ == '__main__':
     Renames grid IDs with leading 0's so that sorting of filenames is in ascending order
 
     To call on masks,
-       python rename_leading_0s.py --dir /home/roserustowicz/data/COUNTRY/raster --tif_content mask
+       python rename_w_leading_0s.py --dir /home/data/COUNTRY/raster --tif_content mask
 
     To call on data, 
-       python rename_leading_0s.py --dir /home/roserustowicz/data/COUNTRY/SOURCE --tif_content data 
+       python rename_w_leading_0s.py --dir /home/data/COUNTRY/SOURCE --tif_content data 
   
     """
     parser = argparse.ArgumentParser(description='')
