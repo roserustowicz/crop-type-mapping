@@ -216,6 +216,7 @@ class DL_model:
             print('average f1: %.3f%% \n' % (f1_avg))
             print('per class f1: ' + str(f1_cls) + '\n')
             print('Confusion Matrix: ', cm) 
+        return f1_avg
 
     def fit(self, epochs, batch_size, class_weight=None, patience=5):
         """ Trains the model
@@ -308,6 +309,113 @@ def generate_float_HP(minVal, maxVal):
 
 def generate_string_HP(choices):
     return np.random.choice(choices)
+
+def get_best_model():
+
+    filename = '20181201_CNN_best.txt'
+    class_weight = {0: 0.8205, 1: 0.4012, 2: 0.8299, 3: 0.8780}
+
+    model_type = 'cnn'
+    dataset_type = 'full'
+    use_pca = 0
+    ordering = 'bytime'
+    reverse_clouds = 0
+    verbose = 1
+    full_sampled = 0 
+    reshape_bands = 1 
+    binary = 0
+    epochs = 20
+    num_search_samples = 10
+
+    source = 's2'
+    batch_size = 128
+    dropout = 0.317266
+    units = 16
+    lr = 0.1
+    reg_strength = 0.000001
+    weight = 1
+    num_classes = 4
+
+    best_f1 = 0
+
+    f = open(filename,'a+')
+    f.write('--------- \n')
+    f.write('{} model, {} dataset, {} source \n'.format(model_type, dataset_type, source))
+    f.write('{} batch, {} dropout, {} units, {}learning rate, {} regularization, {} weight classes \n'.format(batch_size, dropout, units, lr, reg_strength, weight))
+    f.close()
+
+    count = 0
+    while count < num_search_samples:
+        count += 1
+
+        # Define NN model
+        keras_model = DL_model()
+        # Load data into model
+        keras_model.load_data(dataset_type, source, ordering, verbose, full_sampled, reshape_bands, binary)
+        
+        # Define model 
+        if model_type == 'nn':
+            keras_model.model = make_1d_nn_model(num_classes=num_classes, 
+                                             num_input_feats=keras_model.X_train.shape[1],
+                                             units=units,reg_strength=reg_strength,
+                                             input_bands=keras_model.X_train.shape[2],
+                                             dropout=dropout)
+                                         
+        elif model_type == 'cnn':
+            keras_model.model = make_1d_cnn_model(num_classes=num_classes, 
+                                             num_input_feats=keras_model.X_train.shape[1],
+                                             units=units,reg_strength=reg_strength,
+                                             input_bands=keras_model.X_train.shape[2],
+                                             dropout=dropout)
+        # Fit model
+        if weight:
+            history = keras_model.fit(epochs, batch_size, class_weight=class_weight)
+        else:
+            history = keras_model.fit(epochs, batch_size)
+
+        f = open(filename,'a+')
+        # Evaluate
+        f.write('evaluate train: \n')
+        keras_model.evaluate('train', f, lr, verbose)
+        f.write('evaluate val: \n')
+        val_f1 = keras_model.evaluate('val', f, lr, verbose)
+        f.write('evaluate test: \n')
+        keras_model.evaluate('test', f, lr, verbose)
+        f.write('-------------------')
+        f.close()
+
+        if val_f1 > best_f1:
+            
+            print('TO BEST MODEL: {} batch, {} dropout, {} units, {}learning rate, {} regularization, {} weight classes \n'.format(batch_size, dropout, units, lr, reg_strength, weight))
+
+            # serialize model to JSON
+            model_json = keras_model.model.to_json()
+            json_out = 'best_' + model_type + '_model.json'
+            hdf5_out = 'best_' + model_type + '_model.hdf5'
+            with open(json_out, "w") as json_file:
+                json_file.write(model_json)
+            # serialize weights to HDF5
+            keras_model.model.save_weights(hdf5_out)
+            print("Saved model to disk")
+ 
+            ## later... 
+            ## load json and create model
+            #json_file = open('model.json', 'r')
+            #loaded_model_json = json_file.read()
+            #json_file.close()
+            #loaded_model = model_from_json(loaded_model_json)
+            ## load weights into new model
+            #loaded_model.load_weights("model.h5")
+            #print("Loaded model from disk")
+ 
+            ## evaluate loaded model on test data
+            #loaded_model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
+            #score = loaded_model.evaluate(X, Y, verbose=0)
+            #print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1]*100))
+
+if __name__ == '__main__':
+    #main()
+    get_best_model()
 
 def main():
 
