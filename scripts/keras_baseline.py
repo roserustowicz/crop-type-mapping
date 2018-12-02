@@ -385,7 +385,7 @@ def get_best_model():
         f.close()
 
         if val_f1 > best_f1:
-            
+            best_f1 = val_f1            
             print('TO BEST MODEL: {} batch, {} dropout, {} units, {}learning rate, {} regularization, {} weight classes \n'.format(batch_size, dropout, units, lr, reg_strength, weight))
 
             # serialize model to JSON
