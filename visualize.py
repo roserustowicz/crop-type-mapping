@@ -202,7 +202,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
         inputs_grid = make_grid(boi, nrow=NROW, normalize=True)
         targets_grid = make_grid(torch.from_numpy(disp_targets), nrow=NROW, normalize=True) 
         preds_grid = make_grid(torch.from_numpy(disp_preds), nrow=NROW, normalize=True)
-        predsmask_grids = make_grid(torch.from_numpy(disp_preds_w_mask), nrow=NROW, normalize=True)
+        predsmask_grid = make_grid(torch.from_numpy(disp_preds_w_mask), nrow=NROW, normalize=True)
         return labels_grid, inputs_grid, targets_grid, preds_grid, predsmask_grid
 
 def clip_boi(boi):
