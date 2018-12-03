@@ -26,7 +26,7 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
             inputs.to(device)
             targets.to(device)
             preds = model(inputs)   
-            batch_loss, batch_cm, _, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
+            batch_loss, batch_cm, _, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
             total_loss += batch_loss.item()
             total_pixels += num_pixels
             total_cm += batch_cm
@@ -38,8 +38,8 @@ def evaluate(preds, labels, loss_fn, reduction, loss_weight, weight_scale, gamma
     """ Evalautes loss and metrics for predictions vs labels.
 
     Args:
-        preds - (tf tensor) model predictions
-        labels - (npy array / tf tensor) ground truth labels
+        preds - (tensor) model predictions
+        labels - (npy array / tensor) ground truth labels
         loss_fn - (function) function that takes preds and labels and outputs some loss metric
         reduction - (str) "avg" or "sum", where "avg" calculates the average accuracy for each batch
                                           where "sum" tracks total correct and total pixels separately
@@ -55,13 +55,13 @@ def evaluate(preds, labels, loss_fn, reduction, loss_weight, weight_scale, gamma
     cm = metrics.get_cm(preds, labels)
 
     if reduction == "avg":
-        loss = loss_fn(labels, preds, reduction, loss_weight, weight_scale, gamma)
+        loss, confidence = loss_fn(labels, preds, reduction, loss_weight, weight_scale, gamma)
         accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
-        return loss, cm, accuracy
+        return loss, cm, accuracy, confidence
     elif reduction == "sum":
-        loss, _ = loss_fn(labels, preds, reduction, loss_weight, weight_scale, gamma)
+        loss, confidence, _ = loss_fn(labels, preds, reduction, loss_weight, weight_scale, gamma)
         total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
-        return loss, cm, total_correct, num_pixels
+        return loss, cm, total_correct, num_pixels, confidence
 
 def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """ Trains the model on the inputs
@@ -115,19 +115,19 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         preds = model(inputs)   
                         
                         if split == 'train':
-                            loss, cm_cur, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
+                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                             if cm_cur is not None:        
                                 # If there are valid pixels, update weights
                                 optimizer.zero_grad()
                                 loss.backward()
                                 torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=100)
                                 optimizer.step()
-                                gradnorm = torch.norm(list(model.parameters())[0].grad)
+                                gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
                                 vis_data['train_gradnorm'].append(gradnorm)
     
                         
                         elif split == 'val':
-                            loss, cm_cur, total_correct, num_pixels = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
+                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                         
                         if cm_cur is not None:
                             # If there are valid pixels, update metrics
@@ -136,7 +136,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             all_metrics[f'{split}_correct'] += total_correct
                             all_metrics[f'{split}_pix'] += num_pixels
         
-                    #visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
+                    visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
 
                     batch_num += 1
 
@@ -149,7 +149,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_f1 = val_f1
                         if args.save_best: 
-                            visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, 
+                            visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, args.num_classes, 
                                                    split, vis_data, vis, args.include_doy, args.use_s1, 
                                                    args.use_s2, model_name, args.time_slice, save=True, 
                                                    save_dir=os.path.join(args.save_dir, args.name + "_best"))

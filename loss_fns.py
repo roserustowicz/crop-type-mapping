@@ -21,9 +21,12 @@ def focal_loss(y_true, y_pred, reduction, loss_weight=False, weight_scale=1, gam
     y_true = preprocess.reshapeForLoss(y_true)
     num_examples = torch.sum(y_true, dtype=torch.float32).cuda()
     
-
+    bs, classes, rows, cols = y_pred.shape
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
+    y_confidence, _ = torch.sort(y_pred, dim=1, descending=True)
+    y_confidence = y_confidence[:, 0] - y_confidence[:, 1]
+    y_confidence = y_confidence.view([bs, rows, cols])
     y_true = y_true.type(torch.LongTensor).cuda()
     
     if loss_weight:
@@ -48,12 +51,12 @@ def focal_loss(y_true, y_pred, reduction, loss_weight=False, weight_scale=1, gam
         if num_examples == 0:
             return None, 0
         else:
-            return loss, num_examples
+            return loss, y_confidence, num_examples
     else:
         if num_examples == 0:
             return None
         else:
-            return loss / num_examples
+            return loss / num_examples, y_confidence
 
           
 def mask_ce_loss(y_true, y_pred, reduction):
