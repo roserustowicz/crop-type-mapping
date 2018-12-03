@@ -286,7 +286,7 @@ def get_train_parser():
                         required=True)
     parser.add_argument('--hdf5_filepath', type=str,
                         help="full path to hdf5 data file",
-                        default="/home/data/ghana/data_v2.hdf5")
+                        default="/home/data/ghana/data.hdf5")
     parser.add_argument('--dataset', type=str,
                         help="Full or small?",
                         choices=('full', 'small'),
@@ -332,9 +332,14 @@ def get_train_parser():
     parser.add_argument('--device', type=str,
                         help="Cuda or CPU",
                         default='cuda')
+    parser.add_argument('--gpu_id', type=int,
+                        help='which gpu to run on',
+                        default=0)
     parser.add_argument('--save_dir', type=str,
                         help="Directory to save the models in. If unspecified, saves the model to ./models.",
                         default='./models')
+    parser.add_argument('--save_best', type=str2bool, default=True,
+                        help="Whether to save plots and images for best epoch according to validation f1-score")
     parser.add_argument('--name', type=str,
                         help="Name of experiment. Used to uniquely save the model. Defaults to current time + model name if not set.")
     parser.add_argument('--time_slice', type=int,
@@ -398,5 +403,4 @@ def get_train_parser():
                          help="Model to use for fcn part of fcn + crnn")
     parser.add_argument('--crnn_model_name', type=str, default='clstm',
                          help="Model to use for crnn part of fcn + crnn")
-   
     return parser

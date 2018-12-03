@@ -6,8 +6,10 @@ File for visualizing model performance.
 """
 
 import numpy as np
+import os 
 import matplotlib.pyplot as plt
 import visdom
+from torchvision.utils import save_image
 
 import metrics
 import preprocess
@@ -21,6 +23,41 @@ def setup_visdom(env_name, model_name):
     else:
         env_name = env_name
     return visdom.Visdom(port=8097, env=env_name)
+
+def visdom_save_metric(metric_name, split, title, x_label, y_label, vis_data, save_dir):
+    """
+    Args: 
+      metric_name - "loss", "acc", "f1"
+    """
+    Y=np.array(vis_data['{}_{}'.format(split, metric_name)])
+    X=np.array(range(len(vis_data['{}_{}'.format(split, metric_name)])))
+
+    plt.figure()
+    plt.plot(X, Y)
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend(['{}_{}'.format(split, metric_name)])
+    plt.savefig(os.path.join(save_dir, title + '.png'))
+    plt.close()
+
+def visdom_save_many_metrics(metric_name, split, title, x_label, y_label, legend_lbls, vis_data, save_dir):
+    """
+    Args: 
+      metric_name - "loss", "acc", "f1"
+    """
+ 
+    Y = vis_data['{}_{}'.format(split, metric_name)]
+    X = np.array([range(len(vis_data['{}_{}'.format(split, metric_name)]))] * Y.shape[1]).T 
+
+    plt.figure()
+    plt.plot(X, Y)
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend(legend_lbls)
+    plt.savefig(os.path.join(save_dir, title + '.png'))
+    plt.close()
 
 def visdom_plot_metric(metric_name, split, title, x_label, y_label, vis_data, vis):
     """
@@ -44,7 +81,6 @@ def visdom_plot_many_metrics(metric_name, split, title, x_label, y_label, legend
  
     Y = vis_data['{}_{}'.format(split, metric_name)]
     X = np.array([range(len(vis_data['{}_{}'.format(split, metric_name)]))] * Y.shape[1]).T 
-
     vis.line(Y=Y,
              X=X,
              win=title,
@@ -64,7 +100,7 @@ def visdom_plot_images(vis, imgs, win):
     vis.images(imgs, nrow=NROW, win=win, 
                opts={'title': win})
 
-def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice):
+def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None):
     """ Record values and images for batch in visdom
     """
     # Create and show mask for labeled areas
@@ -74,7 +110,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
 
     # Show best inputs judging from cloud masks
     if torch.sum(clouds) != 0 and len(clouds.shape) > 1: 
-        best = np.argmax(np.mean(np.mean(np.squeeze(clouds.numpy()), axis=1), axis=1), axis=1)
+        best = np.argmax(np.mean(np.mean(clouds.numpy()[:, 0, :, :, :], axis=1), axis=1), axis=1)
     else:
         best = np.random.randint(0, high=MIN_TIMESTAMPS, size=(inputs.shape[0],))
 
@@ -84,7 +120,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
     if use_s2 and use_s1:
         if include_doy: 
             add_doy = 1
-        if model_name in ['fcn_crnn', 'bidir_clstm']:
+        if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
             for idx, b in enumerate(best):
                 boi.append(inputs[idx, b, 2+add_doy:5+add_doy, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
@@ -96,7 +132,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
                 boi.append(inputs[idx, b, 2+add_doy:5+add_doy, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
     elif use_s1:
-        if model_name in ['fcn_crnn', 'bidir_clstm']:
+        if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
             for idx, b in enumerate(best):
                 boi.append(torch.cat((inputs[idx, b, 0:2, :, :], inputs[idx, b, 0, :, :].unsqueeze(0)), dim=0).unsqueeze(0))
             boi = torch.cat(boi, dim=0)
@@ -108,7 +144,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
                 boi.append(torch.cat((inputs[idx, b, 0:2, :, :], inputs[idx, b, 0, :, :].unsqueeze(0)), dim=0).unsqueeze(0))
             boi = torch.cat(boi, dim=0)
     elif use_s2:
-        if model_name in ['fcn_crnn', 'bidir_clstm']:
+        if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
             for idx, b in enumerate(best):
                 boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
@@ -119,7 +155,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
             for idx, b in enumerate(best):
                 boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
-    
+            
     # Clip and show input bands of interest
     boi = clip_boi(boi)
     visdom_plot_images(vis, boi, 'Input Images') 
@@ -144,6 +180,18 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
     if split == 'train':
         visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
 
+    if save:
+        save_dir = save_dir.replace(" ", "")
+        save_dir = save_dir.replace(":", "")
+        
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        save_image(torch.from_numpy(label_mask), os.path.join(save_dir, 'label_masks.png'), nrow=NROW, normalize=True) 
+        save_image(boi, os.path.join(save_dir, 'inputs.png'), nrow=NROW, normalize=True)
+        save_image(torch.from_numpy(disp_targets), os.path.join(save_dir, 'targets.png'), nrow=NROW, normalize=True) 
+        save_image(torch.from_numpy(disp_preds), os.path.join(save_dir, 'preds.png'), nrow=NROW, normalize=True)
+        save_image(torch.from_numpy(disp_preds_w_mask), os.path.join(save_dir, 'preds_w_masks.png'), nrow=NROW, normalize=True)
+
 def clip_boi(boi):
     """ Clip bands of interest outside of 2*std per imagei sample
     """
@@ -159,9 +207,14 @@ def clip_boi(boi):
         boi[sample, :, :, :] = (boi[sample, :, :, :] - min_clip)/(max_clip - min_clip)
     return boi
 
-def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
+def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=False, save_dir=None):
     """ Record values for epoch in visdom
     """
+    if country == 'ghana':
+        class_names = GHANA_CROPS
+    elif country == 'southsudan':
+        class_names = SOUTHSUDAN_CROPS
+
     if all_metrics[f'{split}_loss'] is not None: loss_epoch = all_metrics[f'{split}_loss'] / all_metrics[f'{split}_pix']
     if all_metrics[f'{split}_correct'] is not None: acc_epoch = all_metrics[f'{split}_correct'] / all_metrics[f'{split}_pix']
 
@@ -176,22 +229,31 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num):
 
     for cur_metric in ['loss', 'acc', 'f1']:
         visdom_plot_metric(cur_metric, split, f'{split} {cur_metric}', 'Epoch', cur_metric, vis_data, vis)
-    
-    visdom_plot_many_metrics('classf1', split, f'{split} per class f1-score', 'Epoch', 'per class f1-score', CM_CLASSES, vis_data, vis)
-               
-    fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], CM_CLASSES,
+        if save:
+            save_dir = save_dir.replace(" ", "")
+            save_dir = save_dir.replace(":", "")        
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir) 
+            visdom_save_metric(cur_metric, split, f'{split}{cur_metric}', 'Epoch', cur_metric, vis_data, save_dir)
+
+    visdom_plot_many_metrics('classf1', split, f'{split}_per_class_f1-score', 'Epoch', 'per class f1-score', class_names, vis_data, vis)
+
+    fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], class_names,
                                      normalize=False,
                                      title='{} confusion matrix, epoch {}'.format(split, epoch_num),
                                      cmap=plt.cm.Blues)
 
     vis.matplot(fig, win=f'{split} CM')
+    if save: 
+        visdom_save_many_metrics('classf1', split, f'{split}_per_class_f1', 'Epoch', 'per class f1-score', class_names, vis_data, save_dir)               
+        fig.savefig(os.path.join(save_dir, f'{split}_cm.png')) 
 
 def visualize_rgb(argmax_array, num_classes, class_colors=None): 
     mask = []
     rgb_output = np.zeros((argmax_array.shape[0], 3, argmax_array.shape[2], argmax_array.shape[3]))
 
     if class_colors == None:
-        rgbs = [ [255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 255, 255], [0, 0, 255] ]
+        rgbs = [ [255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 255, 255]]
     
     assert len(rgbs) == num_classes
 
@@ -207,31 +269,4 @@ def visualize_rgb(argmax_array, num_classes, class_colors=None):
         rgb_output += (mask_cat * class_vals)
         
     return rgb_output
-
-
-def visualize_model_preds(model, grid_name, save=False):
-    """ Outputs a visualization of model predictions for one grid.
-
-    Args:
-        model - (ML model) model to be evaluated
-        grid_name - (string) name of the grid to evaluate
-    """
-    # assuming there is some way to store the model's name in the model itself
-    # assuming these functions exists somewhere in preprocess
-    
-    # TODO: This function as a whole is a WIP -- was abandoned to
-    #  get visdom working instead ... 
-
-    label = preprocess.retrieve_label(grid_name, country) # get the mask given a grid's name (ex: "004232")
-    best_grid = preprocess.retrieve_best_s2_grid(grid_name, country) # get the actual grid data given a grid's name
-    
-    grid = preprocess.preprocess_grid(grid, model.name) # preprocess the grid in a model specific way
-
-    preds = model.predict(grid) # get model predictions
-
-    # formats preds into a 64x64 grid and creates a visualization of the predicted values
-    # masking everything that's not labeled
-    visualize_preds(preds, mask)
-
-    # save if flag set
 

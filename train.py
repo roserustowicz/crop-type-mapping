@@ -16,12 +16,12 @@ import numpy as np
 from constants import *
 import visualize
 
-def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma):
+def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes):
     total_loss = 0
     total_pixels = 0
-    total_cm = np.zeros((args.num_classes, args.num_classes)).astype(int) 
+    total_cm = np.zeros((num_classes, num_classes)).astype(int) 
     loss_fn = loss_fns.get_loss_fn(model_name)
-    for inputs, targets in split_loader:
+    for inputs, targets, cloudmasks in split_loader:
         with torch.set_grad_enabled(False):
             inputs.to(device)
             targets.to(device)
@@ -76,7 +76,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """
     if model_name in NON_DL_MODELS:
         if X is None: raise ValueError("X not provided!")
-        if  y is None: raise ValueError("y nor provided!")
+        if y is None: raise ValueError("y nor provided!")
         model.fit(X, y)
 
     elif model_name in DL_MODELS:
@@ -96,7 +96,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         loss_fn = loss_fns.get_loss_fn(model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)
-        best_val_acc = 0
+        best_val_f1 = 0
 
         for i in range(args.epochs):
             
@@ -120,8 +120,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                 # If there are valid pixels, update weights
                                 optimizer.zero_grad()
                                 loss.backward()
+                                torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=100)
                                 optimizer.step()
-
                                 gradnorm = torch.norm(list(model.parameters())[0].grad)
                                 vis_data['train_gradnorm'].append(gradnorm)
     
@@ -136,20 +136,31 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             all_metrics[f'{split}_correct'] += total_correct
                             all_metrics[f'{split}_pix'] += num_pixels
         
-                    visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
+                    #visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
 
                     batch_num += 1
 
                 if split == 'val':
                     val_loss = all_metrics['val_loss'] / all_metrics['val_pix']
                     lr_scheduler.step(val_loss)
-                    val_acc = all_metrics['val_correct'] / all_metrics['val_pix']
-                    
-                    if val_acc > best_val_acc:
+                    val_f1 = metrics.get_f1score(all_metrics['val_cm'], avg=True)                 
+ 
+                    if val_f1 > best_val_f1:
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
-                        best_val_acc = val_acc
-                
-                visualize.record_epoch(all_metrics, split, vis_data, vis, i)
+                        best_val_f1 = val_f1
+                        if args.save_best: 
+                            visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, 
+                                                   split, vis_data, vis, args.include_doy, args.use_s1, 
+                                                   args.use_s2, model_name, args.time_slice, save=True, 
+                                                   save_dir=os.path.join(args.save_dir, args.name + "_best"))
+
+                            visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country, save=True, 
+                                                  save_dir=os.path.join(args.save_dir, args.name + "_best"))               
+                            
+                            visualize.record_epoch(all_metrics, 'train', vis_data, vis, i, args.country, save=True, 
+                                                  save_dir=os.path.join(args.save_dir, args.name + "_best"))               
+ 
+                visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country)
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
@@ -161,7 +172,6 @@ if __name__ == "__main__":
     parser = util.get_train_parser()
 
     args = parser.parse_args()
-
     # load in data generator
     dataloaders = datasets.get_dataloaders(args.grid_dir, args.country, args.dataset, args)
     

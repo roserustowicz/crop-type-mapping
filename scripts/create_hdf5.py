@@ -32,7 +32,7 @@ def create_hdf5(data_dir, output_dir):
         data_dir - (string) path to directory containing data which has three subdirectories: s1, s2, masks
         output_dir - (string) path to output directory
     """
-    hdf5_file = h5py.File(os.path.join(output_dir, 'data_v2.hdf5'), 'a')
+    hdf5_file = h5py.File(os.path.join(output_dir, 'data.hdf5'), 'a')
     # subdivide the hdf5 directory into grids and masks
     for group_name in ['s1', 's2', 'labels', 'cloudmasks', 's1_dates', 's2_dates']:
         if group_name not in hdf5_file:
@@ -40,11 +40,11 @@ def create_hdf5(data_dir, output_dir):
 
         actual_dir_name = None
         if group_name in ['s1', 's1_dates']:
-            actual_dir_name = "s1_64x64_npy"
+            actual_dir_name = "s1_npy"
         elif group_name in ['s2', 'cloudmasks', 's2_dates']:
-            actual_dir_name = "s2_64x64_npy"
+            actual_dir_name = "s2_npy"
         elif group_name == 'labels':
-            actual_dir_name = "raster_64x64_npy"
+            actual_dir_name = "raster_npy"
 
         for filepath in os.listdir(os.path.join(data_dir, actual_dir_name)):
             filename, ext = filepath.split('.')
