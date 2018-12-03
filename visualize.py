@@ -81,7 +81,6 @@ def visdom_plot_many_metrics(metric_name, split, title, x_label, y_label, legend
  
     Y = vis_data['{}_{}'.format(split, metric_name)]
     X = np.array([range(len(vis_data['{}_{}'.format(split, metric_name)]))] * Y.shape[1]).T 
-
     vis.line(Y=Y,
              X=X,
              win=title,
@@ -111,7 +110,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
 
     # Show best inputs judging from cloud masks
     if torch.sum(clouds) != 0 and len(clouds.shape) > 1: 
-        best = np.argmax(np.mean(np.mean(np.squeeze(clouds.numpy()), axis=1), axis=1), axis=1)
+        best = np.argmax(np.mean(np.mean(clouds.numpy()[:, 0, :, :, :], axis=1), axis=1), axis=1)
     else:
         best = np.random.randint(0, high=MIN_TIMESTAMPS, size=(inputs.shape[0],))
 
@@ -254,7 +253,7 @@ def visualize_rgb(argmax_array, num_classes, class_colors=None):
     rgb_output = np.zeros((argmax_array.shape[0], 3, argmax_array.shape[2], argmax_array.shape[3]))
 
     if class_colors == None:
-        rgbs = [ [255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 255, 255], [0, 0, 255] ]
+        rgbs = [ [255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 255, 255]]
     
     assert len(rgbs) == num_classes
 
@@ -270,31 +269,4 @@ def visualize_rgb(argmax_array, num_classes, class_colors=None):
         rgb_output += (mask_cat * class_vals)
         
     return rgb_output
-
-
-def visualize_model_preds(model, grid_name, save=False):
-    """ Outputs a visualization of model predictions for one grid.
-
-    Args:
-        model - (ML model) model to be evaluated
-        grid_name - (string) name of the grid to evaluate
-    """
-    # assuming there is some way to store the model's name in the model itself
-    # assuming these functions exists somewhere in preprocess
-    
-    # TODO: This function as a whole is a WIP -- was abandoned to
-    #  get visdom working instead ... 
-
-    label = preprocess.retrieve_label(grid_name, country) # get the mask given a grid's name (ex: "004232")
-    best_grid = preprocess.retrieve_best_s2_grid(grid_name, country) # get the actual grid data given a grid's name
-    
-    grid = preprocess.preprocess_grid(grid, model.name) # preprocess the grid in a model specific way
-
-    preds = model.predict(grid) # get model predictions
-
-    # formats preds into a 64x64 grid and creates a visualization of the predicted values
-    # masking everything that's not labeled
-    visualize_preds(preds, mask)
-
-    # save if flag set
 

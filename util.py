@@ -332,6 +332,9 @@ def get_train_parser():
     parser.add_argument('--device', type=str,
                         help="Cuda or CPU",
                         default='cuda')
+    parser.add_argument('--gpu_id', type=int,
+                        help='which gpu to run on',
+                        default=0)
     parser.add_argument('--save_dir', type=str,
                         help="Directory to save the models in. If unspecified, saves the model to ./models.",
                         default='./models')
@@ -402,5 +405,4 @@ def get_train_parser():
                          help="Model to use for crnn part of fcn + crnn")
     parser.add_argument('--pretrained', type=str2bool, default=True,
                         help="Pretrained unet model for fcn-crnn")
-   
     return parser
