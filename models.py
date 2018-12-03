@@ -8,6 +8,14 @@ given by:
     make_MODELNAME_model(MODEL_SETTINGS)
 
 """
+from keras.models import Sequential, Model
+from keras.layers import InputLayer, Activation, BatchNormalization, Flatten, Dropout
+from keras.layers import Dense, Conv2D, MaxPooling2D, ConvLSTM2D, Lambda
+from keras.layers import Conv1D, MaxPooling1D
+from keras import regularizers
+from keras.layers import Bidirectional, TimeDistributed, concatenate
+from keras.backend import reverse
+from keras.engine.input_layer import Input
 
 import torch 
 import torch.nn as nn

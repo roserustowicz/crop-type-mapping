@@ -312,7 +312,7 @@ def generate_string_HP(choices):
 
 def get_best_model():
 
-    filename = '20181201_NN_best.txt'
+    filename = '20181202_NN_best.txt'
     class_weight = {0: 0.8205, 1: 0.4012, 2: 0.8299, 3: 0.8780}
 
     model_type = 'nn'
@@ -413,9 +413,6 @@ def get_best_model():
             #score = loaded_model.evaluate(X, Y, verbose=0)
             #print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1]*100))
 
-if __name__ == '__main__':
-    #main()
-    get_best_model()
 
 def main():
 
@@ -523,4 +520,4 @@ def main():
         f.close()
 
 if __name__ == '__main__':
-   main()
+    get_best_model()

@@ -9,7 +9,7 @@ import numpy as np
 import os 
 import matplotlib.pyplot as plt
 import visdom
-from torchvision.utils import save_image
+from torchvision.utils import save_image, make_grid
 
 import metrics
 import preprocess
@@ -100,13 +100,14 @@ def visdom_plot_images(vis, imgs, win):
     vis.images(imgs, nrow=NROW, win=win, 
                opts={'title': win})
 
-def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None):
+def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None, show_visdom=True, show_matplot=False):
     """ Record values and images for batch in visdom
     """
     # Create and show mask for labeled areas
     label_mask = np.sum(targets.numpy(), axis=1)
     label_mask = np.expand_dims(label_mask, axis=1)
-    visdom_plot_images(vis, label_mask, 'Label Masks')
+    if show_visdom:
+        visdom_plot_images(vis, label_mask, 'Label Masks')
 
     # Show best inputs judging from cloud masks
     if torch.sum(clouds) != 0 and len(clouds.shape) > 1: 
@@ -158,14 +159,16 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
             
     # Clip and show input bands of interest
     boi = clip_boi(boi)
-    visdom_plot_images(vis, boi, 'Input Images') 
+    if show_visdom:
+        visdom_plot_images(vis, boi, 'Input Images') 
 
     # Show targets (labels)
     disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
     disp_targets = np.argmax(disp_targets, axis=1)
     disp_targets = np.expand_dims(disp_targets, axis=1)
     disp_targets = visualize_rgb(disp_targets, num_classes)
-    visdom_plot_images(vis, disp_targets, 'Target Images')
+    if show_visdom:
+        visdom_plot_images(vis, disp_targets, 'Target Images')
 
     # Show predictions, masked with label mask
     disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1) + 1
@@ -173,12 +176,14 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
     disp_preds = visualize_rgb(disp_preds, num_classes)
     disp_preds_w_mask = disp_preds * label_mask
 
-    visdom_plot_images(vis, disp_preds, 'Predicted Images')
-    visdom_plot_images(vis, disp_preds_w_mask, 'Predicted Images with Label Mask')
+    if show_visdom:
+        visdom_plot_images(vis, disp_preds, 'Predicted Images')
+        visdom_plot_images(vis, disp_preds_w_mask, 'Predicted Images with Label Mask')
 
     # Show gradnorm per batch
-    if split == 'train':
-        visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
+    if show_visdom:
+        if split == 'train':
+            visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
 
     if save:
         save_dir = save_dir.replace(" ", "")
@@ -191,6 +196,14 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
         save_image(torch.from_numpy(disp_targets), os.path.join(save_dir, 'targets.png'), nrow=NROW, normalize=True) 
         save_image(torch.from_numpy(disp_preds), os.path.join(save_dir, 'preds.png'), nrow=NROW, normalize=True)
         save_image(torch.from_numpy(disp_preds_w_mask), os.path.join(save_dir, 'preds_w_masks.png'), nrow=NROW, normalize=True)
+    
+    if show_matplot:
+        labels_grid = make_grid(torch.from_numpy(label_mask), nrow=NROW, normalize=True) 
+        inputs_grid = make_grid(boi, nrow=NROW, normalize=True)
+        targets_grid = make_grid(torch.from_numpy(disp_targets), nrow=NROW, normalize=True) 
+        preds_grid = make_grid(torch.from_numpy(disp_preds), nrow=NROW, normalize=True)
+        predsmask_grids = make_grid(torch.from_numpy(disp_preds_w_mask), nrow=NROW, normalize=True)
+        return labels_grid, inputs_grid, targets_grid, preds_grid, predsmask_grid
 
 def clip_boi(boi):
     """ Clip bands of interest outside of 2*std per imagei sample
@@ -253,8 +266,9 @@ def visualize_rgb(argmax_array, num_classes, class_colors=None):
     rgb_output = np.zeros((argmax_array.shape[0], 3, argmax_array.shape[2], argmax_array.shape[3]))
 
     if class_colors == None:
-        rgbs = [ [255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 255, 255]]
-    
+        rgbs = [ [255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 255, 255], [0, 0, 255] ]
+        rgbs = rgbs[:num_classes]
+ 
     assert len(rgbs) == num_classes
 
     for cur_class in range(0, num_classes):
