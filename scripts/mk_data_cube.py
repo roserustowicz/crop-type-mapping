@@ -5,7 +5,7 @@ import rasterio
 from collections import Counter
 import json
 
-def get_img_cube(home, countries, sources, verbose, out_format):
+def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_s1):
     """
     Provides data from input .tif files depending on function input parameters. 
     
@@ -41,10 +41,17 @@ def get_img_cube(home, countries, sources, verbose, out_format):
                      and 'orbits' (only for s1) information. 'dates' gives the acquisition dates for all 
                      images stacked in the array, in sequential order. 'orbits' gives the type of orbit 
                      the image was taken in, either 'asc' for ascending or 'desc' for descending. 
+      
+      lbl_dir - (str) the directory name that the raster labels are stored in 
+                      (i.e. 'raster', 'raster_64x64')
+
+      filter_s1 - (boolean) If working with Sentinel-1 data, this will take only the last three bands,
+                   which include `angle`, `vv_gamma`, and `vh_gamma` 
+
     """
 
     for country in countries:
-        mask_fnames = [os.path.join(home, country, 'raster_64x64', f) for f in os.listdir(os.path.join(home, country, 'raster_64x64')) if f.endswith('.tif')]
+        mask_fnames = [os.path.join(home, country, lbl_dir, f) for f in os.listdir(os.path.join(home, country, lbl_dir)) if f.endswith('.tif')]
         mask_ids = [f.split('_')[-1].replace('.tif', '') for f in mask_fnames]
     
         if verbose:
@@ -53,7 +60,10 @@ def get_img_cube(home, countries, sources, verbose, out_format):
         for source in sources:
             cur_path = os.path.join(home, country, source)
             files = [os.path.join(cur_path, f) for f in os.listdir(cur_path) if f.endswith('.tif')]
-            grid_numbers = [f.split('_')[-2] for f in files]
+            if country == 'ghana':
+                grid_numbers = [f.split('_')[-2] for f in files]
+            elif country in ['tanzania', 'southsudan']:
+                grid_numbers = [f.split('_')[-3] for f in files]
             grid_numbers.sort()
  
             # read one image from list to get dimensions
@@ -81,23 +91,41 @@ def get_img_cube(home, countries, sources, verbose, out_format):
                 cur_grid_files.sort() # sorts in time
                 
                 if out_format == 'npy':
-                    data_array = np.zeros((img.shape[0], img.shape[1], img.shape[2], len(cur_grid_files)))
+                    if 's1' in source and filter_s1:
+                        data_array = np.zeros((3, img.shape[1], img.shape[2], len(cur_grid_files)))
+                    else:
+                        data_array = np.zeros((img.shape[0], img.shape[1], img.shape[2], len(cur_grid_files)))
+                    
                     dates = []
                     if 's1' in source:
                         orbit = []
 
                 for idx, fname in enumerate(cur_grid_files):
+                    print('idx: ', idx)
+                    print('fname: ', fname)
                     with rasterio.open(fname) as src:
                         if out_format == 'pickle':
                             data_array[grid_idx, :, :, :, idx] = src.read()
                         elif out_format == 'npy':
-                            data_array[:, :, :, idx] = src.read()
-                            dates.append(fname.split('/')[-1][-14:-4])
+                            if 's1' in source and filter_s1:
+                                s1_subset = src.read()[3:, :, :]
+                                data_array[0:2, :, :, idx] = s1_subset
+                                data_array[2, :, :, idx] = s1_subset[1,:, :] / s1_subset[0,:, :]
+                            else:
+                                data_array[:, :, :, idx] = src.read()
+                            if country == 'ghana':
+                                dates.append(fname.split('/')[-1][-14:-4])
+                            elif country in ['tanzania', 'southsudan']:
+                                tmp = fname.split('/')[-1].split('_')[:-1]+['.tif']
+                                dates.append(tmp[-2])
                             if 's1' in source: 
                                 orbit.append(fname.split('/')[-1].split('_')[2])
 
                 if out_format == 'npy':
                     tmp = fname.split('/')
+                    if country in ['tanzania', 'southsudan']: 
+                        tmp[-1] = tmp[-1].split('_')[:-1]
+                        tmp[-1] = "_".join(tmp[-1])+'.tif'
                     tmp[-1] = tmp[-1][:-15].replace('asc_', '').replace('desc_', '')
                     tmp[-2] = tmp[-2] + '_npy'
                     output_fname = "/".join(tmp)
@@ -127,13 +155,15 @@ def get_img_cube(home, countries, sources, verbose, out_format):
 
 if __name__ == '__main__':
 
-    home = '/home/data'
-    countries = ['Ghana']
-    sources = ['s2_64x64']
+    home = '/home/data/'
+    countries = ['southsudan']
+    sources = ['s2_extra']
+    lbl_dir = 'raster'
     verbose = 1
     out_format = 'npy'
+    filter_s1 = 1
 
-    data_array = get_img_cube(home, countries, sources, verbose, out_format)
+    data_array = get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_s1)
     
     # To load pickle file ... 
     #with open(fname, "rb") as f:

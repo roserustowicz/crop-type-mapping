@@ -93,7 +93,7 @@ def make_logreg_model(random_state=None, solver='lbfgs', multi_class='multinomia
     model = LogisticRegression(random_state, solver, multi_class)
     return model
 
-def make_1d_nn_model(num_classes, num_input_feats, units, reg_strength):
+def make_1d_nn_model(num_classes, num_input_feats, units, reg_strength, input_bands, dropout):
     """ Defines a keras Sequential 1D NN model
 
     Args:
@@ -107,15 +107,16 @@ def make_1d_nn_model(num_classes, num_input_feats, units, reg_strength):
 
     model.add(Flatten())
     model.add(Dense(units=units, kernel_regularizer=reg, 
-              bias_regularizer=reg, input_shape=(num_input_feats, 1)))
-    model.add(BatchNormalization())
+              bias_regularizer=reg, input_shape=(num_input_feats, input_bands)))
     model.add(Activation('relu'))
+    model.add(Dropout(rate=dropout))
+    model.add(BatchNormalization())
     model.add(Dense(num_classes, activation='softmax', 
               kernel_regularizer=reg, bias_regularizer=reg))
 
     return model
 
-def make_1d_2layer_nn_model(num_classes, num_input_feats, units, reg_strength):
+def make_1d_2layer_nn_model(num_classes, num_input_feats, units, reg_strength, input_bands, dropout):
     """ Defines a keras Sequential 1D NN model
 
     Args:
@@ -129,19 +130,21 @@ def make_1d_2layer_nn_model(num_classes, num_input_feats, units, reg_strength):
 
     model.add(Flatten())
     model.add(Dense(units=units, kernel_regularizer=reg, 
-              bias_regularizer=reg, input_shape=(num_input_feats, 1)))
+              bias_regularizer=reg, input_shape=(num_input_feats, input_bands)))
     model.add(Activation('relu'))
+    model.add(Dropout(rate=dropout))
     model.add(BatchNormalization())
     model.add(Dense(units=units, kernel_regularizer=reg,
               bias_regularizer=reg))
     model.add(Activation('relu'))
+    model.add(Dropout(rate=dropout))
     model.add(BatchNormalization())
     model.add(Dense(num_classes, activation='softmax', 
               kernel_regularizer=reg, bias_regularizer=reg))
 
     return model
 
-def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength):
+def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength, input_bands, dropout):
     """ Defines a keras Sequential 1D CNN model
 
     Args:
@@ -153,24 +156,27 @@ def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength):
     
     model = Sequential()
 
-    model.add(Conv1D(units, kernel_size=11,
-              strides=11, padding='same',
+    model.add(Conv1D(units, kernel_size=3,
+              strides=1, padding='same',
               kernel_regularizer=reg,
               bias_regularizer=reg,
-              input_shape=(num_input_feats, 1)))
+              input_shape=(num_input_feats, input_bands)))
     model.add(Activation('relu'))
+    model.add(Dropout(rate=dropout))
     model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
     model.add(Conv1D(units*2, kernel_size=3, padding='same',
               kernel_regularizer=reg, bias_regularizer=reg))
     model.add(Activation('relu'))
+    model.add(Dropout(rate=dropout))
     model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
     model.add(Flatten())
     model.add(Dense(units*4, activation='relu', 
               kernel_regularizer=reg, bias_regularizer=reg))
+    model.add(Dropout(rate=dropout))
     model.add(Dense(num_classes, activation='softmax', 
               kernel_regularizer=reg, bias_regularizer=reg))
 
