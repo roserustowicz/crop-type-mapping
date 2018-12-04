@@ -100,13 +100,15 @@ def visdom_plot_images(vis, imgs, win):
     vis.images(imgs, nrow=NROW, win=win, 
                opts={'title': win})
 
-def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None):
+def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None):
     """ Record values and images for batch in visdom
     """
     # Create and show mask for labeled areas
     label_mask = np.sum(targets.numpy(), axis=1)
     label_mask = np.expand_dims(label_mask, axis=1)
+    confidence = np.expand_dims(confidence, axis=1)
     visdom_plot_images(vis, label_mask, 'Label Masks')
+    visdom_plot_images(vis, confidence, 'Confidence')
 
     # Show best inputs judging from cloud masks
     if torch.sum(clouds) != 0 and len(clouds.shape) > 1: 

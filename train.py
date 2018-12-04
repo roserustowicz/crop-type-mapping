@@ -120,7 +120,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                 # If there are valid pixels, update weights
                                 optimizer.zero_grad()
                                 loss.backward()
-                                torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=100)
                                 optimizer.step()
                                 gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
                                 vis_data['train_gradnorm'].append(gradnorm)
@@ -136,7 +135,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             all_metrics[f'{split}_correct'] += total_correct
                             all_metrics[f'{split}_pix'] += num_pixels
         
-                    visualize.record_batch(inputs, cloudmasks, targets, preds, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
+                    visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
 
                     batch_num += 1
 
