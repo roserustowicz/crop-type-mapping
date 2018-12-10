@@ -119,21 +119,6 @@ def doy2stack(doy_vec, in_shp):
     stack = doy.unsqueeze(0).expand(c, t).unsqueeze(0).expand(r, c, t).unsqueeze(0)
     return stack
 
-def retrieve_label(grid_name, country):
-    """ Return the label of the grid specified by grid_name.
-
-    Args:
-        grid_name - (string) string representation of the grid number
-
-    Returns:
-        mask - (npy arr) mask containing labels for each pixel
-    """
-    label_path = '{}/{}/{}'.format(DATA_FILE_PATH, country, LABEL_DIR)
-    label_fname = [f for f in os.listdir(label_path) if '_{}_'.format(grid_name.zfill(6)) in f and f.endswith('_label.npy')]
-    label_grid_path = "/".join((label_path, label_fname[0]))
-    label = np.load(label_grid_path)
-    return label
-
 def retrieve_best_s2_grid(grid_name, country):
     """ Retrieves the least cloudy s2 image of the grid specified.
 
@@ -170,19 +155,6 @@ def get_least_cloudy_idx(cloud_stack):
     cloudiness = np.mean(cloud_stack, axis=(0, 1))
     least_cloudy_idx = np.argmax(cloudiness)
     return least_cloudy_idx
-
-def retrieve_grid(grid_name, country):
-    """ Retrieves a concatenation of the s1 and s2 values of the grid specified.
-
-    Args:
-        grid_name - (string) string representation of the grid number
-
-    Returns:
-        grid - (npy array) concatenation of the s1 and s2 values of the grid over time
-    """
-    
-    grid = None
-    return grid
 
 def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None):
     """ Returns a preprocessed version of the grid based on the model.
@@ -267,7 +239,7 @@ def preprocessGrid(grid, transform, rot, time_slice=None):
     grid = torch.tensor(grid.copy(), dtype=torch.float32)
 
     if time_slice is not None:
-        grid = takeTimeSlice(grid, time_slice)
+        grid = grid[timeslice, :, :, :]
     return grid
 
 def preprocessGridForUNet3D(grid, transform, rot, time_slice=None):
@@ -295,15 +267,6 @@ def moveTimeToStart(arr):
     """
     
     return np.transpose(arr, [3, 0, 1, 2])
-
-def takeTimeSlice(arr, timeslice):
-    """ Take time slice for fcn input [bands x rows x cols]
-    
-    Args:
-        arr - (npy arr) [timestamps x bands x rows x cols] 
-    """
-    arr_slice = arr[timeslice,:,:,:]
-    return arr_slice
 
 def mergeTimeBandChannels(arr):
     """ Merge timestamps and band channels for UNet input [(bands x timestamps) x rows x cols]

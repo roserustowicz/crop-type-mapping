@@ -13,9 +13,13 @@ import preprocess
 from constants import *
 
 def get_loss_fn(model_name):
+    """
+        Allows for changing the loss function depending on the model.
+        Currently always returns the focal_loss.
+    """
     return focal_loss
 
-def focal_loss(y_true, y_pred, reduction, loss_weight=False, weight_scale=1, gamma=2):
+def focal_loss(y_true, y_pred, reduction, loss_weight=False, weight_scale=1, gamma=0):
     """
     """ 
     y_true = preprocess.reshapeForLoss(y_true)
@@ -88,6 +92,10 @@ def mask_ce_loss(y_true, y_pred, reduction):
             return total_loss / (num_examples)
 
 def get_optimizer(params, optimizer_name, lr, momentum, weight_decay):
+    """
+        TODO: find a better place for this
+        Returns an optimizer with the settings set to the args passed in
+    """
     if optimizer_name == "sgd":
         return optim.SGD(params, lr=lr, momentum=momentum, weight_decay=weight_decay)
     elif optimizer_name == "adam":
