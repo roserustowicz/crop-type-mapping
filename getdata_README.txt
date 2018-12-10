@@ -58,6 +58,13 @@ This readme explains how data is downloaded and formatted to be used in our mode
 6.) Next, we want to change the values in the raster files so that the labels correspond to crop type
     rather than field ID. To do so, run:
 
+7.) Once all the data and labels have been converted to npy files using the steps above, data splits are
+     created. To do so, run the following command: 
+    
+     `python scripts/data_split.py --save=True --full_seed=14`
+
+    This will save a pickled list of gridIDs for each split, saved in /home/data/COUNTRY/
+
 7.) Finally, we create an hdf5 file that contains all necessary inputs that we've created above. To create
      the hdf5 file, run:
 
