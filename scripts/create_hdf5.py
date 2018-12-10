@@ -47,6 +47,7 @@ def create_hdf5(data_dir, output_dir):
             actual_dir_name = "raster_npy"
 
         for filepath in os.listdir(os.path.join(data_dir, actual_dir_name)):
+            print('filepath: ', filepath)
             filename, ext = filepath.split('.')
             # get grid num to use as the object's file name
             grid_num = get_grid_num(filename, ext, group_name)
@@ -72,10 +73,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,
                         help='Path to directory containing data.',
-                        default='/home/data/ghana/')
+                        default='/home/data/southsudan/')
     parser.add_argument('--output_dir', type=str,
                         help='Path to directory to output the hdf5 file.',
-                        default='/home/data/ghana/')
+                        default='/home/data/southsudan/')
 
     args = parser.parse_args()
     create_hdf5(args.data_dir, args.output_dir)

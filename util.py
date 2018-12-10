@@ -362,6 +362,9 @@ def get_train_parser():
     parser.add_argument('--apply_transforms', type=str2bool,
                         help="Apply horizontal flipping / rotation",
                         default=True)
+    parser.add_argument('--normalize', type=str2bool,
+                        help="Apply normalization to input based on overall band means and stds",
+                        default=True)
     parser.add_argument('--patience', type=int,
                         help="Number of epochs before decreasing lr.",
                         default=3)
