@@ -24,6 +24,7 @@ class CropTypeDS(Dataset):
 
         with open(grid_path, "rb") as f:
             self.grid_list = list(pickle.load(f))
+            self.grid_list = np.random.choice(self.grid_list, int(len(self.grid_list) * args.percent_of_dataset))
 
         self.num_grids = len(self.grid_list)
         self.use_s1 = args.use_s1
@@ -57,13 +58,14 @@ class CropTypeDS(Dataset):
                 if self.include_doy:
                     s1_doy = data['s1_dates'][self.grid_list[idx]][()]
                 s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed)
+                
                 # Concatenate DOY bands
                 if s1_doy is not None and self.include_doy:
                     doy_stack = preprocess.doy2stack(s1_doy, s1.shape)
                     s1 = np.concatenate((s1, doy_stack), 0)
 
             if self.use_s2:
-                s2 = data['s2'][self.grid_list[idx]][()]
+                s2 = data['s2'][self.grid_list[idx]]
                 if self.normalize:
                     s2 = preprocess.normalization(s2, 's2')
                 if self.include_clouds:

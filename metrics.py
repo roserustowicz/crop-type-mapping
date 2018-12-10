@@ -11,11 +11,17 @@ def get_accuracy(y_pred, y_true, reduction='avg'):
     Get accuracy from predictions and labels 
 
     Args: 
-      y_pred -  
-      y_true - 
-      reduction - 
+      y_true - (torch tensor) torch.Size([batch_size, num_classes, img_height, img_width]) 
+                tensor of ground truth crop classes
+      y_pred - (torch tensor) torch.Size([batch_size, num_classes, img_height, img_width])
+                tensor of predicted crop classes
+      reduction - (str) "avg" specified to return average accuracy, defined as total_correct 
+                   over num_pixes. Otherwise, return total_correct and num_pixels separately
+                   in order to accumulate over many batches 
 
     Returns: 
+      total_correct - (int) number of cases in which y_pred == y_true
+      num_pixels - (int) number of pixels that are valid, i.e. have a ground truth label
       
     """
     # Reshape truth labels into [N, num_classes]
@@ -59,8 +65,10 @@ def get_cm(y_pred, y_true):
     Get confusion matrix from predictions and labels
 
     Args: 
-      y_pred - 
-      y_true -
+      y_true - (torch tensor) torch.Size([batch_size, num_classes, img_height, img_width]) 
+                tensor of ground truth crop classes
+      y_pred - (torch tensor) torch.Size([batch_size, num_classes, img_height, img_width])
+                tensor of predicted crop classes
     
     Returns: 
       cm - confusion matrix 

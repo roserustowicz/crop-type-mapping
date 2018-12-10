@@ -18,10 +18,7 @@ from constants import *
 
 def setup_visdom(env_name, model_name):
     # TODO: Add args to visdom envs default name
-    if not env_name:
-        env_name = "{}".format(model_name)
-    else:
-        env_name = env_name
+    env_name = model_name if not env_name else env_name
     return visdom.Visdom(port=8097, env=env_name)
 
 def visdom_save_metric(metric_name, split, title, x_label, y_label, vis_data, save_dir):
@@ -100,7 +97,7 @@ def visdom_plot_images(vis, imgs, win):
     vis.images(imgs, nrow=NROW, win=win, padding=8, pad_value=255, 
                opts={'title': win})
 
-def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None, show_visdom=True, show_matplot=False):
+def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None, show_visdom=True, show_matplot=False):
     """ Record values and images for batch in visdom
     """
     # Create and show mask for labeled areas
@@ -108,6 +105,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
     label_mask = np.expand_dims(label_mask, axis=1)
     if show_visdom:
         visdom_plot_images(vis, label_mask, 'Label Masks')
+        visdom_plot_images(vis, confidence, 'Confidence')
 
     # Show best inputs judging from cloud masks
     if torch.sum(clouds) != 0 and len(clouds.shape) > 1: 
@@ -118,45 +116,21 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
 
     # Get bands of interest (boi) to show best rgb version of s2 or vv, vh, vv version of s1
     boi = []
-    add_doy = 0
-    if use_s2 and use_s1:
-        if include_doy: 
-            add_doy = 1
-        if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
-            for idx, b in enumerate(best):
-                boi.append(inputs[idx, b, 2+add_doy:5+add_doy, :, :].unsqueeze(0))
-            boi = torch.cat(boi, dim=0)
-        elif model_name in ['fcn', 'unet'] and time_slice is not None:
-            boi = inputs[:, 2+add_doy:5+add_doy, :, :]
-        elif model_name in ['unet'] and time_slice is None:
-            inputs = inputs.view(inputs.shape[0], MIN_TIMESTAMPS, -1, inputs.shape[2], inputs.shape[3])  
-            for idx, b in enumerate(best):
-                boi.append(inputs[idx, b, 2+add_doy:5+add_doy, :, :].unsqueeze(0))
-            boi = torch.cat(boi, dim=0)
-    elif use_s1:
-        if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
-            for idx, b in enumerate(best):
-                boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
-            boi = torch.cat(boi, dim=0)
-        elif model_name in ['fcn', 'unet'] and time_slice is not None:
-            boi = inputs[:, 0:3, :, :]
-        elif model_name in ['unet'] and time_slice is None:
-            inputs = inputs.view(inputs.shape[0], MIN_TIMESTAMPS, -1, inputs.shape[2], inputs.shape[3])  
-            for idx, b in enumerate(best):
-                boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
-            boi = torch.cat(boi, dim=0)
-    elif use_s2:
-        if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
-            for idx, b in enumerate(best):
-                boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
-            boi = torch.cat(boi, dim=0)
-        elif model_name in ['fcn', 'unet'] and time_slice is not None:
-            boi = inputs[:, 0:3, :, :]
-        elif model_name in ['unet'] and time_slice is None:
-            inputs = inputs.view(inputs.shape[0], MIN_TIMESTAMPS, -1, inputs.shape[2], inputs.shape[3]) 
-            for idx, b in enumerate(best):
-                boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
-            boi = torch.cat(boi, dim=0)
+    add_doy = 1 if use_s2 and use_s1 and include_doy else 0
+    # TODO: change these to be constants in constants.py eventually
+    start_idx = 2 if use_s2 and use_s1 else 0
+    end_idx = 5 if use_s2 and use_s1 else 3
+    if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
+        for idx, b in enumerate(best):
+            boi.append(inputs[idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
+        boi = torch.cat(boi, dim=0)
+    elif model_name in ['fcn', 'unet'] and time_slice is not None:
+        boi = inputs[:, start_idx+add_doy:end_idx+add_doy, :, :]
+    elif model_name in ['unet'] and time_slice is None:
+        inputs = inputs.view(inputs.shape[0], MIN_TIMESTAMPS, -1, inputs.shape[2], inputs.shape[3])  
+        for idx, b in enumerate(best):
+            boi.append(inputs[idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
+        boi = torch.cat(boi, dim=0)
             
     # Clip and show input bands of interest
     boi = clip_boi(boi)
@@ -185,7 +159,8 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
     if show_visdom:
         if split == 'train':
             visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
-
+    
+    # TODO: put this into a separate helper function?
     if save:
         save_dir = save_dir.replace(" ", "")
         save_dir = save_dir.replace(":", "")

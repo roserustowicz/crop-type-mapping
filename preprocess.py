@@ -18,6 +18,14 @@ import random
 
 
 def normalization(grid, satellite):
+    """ Normalization based on values defined in constants.py
+    Args: 
+      grid - (tensor) grid to be normalized
+      satellite - (str) describes source that grid is from ("s1" or "s2")
+
+    Returns:
+      grid - (tensor) a normalized version of the input grid
+    """
     if satellite == 's1':
         grid = (grid-S1_BAND_MEANS.reshape(S1_NUM_BANDS, 1, 1, 1))/S1_BAND_STDS.reshape(S1_NUM_BANDS, 1, 1, 1)
     elif satellite == 's2':
@@ -39,14 +47,18 @@ def reshapeForLoss(y):
 def maskForLoss(y_pred, y_true):
     """
     Masks y_pred and y_true with valid pixel locations. 
-    
-    Args:
-      y_pred - 
-      y_true - 
-    
+
+    Args:    
+      y_true - (torch tensor) torch.Size([batch_size*img_height*img_width, num_classes]) 
+                tensor of ground truth crop classes
+      y_pred - (torch tensor) torch.Size([batch_size*img_height*img_width, num_classes])
+                tensor of predicted crop classes
+
     Returns: 
-      y_pred - 
-      y_true - 
+      y_true - (torch tensor) torch.Size([batch_size*img_height*img_width]) 
+                tensor of ground truth crop classes, argmaxed
+      y_pred - (torch tensor) torch.Size([batch_size*img_height*img_width, num_classes])
+                tensor of predicted crop classes
     """
     loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
 
@@ -61,15 +73,20 @@ def maskForLoss(y_pred, y_true):
 
 def maskForMetric(y_pred, y_true):
     """
-    Masks y_pred and y_true with valid pixel locations for metric calculations
+    Masks y_pred and y_true with valid pixel locations for metric calculations and returns 
+     vectors of only valid locations
 
-    Args: 
-      y_pred - 
-      y_true - 
+    Args:    
+      y_true - (torch tensor) torch.Size([batch_size*img_height*img_width, num_classes]) 
+                tensor of ground truth crop classes
+      y_pred - (torch tensor) torch.Size([batch_size*img_height*img_width, num_classes])
+                tensor of predicted crop classes
 
     Returns: 
-      y_pred - 
-      y_true - 
+      y_true - (torch tensor) torch.Size([valid_pixel_locations]) 
+                tensor of ground truth crop classes, argmaxed
+      y_pred - (torch tensor) torch.Size([valid_pixel_locations])
+                tensor of predicted crop classes, argmaxed
     """
     # Create mask for valid pixel locations
     loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
@@ -106,8 +123,13 @@ def onehot_mask(mask, num_classes):
     return np.eye(num_classes+1)[mask][:, :, 1:] 
 
 def doy2stack(doy_vec, in_shp):
-    """
-    in_shp
+    """ Creates input bands for day of year values
+    Args:
+      doy_vec - (vector) vector of day of year values 
+      in_shp - (tuple) shape that doy bands should take on
+
+    Returns: 
+      stack - (tensor) stack of doy values now in fature bands, of shape in_shp
     """
     b, r, c, t = in_shp
     assert t == len(doy_vec)
@@ -115,24 +137,10 @@ def doy2stack(doy_vec, in_shp):
     # normalize
     doy_vec = (doy_vec - 177.5) / 177.5
     doy = torch.from_numpy(doy_vec)
+
     # create feature bands filled with the doy values
     stack = doy.unsqueeze(0).expand(c, t).unsqueeze(0).expand(r, c, t).unsqueeze(0)
     return stack
-
-def retrieve_label(grid_name, country):
-    """ Return the label of the grid specified by grid_name.
-
-    Args:
-        grid_name - (string) string representation of the grid number
-
-    Returns:
-        mask - (npy arr) mask containing labels for each pixel
-    """
-    label_path = '{}/{}/{}'.format(DATA_FILE_PATH, country, LABEL_DIR)
-    label_fname = [f for f in os.listdir(label_path) if '_{}_'.format(grid_name.zfill(6)) in f and f.endswith('_label.npy')]
-    label_grid_path = "/".join((label_path, label_fname[0]))
-    label = np.load(label_grid_path)
-    return label
 
 def retrieve_best_s2_grid(grid_name, country):
     """ Retrieves the least cloudy s2 image of the grid specified.
@@ -166,23 +174,12 @@ def retrieve_best_s2_grid(grid_name, country):
     return grid
 
 def get_least_cloudy_idx(cloud_stack):
+    """ Get index of least cloudy image from a stack of cloud masks
+    """
     cloud_stack = remap_cloud_stack(cloud_stack)
     cloudiness = np.mean(cloud_stack, axis=(0, 1))
     least_cloudy_idx = np.argmax(cloudiness)
     return least_cloudy_idx
-
-def retrieve_grid(grid_name, country):
-    """ Retrieves a concatenation of the s1 and s2 values of the grid specified.
-
-    Args:
-        grid_name - (string) string representation of the grid number
-
-    Returns:
-        grid - (npy array) concatenation of the s1 and s2 values of the grid over time
-    """
-    
-    grid = None
-    return grid
 
 def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None):
     """ Returns a preprocessed version of the grid based on the model.
@@ -267,7 +264,7 @@ def preprocessGrid(grid, transform, rot, time_slice=None):
     grid = torch.tensor(grid.copy(), dtype=torch.float32)
 
     if time_slice is not None:
-        grid = takeTimeSlice(grid, time_slice)
+        grid = grid[timeslice, :, :, :]
     return grid
 
 def preprocessGridForUNet3D(grid, transform, rot, time_slice=None):
@@ -282,6 +279,8 @@ def preprocessGridForUNet(grid, transform, rot, time_slice=None):
     return grid 
    
 def preprocessClouds(clouds):
+    """ Normalize cloud mask input bands
+    """
     clouds = np.expand_dims(clouds, 0)
     # normalize to -1, 1
     clouds = (clouds - 1.5)/1.5
@@ -295,15 +294,6 @@ def moveTimeToStart(arr):
     """
     
     return np.transpose(arr, [3, 0, 1, 2])
-
-def takeTimeSlice(arr, timeslice):
-    """ Take time slice for fcn input [bands x rows x cols]
-    
-    Args:
-        arr - (npy arr) [timestamps x bands x rows x cols] 
-    """
-    arr_slice = arr[timeslice,:,:,:]
-    return arr_slice
 
 def mergeTimeBandChannels(arr):
     """ Merge timestamps and band channels for UNet input [(bands x timestamps) x rows x cols]
@@ -328,7 +318,6 @@ def truncateToSmallestLength(batch):
             batch_X[i], _, _ = sample_timeseries(batch_X[i], MIN_TIMESTAMPS, timestamps_first=True)
     
     return [torch.stack(batch_X), torch.stack(batch_y)]
-
 
 
 def padToVariableLength(batch):
@@ -357,8 +346,8 @@ def concat_s1_s2(s1, s2):
     Specifically, returns s1 if s2 is None, s2 if s1 is None, and otherwise downsamples the larger series to size of the smaller one and returns the concatenation on the time axis.
 
     Args:
-        s1 - (npy array) [bands x rows x cols x timestamps]
-        s2 - (npy array) [bands x rows x cols x timestamps]
+        s1 - (npy array) [bands x rows x cols x timestamps] Sentinel-1 data
+        s2 - (npy array) [bands x rows x cols x timestamps] Sentinel-2 data
 
     Returns:
         (npy array) [bands x rows x cols x min(num s1 timestamps, num s2 timestamps) Concatenation of s1 and s2 data
@@ -373,6 +362,7 @@ def concat_s1_s2(s1, s2):
         s2, _, _ = sample_timeseries(s2, s1.shape[-1])
     return np.concatenate((s1, s2), axis=0)
 
+
 def remap_cloud_stack(cloud_stack):
     """ 
      Remap cloud mask values so clearest pixels have highest values
@@ -385,6 +375,7 @@ def remap_cloud_stack(cloud_stack):
     remapped_cloud_stack[cloud_stack == 3] = 1
     return remapped_cloud_stack
 
+
 def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False, sample_w_clouds=True):
     """
     Args:
@@ -394,10 +385,11 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
       dates - (numpy array) vector of dates that correspond to the timestamps in the img_stack and
                      cloud_stack
       cloud_stack - (numpy array) [rows x cols x timestamps], temporal stack of cloud masks
+      remap_clouds - (boolean) whether to remap cloud masks to new class values, ordered in terms of view obstruction
       reverse - (boolean) take 1 - probabilities, encourages cloudy images to be sampled
       seed - (int) a random seed for sampling
-      verbose - 
-      timestamps_first - 
+      verbose - (boolean) whether to print out information when function is executed
+      timestamps_first - (boolean) if True, timestamps occupy first dimension
       least_cloudy - (bool) if true, take the least cloudy images rather than sampling with probability
       sample_w_clouds - (bool) if clouds are used as input, whether or not to use them for sampling
     Returns:
@@ -479,28 +471,18 @@ def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytim
     
     Args:
       home - (str) the base directory of data
-
       country - (str) string for the country 'ghana', 'tanzania', 'southsudan'
-
       data_set - (str) balanced 'small' or unbalanced 'full' dataset
-
       satellite - (str) satellite to use 's1' 's2' 's1_s2'
-
       ylabel_dir - (str) dir to load ylabel
-
       band_order - (str) band order: 'byband', 'bytime'
-      
       random_sample - (boolean) use random sample (True) or take median (False)
-      
       num_timestamp - (num) minimum num for time stamp
-      
       reverse - (boolean) use cloud mask reversed softmax probability or not 
-      
       seed - (int) random sample seed
 
     Output: 
-
-    saved in HOME/pixel_arrays
+      npy array, [num_examples, features] saved in HOME/pixel_arrays
 
     """
 
