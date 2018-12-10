@@ -14,6 +14,8 @@ from datetime import datetime
 from sklearn.model_selection import GroupShuffleSplit
 
 def dates2doy(dates):
+    """ Transforms list of dates in YYYY-MM-DD format to a vector of days of year
+    """
     data = []
     # convert each date to doy
     for date in dates:
@@ -72,6 +74,8 @@ def plot_confusion_matrix(cm, classes,
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
+    
+    https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
     """
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -182,15 +186,10 @@ def get_y_label(home, country, data_set, data_type, ylabel_dir, raster_npy_dir):
     
     Args:
       home - (str) the base directory of data
-
       country - (str) string for the country 'Ghana', 'Tanzania', 'SouthSudan'
-
       data_set - (str) balanced 'small' or unbalanced 'full' dataset
-
       data_type - (str) 'train'/'val'/'test'
-
       ylabel_dir - (str) dir to save ylabel
-      
       raster_npy_dir - (str) string for the mask raster dir 'raster_npy' or 'raster_64x64_npy'
 
     Output: 
@@ -225,13 +224,9 @@ def mask_tif_npy(home, country, csv_source, crop_dict_dir, raster_dir):
     
     Args:
       home - (str) the base directory of data
-
       country - (str) string for the country 'Ghana', 'Tanzania', 'SouthSudan'
-
       csv_source - (str) string for the csv field id file corresponding with the country
-
       crop_dict_dir - (str) string for the crop_dict dictionary {0: 'unlabeled', 1: 'groundnuts' ...}
-      
       raster_dir - (str) string for the mask raster dir 'raster' or 'raster_64x64'
 
     Outputs:
