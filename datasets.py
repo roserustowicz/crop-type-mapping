@@ -24,6 +24,7 @@ class CropTypeDS(Dataset):
 
         with open(grid_path, "rb") as f:
             self.grid_list = list(pickle.load(f))
+            self.grid_list = np.random.choice(self.grid_list, int(len(self.grid_list) * args.percent_of_dataset))
 
         self.num_grids = len(self.grid_list)
         self.use_s1 = args.use_s1
