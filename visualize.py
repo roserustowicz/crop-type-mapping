@@ -97,7 +97,7 @@ def visdom_plot_images(vis, imgs, win):
       imgs - (array) array of images [batch x channels x rows x cols]
       win - (str) serves as both window name and title name
     """
-    vis.images(imgs, nrow=NROW, win=win, 
+    vis.images(imgs, nrow=NROW, win=win, padding=8, pad_value=255, 
                opts={'title': win})
 
 def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None, show_visdom=True, show_matplot=False):
@@ -114,6 +114,7 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
         best = np.argmax(np.mean(np.mean(clouds.numpy()[:, 0, :, :, :], axis=1), axis=1), axis=1)
     else:
         best = np.random.randint(0, high=MIN_TIMESTAMPS, size=(inputs.shape[0],))
+    best = np.zeros_like(best)
 
     # Get bands of interest (boi) to show best rgb version of s2 or vv, vh, vv version of s1
     boi = []
@@ -198,15 +199,15 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
         save_image(torch.from_numpy(disp_preds_w_mask), os.path.join(save_dir, 'preds_w_masks.png'), nrow=NROW, normalize=True)
     
     if show_matplot:
-        labels_grid = make_grid(torch.from_numpy(label_mask), nrow=NROW, normalize=True) 
-        inputs_grid = make_grid(boi, nrow=NROW, normalize=True)
-        targets_grid = make_grid(torch.from_numpy(disp_targets), nrow=NROW, normalize=True) 
-        preds_grid = make_grid(torch.from_numpy(disp_preds), nrow=NROW, normalize=True)
-        predsmask_grid = make_grid(torch.from_numpy(disp_preds_w_mask), nrow=NROW, normalize=True)
+        labels_grid = make_grid(torch.from_numpy(label_mask), nrow=NROW, normalize=True, padding=8, pad_value=255) 
+        inputs_grid = make_grid(boi, nrow=NROW, normalize=True, padding=8, pad_value=255)
+        targets_grid = make_grid(torch.from_numpy(disp_targets), nrow=NROW, normalize=True, padding=8, pad_value=255) 
+        preds_grid = make_grid(torch.from_numpy(disp_preds), nrow=NROW, normalize=True, padding=8, pad_value=255)
+        predsmask_grid = make_grid(torch.from_numpy(disp_preds_w_mask), nrow=NROW, normalize=True, padding=8, pad_value=255)
         return labels_grid, inputs_grid, targets_grid, preds_grid, predsmask_grid
 
 def clip_boi(boi):
-    """ Clip bands of interest outside of 2*std per imagei sample
+    """ Clip bands of interest outside of 2*std per image sample
     """
     for sample in range(boi.shape[0]):
         sample_mean = torch.mean(boi[sample, :, :, :])
@@ -216,7 +217,7 @@ def clip_boi(boi):
 
         boi[sample, :, :, :][boi[sample, :, :, :] < min_clip] = min_clip
         boi[sample, :, :, :][boi[sample, :, :, :] > max_clip] = max_clip
-    
+   
         boi[sample, :, :, :] = (boi[sample, :, :, :] - min_clip)/(max_clip - min_clip)
     return boi
 
