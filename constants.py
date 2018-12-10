@@ -22,9 +22,9 @@ S2_NUM_BANDS = 10
 GRID_SIZE = 64
 MIN_TIMESTAMPS = 16
 
-LABEL_DIR = "raster_64x64_npy"
+LABEL_DIR = "raster_npy"
 S1_DIR = "s1_npy"
-S2_DIR = "s2_64x64_npy"
+S2_DIR = "s2_npy"
 NROW = 8
 
 INT_POWER_EXP = ["hidden_dims"]

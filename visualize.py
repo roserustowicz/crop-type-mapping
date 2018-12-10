@@ -136,14 +136,14 @@ def record_batch(inputs, clouds, targets, preds, num_classes, split, vis_data, v
     elif use_s1:
         if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
             for idx, b in enumerate(best):
-                boi.append(torch.cat((inputs[idx, b, 0:2, :, :], inputs[idx, b, 0, :, :].unsqueeze(0)), dim=0).unsqueeze(0))
+                boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
         elif model_name in ['fcn', 'unet'] and time_slice is not None:
-            boi = torch.cat((inputs[:, 0:2, :, :], inputs[:, 0, :, :].unsqueeze(1)), dim=1)
+            boi = inputs[:, 0:3, :, :]
         elif model_name in ['unet'] and time_slice is None:
             inputs = inputs.view(inputs.shape[0], MIN_TIMESTAMPS, -1, inputs.shape[2], inputs.shape[3])  
             for idx, b in enumerate(best):
-                boi.append(torch.cat((inputs[idx, b, 0:2, :, :], inputs[idx, b, 0, :, :].unsqueeze(0)), dim=0).unsqueeze(0))
+                boi.append(inputs[idx, b, 0:3, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
     elif use_s2:
         if model_name in ['fcn_crnn', 'bidir_clstm','unet3d']:
