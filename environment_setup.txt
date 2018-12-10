@@ -65,9 +65,11 @@ This readme explains how data is downloaded and formatted to be used in our mode
 
     This will save a pickled list of gridIDs for each split, saved in /home/data/COUNTRY/
 
-8.) Finally, we create an hdf5 file that contains all necessary inputs that we've created above. To create
+8.) We then create an hdf5 file that contains all necessary inputs that we've created above. To create
      the hdf5 file, run:
 
     `python crop-type-mapping/scripts/create_hdf5.py`
 
     If you are not using the default, you can specify --data_dir and --output_dir in the line above 
+
+9.) Finally, we remove grids that have less than the required number of timestamps by first finding them using [TODO: insert command] and then removing them by calling `python remove_bad_timestamps.py`
