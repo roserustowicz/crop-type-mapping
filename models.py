@@ -108,6 +108,12 @@ def make_1d_nn_model(num_classes, num_input_feats, units, reg_strength, input_ba
 
     Args:
       num_classes - (int) number of classes to predict
+      num_input_feats - (int) number of input features (timestamps)
+      units - (int) corresponds to hidden layer features
+      reg_stength - (float) constant for regularization strength for model weights
+      input_bands - (int) number of input channels
+      dropout - (float) constant for percentage of connections to drop during training
+
     Returns:
       loads self.model as the defined model
     """
@@ -131,6 +137,12 @@ def make_1d_2layer_nn_model(num_classes, num_input_feats, units, reg_strength, i
 
     Args:
       num_classes - (int) number of classes to predict
+      num_input_feats - (int) number of input features (timestamps)
+      units - (int) corresponds to hidden layer features
+      reg_stength - (float) constant for regularization strength for model weights
+      input_bands - (int) number of input channels
+      dropout - (float) constant for percentage of connections to drop during training
+
     Returns:
       loads self.model as the defined model
     """
@@ -159,6 +171,12 @@ def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength, input_b
 
     Args:
       num_classes - (int) number of classes to predict
+      num_input_feats - (int) number of input features (timestamps)
+      units - (int) corresponds to hidden layer features
+      reg_stength - (float) constant for regularization strength for model weights
+      input_bands - (int) number of input channels
+      dropout - (float) constant for percentage of connections to drop during training
+
     Returns:
       loads self.model as the defined model
     """
@@ -194,13 +212,36 @@ def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength, input_b
 
 
 def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional):
-
+    """ Defines a (bidirectional) CLSTM model 
+    Args:
+        input_size - (tuple) size of input dimensions 
+        hidden_dims - (int or list) num features for hidden layers 
+        lstm_kernel_sizes - (int) kernel size for lstm cells
+        conv_kernel_size - (int) ketnel size for convolutional layers
+        lstm_num_layers - (int) number of lstm cells to stack
+        num_classes - (int) number of classes to predict
+        bidirectional - (bool) if True, include reverse inputs and concatenate output features from forward and reverse models
+                               if False, use only forward inputs and features
+    
+    Returns:
+      returns the model! 
+    """
     clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
 
     return clstm_segmenter
 
 
 def make_fcn_model(n_class, n_channel, freeze=True):
+    """ Defines a FCN8s model
+    Args: 
+      n_class - (int) number of classes to predict
+      n_channel - (int) number of channels in input
+      freeze - (bool) whether to use pre-trained weights
+                TODO: unfreeze after x epochs of training
+
+    Returns: 
+      returns the model!
+    """
     ## load pretrained model
     fcn8s_pretrained_model=torch.load(torchfcn.models.FCN8s.download())
     fcn8s = FCN8s_croptype(n_class, n_channel)
@@ -214,7 +255,20 @@ def make_fcn_model(n_class, n_channel, freeze=True):
     
     return fcn8s
 
-def make_UNet_model(n_class, n_channel, for_fcn=False, pretrained = True):
+def make_UNet_model(n_class, n_channel, for_fcn=False, pretrained=True):
+    """ Defines a U-Net model
+    Args:
+      n_class - (int) number of classes to predict
+      n_channel - (int) number of channels in input
+      for_fcn - (bool) whether or not U-Net is to be used for FCN + CLSTM, 
+                 or false if just used as a U-Net. When True, the last conv and 
+                 softmax layer is removed and features are returned. When False, 
+                 the softmax layer is kept and probabilities are returned. 
+      pretrained - (bool) whether to use pre-trained weights
+
+    Returns: 
+      returns the model!
+    """
     model = UNet(n_class, n_channel, for_fcn)
     
     if pretrained: 
@@ -234,17 +288,47 @@ def make_UNet_model(n_class, n_channel, for_fcn=False, pretrained = True):
     return model
 
 def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained):
+    """ Defines a fully-convolutional-network + CLSTM model
+    Args:
+      fcn_input_size - (tuple) input dimensions for FCN model
+      fcn_model_name - (str) model name used as the FCN portion of the network
+      crnn_input_size - (tuple) input dimensions for CRNN model
+      crnn_model_name - (str) model name used as the convolutional RNN portion of the network 
+      hidden_dims - (int or list) num features for hidden layers 
+      lstm_kernel_sizes - (int) kernel size for lstm cells
+      conv_kernel_size - (int) ketnel size for convolutional layers
+      lstm_num_layers - (int) number of lstm cells to stack
+      num_classes - (int) number of classes to predict
+      bidirectional - (bool) if True, include reverse inputs and concatenate output features from forward and reverse models
+                               if False, use only forward inputs and features
+      pretrained - (bool) whether to use pre-trained weights
+
+    Returns: 
+      returns the model!
+    """
+
     model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained)
     model = model.cuda()
 
     return model
 
 def make_UNet3D_model(n_class, n_channel):
+    """ Defined a 3d U-Net model
+    Args: 
+      n_class - (int) number of classes to predict
+      n_channels - (int) number of input channgels
+
+    Returns:
+      returns the model!
+    """
+
     model = UNet3D(n_channel, n_class)
     model = model.cuda()
     return model
 
 class _EncoderBlock(nn.Module):
+    """ U-Net encoder block
+    """
     def __init__(self, in_channels, out_channels, dropout=False):
         super(_EncoderBlock, self).__init__()
         layers = [
@@ -265,6 +349,8 @@ class _EncoderBlock(nn.Module):
 
 
 class _DecoderBlock(nn.Module):
+    """ U-Net decoder block
+    """
     def __init__(self, in_channels, middle_channels, out_channels):
         super(_DecoderBlock, self).__init__()
         self.decode = nn.Sequential(
@@ -282,6 +368,8 @@ class _DecoderBlock(nn.Module):
     
     
 class UNet(nn.Module):
+    """ U-Net architecture definition
+    """
     def __init__(self, num_classes, num_channels, for_fcn):
         super(UNet, self).__init__()
         self.for_fcn = for_fcn
@@ -328,11 +416,11 @@ class UNet(nn.Module):
             final = torch.log(final)
             return final
 
-
         
 def maxpool_3d():
     pool = nn.MaxPool3d(kernel_size=2, stride=2, padding=0)
     return pool
+
 
 def conv_block(in_dim, middle_dim, out_dim):
     model = nn.Sequential(
@@ -353,6 +441,7 @@ def up_conv_block(in_dim, out_dim):
         nn.ReLU(inplace=True),
     )
     return model
+
 
 class UNet3D(nn.Module):
     def __init__(self, in_channel, n_classes):
@@ -433,8 +522,11 @@ class FCN_CRNN(nn.Module):
         crnn_input = fcn_output.view(batch, timestamps, -1, rows, cols)
         preds = self.crnn(crnn_input)
         return preds
+
     
 class simple_CNN(nn.Module):
+    """ Simple CNN model used for testing
+    """
     def __init__(self, input_size, fcn_out_feats):
         """ input_size is batch, time_steps, channels, height, width
         """
@@ -445,9 +537,10 @@ class simple_CNN(nn.Module):
         h = self.conv1(h)
         return h
 
+
 class FCN8s_croptype(nn.Module):
     '''
-    FCN inplementation from https://github.com/wkentaro/pytorch-fcn/tree/63bc2c5bf02633f08d0847bb2dbd0b2f90034837
+    FCN implementation from https://github.com/wkentaro/pytorch-fcn/tree/63bc2c5bf02633f08d0847bb2dbd0b2f90034837
     '''
     def __init__(self, n_class=5, n_channel = 11):
         super(FCN8s_croptype, self).__init__()
@@ -650,6 +743,7 @@ class ConvLSTMCell(nn.Module):
         return (torch.zeros(batch_size, self.hidden_dim, self.height, self.width).cuda(),
                 torch.zeros(batch_size, self.hidden_dim, self.height, self.width).cuda())
 
+
 class CLSTM(nn.Module):
 
     def __init__(self, input_size, hidden_dims, kernel_sizes, lstm_num_layers, batch_first=True, bias=True, return_all_layers=False):
@@ -657,7 +751,7 @@ class CLSTM(nn.Module):
            Args:
                 input_size - (tuple) should be (time_steps, channels, height, width)
                 hidden_dims - (list of ints) number of filters to use per layer
-                kernel_size -
+                kernel_sizes - lstm kernel sizes
                 lstm_num_layers - (int) number of stacks of ConvLSTM units per step
         """
 
@@ -737,6 +831,7 @@ class CLSTM(nn.Module):
             init_states.append(self.cell_list[i].init_hidden(batch_size))
         return init_states
 
+
 class CLSTMSegmenter(nn.Module):
     """ CLSTM followed by conv for segmentation output
     """
@@ -768,6 +863,7 @@ class CLSTMSegmenter(nn.Module):
 
         return preds
 
+
 def get_num_bands(kwargs):
     num_bands = -1
     added_doy = 0
@@ -788,7 +884,17 @@ def get_num_bands(kwargs):
         raise ValueError("S1 / S2 usage not specified in args!")
     return num_bands
 
+
 def get_model(model_name, **kwargs):
+    """ Get appropriate model based on model_name and input arguments
+    Args: 
+      model_name - (str) which model to use 
+      kwargs - input arguments corresponding to the model name
+
+    Returns: 
+      returns the model!
+    """
+
     model = None
 
     if model_name == 'random_forest':

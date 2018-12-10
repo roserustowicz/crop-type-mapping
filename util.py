@@ -14,6 +14,8 @@ from datetime import datetime
 from sklearn.model_selection import GroupShuffleSplit
 
 def dates2doy(dates):
+    """ Transforms list of dates in YYYY-MM-DD format to a vector of days of year
+    """
     data = []
     # convert each date to doy
     for date in dates:
@@ -72,6 +74,8 @@ def plot_confusion_matrix(cm, classes,
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
+    
+    https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
     """
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -182,15 +186,10 @@ def get_y_label(home, country, data_set, data_type, ylabel_dir, raster_npy_dir):
     
     Args:
       home - (str) the base directory of data
-
       country - (str) string for the country 'Ghana', 'Tanzania', 'SouthSudan'
-
       data_set - (str) balanced 'small' or unbalanced 'full' dataset
-
       data_type - (str) 'train'/'val'/'test'
-
       ylabel_dir - (str) dir to save ylabel
-      
       raster_npy_dir - (str) string for the mask raster dir 'raster_npy' or 'raster_64x64_npy'
 
     Output: 
@@ -225,13 +224,9 @@ def mask_tif_npy(home, country, csv_source, crop_dict_dir, raster_dir):
     
     Args:
       home - (str) the base directory of data
-
       country - (str) string for the country 'Ghana', 'Tanzania', 'SouthSudan'
-
       csv_source - (str) string for the csv field id file corresponding with the country
-
       crop_dict_dir - (str) string for the crop_dict dictionary {0: 'unlabeled', 1: 'groundnuts' ...}
-      
       raster_dir - (str) string for the mask raster dir 'raster' or 'raster_64x64'
 
     Outputs:
@@ -324,7 +319,7 @@ def get_train_parser():
                         default=True)
     parser.add_argument('--num_classes', type=int,
                         help="Number of crops to predict over",
-                        default=5)
+                        default=4)
     parser.add_argument('--num_workers', type=int,
                         help="Number of workers to use for pulling data",
                         default=8)
@@ -332,9 +327,6 @@ def get_train_parser():
     parser.add_argument('--device', type=str,
                         help="Cuda or CPU",
                         default='cuda')
-    parser.add_argument('--gpu_id', type=int,
-                        help='which gpu to run on',
-                        default=0)
     parser.add_argument('--save_dir', type=str,
                         help="Directory to save the models in. If unspecified, saves the model to ./models.",
                         default='./models')
@@ -408,4 +400,7 @@ def get_train_parser():
                          help="Model to use for crnn part of fcn + crnn")
     parser.add_argument('--pretrained', type=str2bool, default=True,
                         help="Pretrained unet model for fcn-crnn")
+    parser.add_argument('--model_path', type=str)
+    parser.add_argument('--eval_on_test', type=str2bool, default=False)
+    parser.add_argument('--percent_of_dataset', type=float, default=1)
     return parser
