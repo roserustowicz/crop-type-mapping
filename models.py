@@ -8,10 +8,19 @@ given by:
     make_MODELNAME_model(MODEL_SETTINGS)
 
 """
+from keras.models import Sequential, Model
+from keras.layers import InputLayer, Activation, BatchNormalization, Flatten, Dropout
+from keras.layers import Dense, Conv2D, MaxPooling2D, ConvLSTM2D, Lambda
+from keras.layers import Conv1D, MaxPooling1D
+from keras import regularizers
+from keras.layers import Bidirectional, TimeDistributed, concatenate
+from keras.backend import reverse
+from keras.engine.input_layer import Input
 
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import models
 
 import numpy as np
 import yaml
@@ -93,7 +102,7 @@ def make_logreg_model(random_state=None, solver='lbfgs', multi_class='multinomia
     model = LogisticRegression(random_state, solver, multi_class)
     return model
 
-def make_1d_nn_model(num_classes, num_input_feats, units, reg_strength):
+def make_1d_nn_model(num_classes, num_input_feats, units, reg_strength, input_bands, dropout):
     """ Defines a keras Sequential 1D NN model
 
     Args:
@@ -107,15 +116,16 @@ def make_1d_nn_model(num_classes, num_input_feats, units, reg_strength):
 
     model.add(Flatten())
     model.add(Dense(units=units, kernel_regularizer=reg, 
-              bias_regularizer=reg, input_shape=(num_input_feats, 1)))
-    model.add(BatchNormalization())
+              bias_regularizer=reg, input_shape=(num_input_feats, input_bands)))
     model.add(Activation('relu'))
+    model.add(Dropout(rate=dropout))
+    model.add(BatchNormalization())
     model.add(Dense(num_classes, activation='softmax', 
               kernel_regularizer=reg, bias_regularizer=reg))
 
     return model
 
-def make_1d_2layer_nn_model(num_classes, num_input_feats, units, reg_strength):
+def make_1d_2layer_nn_model(num_classes, num_input_feats, units, reg_strength, input_bands, dropout):
     """ Defines a keras Sequential 1D NN model
 
     Args:
@@ -129,19 +139,21 @@ def make_1d_2layer_nn_model(num_classes, num_input_feats, units, reg_strength):
 
     model.add(Flatten())
     model.add(Dense(units=units, kernel_regularizer=reg, 
-              bias_regularizer=reg, input_shape=(num_input_feats, 1)))
+              bias_regularizer=reg, input_shape=(num_input_feats, input_bands)))
     model.add(Activation('relu'))
+    model.add(Dropout(rate=dropout))
     model.add(BatchNormalization())
     model.add(Dense(units=units, kernel_regularizer=reg,
               bias_regularizer=reg))
     model.add(Activation('relu'))
+    model.add(Dropout(rate=dropout))
     model.add(BatchNormalization())
     model.add(Dense(num_classes, activation='softmax', 
               kernel_regularizer=reg, bias_regularizer=reg))
 
     return model
 
-def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength):
+def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength, input_bands, dropout):
     """ Defines a keras Sequential 1D CNN model
 
     Args:
@@ -153,33 +165,36 @@ def make_1d_cnn_model(num_classes, num_input_feats, units, reg_strength):
     
     model = Sequential()
 
-    model.add(Conv1D(units, kernel_size=11,
-              strides=11, padding='same',
+    model.add(Conv1D(units, kernel_size=3,
+              strides=1, padding='same',
               kernel_regularizer=reg,
               bias_regularizer=reg,
-              input_shape=(num_input_feats, 1)))
+              input_shape=(num_input_feats, input_bands)))
     model.add(Activation('relu'))
+    model.add(Dropout(rate=dropout))
     model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
     model.add(Conv1D(units*2, kernel_size=3, padding='same',
               kernel_regularizer=reg, bias_regularizer=reg))
     model.add(Activation('relu'))
+    model.add(Dropout(rate=dropout))
     model.add(BatchNormalization())
     model.add(MaxPooling1D(pool_size=2, strides=2))
 
     model.add(Flatten())
     model.add(Dense(units*4, activation='relu', 
               kernel_regularizer=reg, bias_regularizer=reg))
+    model.add(Dropout(rate=dropout))
     model.add(Dense(num_classes, activation='softmax', 
               kernel_regularizer=reg, bias_regularizer=reg))
 
     return model
 
 
-def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes):
+def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional):
 
-    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes)
+    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
 
     return clstm_segmenter
 
@@ -198,14 +213,27 @@ def make_fcn_model(n_class, n_channel, freeze=True):
     
     return fcn8s
 
-def make_UNet_model(n_class, n_channel, for_fcn=False):
+def make_UNet_model(n_class, n_channel, for_fcn=False, pretrained = True):
     model = UNet(n_class, n_channel, for_fcn)
+    
+    if pretrained: 
+        pre_trained = models.vgg13(pretrained=True)
+        pre_trained_features = list(pre_trained.features)
+        model.enc1.encode[3] = pre_trained_features[2]
+        model.enc1.encode[6] = pre_trained_features[4]
+        model.enc2.encode[0] = pre_trained_features[5]
+        model.enc2.encode[3] = pre_trained_features[7]
+        model.enc2.encode[6] = pre_trained_features[9]
+        model.enc2.encode[6] = pre_trained_features[9]
+        model.center.decode[0] = pre_trained_features[10]
+        model.center.decode[3] = pre_trained_features[12]
+        
     model = model.cuda()
         
     return model
 
-def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional):
-    model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
+def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained):
+    model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained)
     model = model.cuda()
 
     return model
@@ -385,14 +413,14 @@ class UNet3D(nn.Module):
 class FCN_CRNN(nn.Module):
     def __init__(self, fcn_input_size, fcn_model_name, 
                        crnn_input_size, crnn_model_name, 
-                       hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional):
+                       hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained):
         super(FCN_CRNN, self).__init__()
         if fcn_model_name == 'simpleCNN':
             self.fcn = simple_CNN(fcn_input_size, crnn_input_size[1])
         elif fcn_model_name == 'fcn8':
             self.fcn = make_fcn_model(crnn_input_size[1], fcn_input_size[1], freeze=False)
         elif fcn_model_name == 'unet':
-            self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], for_fcn=True)
+            self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], for_fcn=True, pretrained = pretrained)
         if crnn_model_name == 'clstm': 
             self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
 
@@ -803,7 +831,8 @@ def get_model(model_name, **kwargs):
                                      conv_kernel_size=kwargs.get('conv_kernel_size'), 
                                      lstm_num_layers=kwargs.get('crnn_num_layers'), 
                                      num_classes=kwargs.get('num_classes'),
-                                     bidirectional=kwargs.get('bidirectional'))
+                                     bidirectional=kwargs.get('bidirectional'),                                       
+                                     pretrained = kwargs.get('pretrained'))
     elif model_name == 'unet3d':
         num_bands = get_num_bands(kwargs)
         model = make_UNet3D_model(n_class = kwargs.get('num_classes'), n_channel = num_bands)

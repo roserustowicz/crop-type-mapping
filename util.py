@@ -332,6 +332,9 @@ def get_train_parser():
     parser.add_argument('--device', type=str,
                         help="Cuda or CPU",
                         default='cuda')
+    parser.add_argument('--gpu_id', type=int,
+                        help='which gpu to run on',
+                        default=0)
     parser.add_argument('--save_dir', type=str,
                         help="Directory to save the models in. If unspecified, saves the model to ./models.",
                         default='./models')
@@ -353,7 +356,7 @@ def get_train_parser():
     parser.add_argument('--gamma', type=int,
                         help="weighting factor for focal loss",
                         default=2)
-    parser.add_argument('--weight_scale', type=int,
+    parser.add_argument('--weight_scale', type=float,
                         help="power to raise weights by",
                         default=1)
     parser.add_argument('--lr_decay', type=float,
@@ -361,6 +364,9 @@ def get_train_parser():
                         default=.5)
     parser.add_argument('--apply_transforms', type=str2bool,
                         help="Apply horizontal flipping / rotation",
+                        default=True)
+    parser.add_argument('--normalize', type=str2bool,
+                        help="Apply normalization to input based on overall band means and stds",
                         default=True)
     parser.add_argument('--patience', type=int,
                         help="Number of epochs before decreasing lr.",
@@ -400,5 +406,6 @@ def get_train_parser():
                          help="Model to use for fcn part of fcn + crnn")
     parser.add_argument('--crnn_model_name', type=str, default='clstm',
                          help="Model to use for crnn part of fcn + crnn")
-   
+    parser.add_argument('--pretrained', type=str2bool, default=True,
+                        help="Pretrained unet model for fcn-crnn")
     return parser

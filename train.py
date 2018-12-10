@@ -16,12 +16,12 @@ import numpy as np
 from constants import *
 import visualize
 
-def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma):
+def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes):
     total_loss = 0
     total_pixels = 0
-    total_cm = np.zeros((args.num_classes, args.num_classes)).astype(int) 
+    total_cm = np.zeros((num_classes, num_classes)).astype(int) 
     loss_fn = loss_fns.get_loss_fn(model_name)
-    for inputs, targets in split_loader:
+    for inputs, targets, cloudmasks in split_loader:
         with torch.set_grad_enabled(False):
             inputs.to(device)
             targets.to(device)
@@ -76,7 +76,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """
     if model_name in NON_DL_MODELS:
         if X is None: raise ValueError("X not provided!")
-        if  y is None: raise ValueError("y nor provided!")
+        if y is None: raise ValueError("y nor provided!")
         model.fit(X, y)
 
     elif model_name in DL_MODELS:
@@ -120,8 +120,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                 # If there are valid pixels, update weights
                                 optimizer.zero_grad()
                                 loss.backward()
+                                torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=100)
                                 optimizer.step()
-
                                 gradnorm = torch.norm(list(model.parameters())[0].grad)
                                 vis_data['train_gradnorm'].append(gradnorm)
     
@@ -172,7 +172,6 @@ if __name__ == "__main__":
     parser = util.get_train_parser()
 
     args = parser.parse_args()
-
     # load in data generator
     dataloaders = datasets.get_dataloaders(args.grid_dir, args.country, args.dataset, args)
     
