@@ -2,12 +2,21 @@ import numpy as np
 import torch.nn as nn
 import torch
 
-LOSS_WEIGHT = np.array([5.57, 1.67, 5.88, 8.20, 25.57])
+"""
+Constants for file paths
+"""
+
+DATA_DIR = '/home/data'
+GHANA_RASTER_DIR = '/home/data/ghana/raster/'
+GHANA_RASTER_NPY_DIR = '/home/data/ghana/raster_npy/'
+GHANA_S1_DIR = '/home/data/ghana/s1_npy'
+GHANA_S2_DIR = '/home/data/ghana/s2_npy'
+GHANA_HDF5_PATH = '/home/data/ghana/data.hdf5'
+
+
+LOSS_WEIGHT = np.array([5.57, 1.67, 5.88, 8.20])
 LOSS_WEIGHT = torch.tensor(LOSS_WEIGHT)
-# FOR 4 CLASS
-LOSS_WEIGHT = (1 - 1 / LOSS_WEIGHT.type(torch.FloatTensor).cuda())[:-1]
-# FOR BINARY
-#LOSS_WEIGHT = torch.tensor((1 - np.array([.7, .3])), dtype=torch.float32).cuda()
+LOSS_WEIGHT = (1 - 1 / LOSS_WEIGHT.type(torch.FloatTensor).cuda())
 # FOR SOUTH SUDAN
 #LOSS_WEIGHT = 1 - np.array([.7265, .1199, .0836, .0710])
 #LOSS_WEIGHT = torch.tensor(LOSS_WEIGHT, dtype=torch.float32).cuda()
@@ -44,13 +53,8 @@ S2_BAND_MEANS = np.array([2626.4081074042033, 2520.2485066503864, 2615.775295850
 
 S2_BAND_STDS = np.array([2232.5334052935987, 2147.2823093704483, 2244.5187602951046, 2153.469486034919, 2129.289151884002, 2190.9747736567133, 2059.9788191903117, 2174.898225617082, 1237.3449495354944, 937.4064744674777])
 
-#CM_LABELS = [0, 1, 2, 3, 4]
 CM_LABELS = [0, 1, 2, 3]
-#CM_LABELS = [0, 1]
-#GHANA_CROPS = ['groundnut', 'maize', 'rice', 'soya bean', 'yam']
 GHANA_CROPS = ['groundnut', 'maize', 'rice', 'soya bean']
-#GHANA_CROPS = ['other', 'maize']
-#SOUTHSUDAN_CROPS = ['sorghum', 'maize', 'rice', 'groundnut', 'sesame']
 SOUTHSUDAN_CROPS = ['sorghum', 'maize', 'rice', 'groundnut']
 S2_BAND_MEANS_wclouds = np.array([2626.4081074042033, 2520.2485066503864, 2615.7752958508927, 2720.921209161932, 3204.026112633294, 3536.487707240784, 3331.169189873876, 3757.642916408606, 2819.208490729178, 2032.4985852255897, 1.5])
 

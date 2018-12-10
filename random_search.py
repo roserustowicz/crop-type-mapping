@@ -1,9 +1,15 @@
 """
 Wrapper script for performing random search. 
 
+Hyperparameters should be specified as --hpname_range="(...)" and added to the appropriate list in the constants.py file.
+
+The types of values that can be generated are specified in the functions below. 
+
 run with:
 
 python random_search.py --model_name fcn_crnn --dataset full --epochs 2 --batch_size_range="(1, 5)" --crnn_num_layers_range="(1, 1)" --lr_range="(10, -5, -1)" --hidden_dims_range="(2, 3, 7)" --weight_scale_range="(.5, 2)" --gamma_range="(0, 2)" --weight_decay_range="(10, -5, 0)" --momentum_range="(.5, .999)" --optimizer_range="('adam', 'adam')" --num_samples=3 --patience_range="(1, 5)" --use_s1_range="()" --use_s2_range="()" --apply_transforms_range="()" --sample_w_clouds_range="()" --include_clouds_range="()" --include_doy_range="()" --bidirectional_range="()"
+
+
 """
 
 
@@ -24,26 +30,44 @@ from constants import *
 from ast import literal_eval
 
 def generate_int_power_HP(base, minVal, maxVal):
+    """ Generates discrete values in the range (base^minVal, base^maxVal).
+    """
     exp = np.random.randint(minVal, maxVal + 1)
     return base ** exp
 
 def generate_real_power_HP(base, minVal, maxVal):
+    """ Generates continuous vals in range (base^minVal, base^maxVal).
+    """
     exp = np.random.uniform(minVal, maxVal)
     return base ** exp
 
 def generate_int_HP(minVal, maxVal):
+    """ Generates discrete vals in range (minVal, maxVal) inclusive.
+    """
     return np.random.randint(minVal, maxVal + 1)
 
 def generate_float_HP(minVal, maxVal):
+    """ Generates continuous vals in range (minVal, maxVal) inclusive.
+    """
     return np.random.uniform(minVal, maxVal)
 
 def generate_string_HP(choices):
+    """ Chooses from one of the choices in `choices`.
+    """
     return np.random.choice(choices)
 
 def generate_bool_HP(choices):
+    """ Chooses from one of the choices in `choices`.
+    """
     return np.random.choice(choices)
 
 def str2tuple(arg):
+    """ Converts a tuple in string format to a tuple.
+
+    Ex: "(2, 2)" => (2, 2) (as a tuple)
+
+    Requires " " around the parenthesis.
+    """
     return literal_eval(arg)
 
 def recordMetadata(args, experiment_name, hps, loss, f1):
@@ -134,7 +158,6 @@ if __name__ ==  "__main__":
                                               '--country', search_range.country,
                                               '--grid_dir', search_range.grid_dir,
                                               '--hdf5_filepath', search_range.hdf5_filepath])
-
         generate_hps(train_args, search_range) 
         train_args.epochs = search_range.epochs
         dataloaders = datasets.get_dataloaders(train_args.grid_dir, train_args.country, train_args.dataset, train_args)

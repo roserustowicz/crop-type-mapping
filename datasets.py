@@ -65,7 +65,7 @@ class CropTypeDS(Dataset):
                     s1 = np.concatenate((s1, doy_stack), 0)
 
             if self.use_s2:
-                s2 = data['s2'][self.grid_list[idx]][()]
+                s2 = data['s2'][self.grid_list[idx]]
                 if self.normalize:
                     s2 = preprocess.normalization(s2, 's2')
                 if self.include_clouds:

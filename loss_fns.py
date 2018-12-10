@@ -13,6 +13,10 @@ import preprocess
 from constants import *
 
 def get_loss_fn(model_name):
+    """
+        Allows for changing the loss function depending on the model.
+        Currently always returns the focal_loss.
+    """
     return focal_loss
 
 def focal_loss(y_true, y_pred, reduction, loss_weight=False, weight_scale=1, gamma=2):
