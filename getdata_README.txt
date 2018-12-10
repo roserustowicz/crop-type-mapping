@@ -55,5 +55,12 @@ This readme explains how data is downloaded and formatted to be used in our mode
 
     `python crop-type-mapping/scripts/cloud_classifier.py`
 
-6.) Finally, we want to change the values in the raster files so that the labels correspond to crop type
+6.) Next, we want to change the values in the raster files so that the labels correspond to crop type
     rather than field ID. To do so, run:
+
+7.) Finally, we create an hdf5 file that contains all necessary inputs that we've created above. To create
+     the hdf5 file, run:
+
+    `python crop-type-mapping/scripts/create_hdf5.py`
+
+    If you are not using the default, you can specify --data_dir and --output_dir in the line above 
