@@ -82,15 +82,16 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     elif model_name in DL_MODELS:
         if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
         if args is None: raise ValueError("Args is NONE")
+        splits = ['train', 'val'] if not args.eval_on_test else ['test']
 
         # set up information lists for visdom    
-        vis_data = {'train_loss': [], 'val_loss': [], 
-                    'train_acc': [], 'val_acc': [], 
-                    'train_f1': [], 'val_f1': [],
-                    'train_classf1': None,
-                    'val_classf1': None,
-                    'train_gradnorm': []} 
-        
+        vis_data = {}
+        for split in splits:
+            vis_data[f'{split}_loss'] = []
+            vis_data[f'{split}_acc'] = []
+            vis_data[f'{split}_f1'] = []
+            vis_data[f'{split}_classf1'] = None
+        vis_data['train_gradnorm'] = []
         vis = visualize.setup_visdom(args.env_name, model_name)
 
         loss_fn = loss_fns.get_loss_fn(model_name)
@@ -99,13 +100,14 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         best_val_f1 = 0
 
         for i in range(args.epochs):
-            
-            all_metrics = {'train_loss': 0, 'train_correct': 0, 'train_pix': 0,
-                       'train_cm': np.zeros((args.num_classes, args.num_classes)).astype(int),
-                       'val_loss': 0, 'val_correct': 0, 'val_pix': 0, 
-                       'val_cm': np.zeros((args.num_classes, args.num_classes)).astype(int)}
+            all_metrics = {}
+            for split in splits:
+                all_metrics[f'{split}_loss'] = 0
+                all_metrics[f'{split}_correct'] = 0
+                all_metrics[f'{split}_pix'] = 0
+                all_metrics[f'{split}_cm'] = np.zeros((args.num_classes, args.num_classes)).astype(int)
 
-            for split in ['train', 'val']:
+            for split in ['train', 'val'] if not args.eval_on_test else ['test']:
                 dl = dataloaders[split]
                 batch_num = 0
                 for inputs, targets, cloudmasks in dl:
@@ -125,7 +127,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                                 vis_data['train_gradnorm'].append(gradnorm)
     
                         
-                        elif split == 'val':
+                        elif split in ['val', 'test']:
                             loss, cm_cur, total_correct, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                         
                         if cm_cur is not None:
@@ -176,6 +178,10 @@ if __name__ == "__main__":
     
     # load in model
     model = models.get_model(**vars(args))
+    
+    if args.model_path is not None:
+        model.load_state_dict(torch.load(args.model_path))
+
     if args.model_name in DL_MODELS and args.device == 'cuda' and torch.cuda.is_available():
         model.to(args.device)
 
