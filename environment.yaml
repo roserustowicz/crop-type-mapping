@@ -209,6 +209,7 @@ dependencies:
     - filelock==3.0.10
     - gdown==3.6.0
     - networkx==2.2
+    - python-constraint==1.4.0
     - pywavelets==1.0.1
     - scikit-image==0.14.1
     - tensorboardx==1.4
@@ -217,4 +218,3 @@ dependencies:
     - torchfcn==1.9.0
     - tqdm==4.28.1
 prefix: /home/croptype
-
