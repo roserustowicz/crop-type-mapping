@@ -2,11 +2,12 @@
 
 File housing all models.
 
-Each model is created by invoking the appropriate function
+Each model can be created by invoking the appropriate function
 given by:
 
     make_MODELNAME_model(MODEL_SETTINGS)
 
+Changes to allow this are still in progess
 """
 from keras.models import Sequential, Model
 from keras.layers import InputLayer, Activation, BatchNormalization, Flatten, Dropout
