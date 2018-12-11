@@ -57,6 +57,7 @@ This readme explains how data is downloaded and formatted to be used in our mode
 
 6.) Next, we want to change the values in the raster files so that the labels correspond to crop type
     rather than field ID. We also save these as npy files rather than tifs. To do so, run:
+    `python crop-type-mapping/scripts/mask_tif_npy.py`
 
 7.) Once all the data and labels have been converted to npy files using the steps above, data splits are
      created. To do so, run the following command: 
