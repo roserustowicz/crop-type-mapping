@@ -73,4 +73,6 @@ This readme explains how data is downloaded and formatted to be used in our mode
 
     If you are not using the default, you can specify --data_dir and --output_dir in the line above 
 
-9.) Finally, we remove grids that have less than the required number of timestamps by first finding them using [TODO: insert command] and then removing them by calling `python remove_bad_timestamps.py`
+9.) Finally, we remove grids that have less than the required number of timestamps by first finding them using 
+    `python crop-type-mapping/scripts/bad_list_finder.py`
+    and then removing them by calling `python remove_bad_timestamps.py`
