@@ -93,7 +93,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             vis_data[f'{split}_classf1'] = None
         vis_data['train_gradnorm'] = []
         vis = visualize.setup_visdom(args.env_name, model_name)
-
         loss_fn = loss_fns.get_loss_fn(model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)

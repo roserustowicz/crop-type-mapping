@@ -360,7 +360,9 @@ def concat_s1_s2(s1, s2):
         s1, _, _ = sample_timeseries(s1, s2.shape[-1])
     else:
         s2, _, _ = sample_timeseries(s2, s1.shape[-1])
-    return np.concatenate((s1, s2), axis=0)
+    
+    concat_s1_s2 = np.concatenate((s1, s2), axis=0)
+    return concat_s1_s2
 
 
 def remap_cloud_stack(cloud_stack):
