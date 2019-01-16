@@ -414,13 +414,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--raster_dir', type=str,
                         help='Path to directory containing rasters.',
-                        default='/home/data/ghana/raster/')
+                        default=GHANA_RASTER_DIR)
     parser.add_argument('--mask_dir', type=str,
                         help='Path to directory containing npy mask.',
-                        default='/home/data/ghana/raster_npy/')
+                        default=GHANA_RASTER_NPY_DIR)
     parser.add_argument('--npy_dir', type=str,
                         help='Path to directory containing numpy volumes of grids.',
-                        default='/home/data/ghana/s1_npy/')
+                        default=GHANA_S1_DIR)
     parser.add_argument('--country', type=str,
                         help='Country to use',
                         default='ghana')
@@ -432,7 +432,7 @@ if __name__ == '__main__':
                         default=False)
     parser.add_argument('--out_dir', type=str,
                         help='Path to directory outputs should be stored in.',
-                        default='/home/data/')
+                        default=DATA_DIR)
     parser.add_argument('--small_seed', type=int,
                         help='Random seed to use for small splitting',
                         default=0)
