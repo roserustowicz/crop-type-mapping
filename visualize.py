@@ -97,8 +97,7 @@ def visdom_plot_images(vis, imgs, win):
       imgs - (array) array of images [batch x channels x rows x cols]
       win - (str) serves as both window name and title name
     """
-    vis.images(imgs, nrow=NROW, win=win, padding=8, pad_value=255, 
-               opts={'title': win})
+    vis.images(imgs, nrow=NROW, win=win, padding=8, opts={'title': win})
 
 def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None, show_visdom=True, show_matplot=False):
     """ Record values and images for batch in visdom
@@ -108,7 +107,7 @@ def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split,
     label_mask = np.expand_dims(label_mask, axis=1)
     if show_visdom:
         visdom_plot_images(vis, label_mask, 'Label Masks')
-        visdom_plot_images(vis, confidence, 'Confidence')
+        #visdom_plot_images(vis, confidence, 'Confidence')
 
     # Show best inputs judging from cloud masks
     if torch.sum(clouds) != 0 and len(clouds.shape) > 1: 
