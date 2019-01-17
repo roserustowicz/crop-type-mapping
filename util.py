@@ -3,6 +3,7 @@
 Util file for misc functions
 
 """
+from constants import *
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
