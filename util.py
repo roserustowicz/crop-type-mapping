@@ -12,6 +12,7 @@ import pandas as pd
 import time
 from datetime import datetime
 from sklearn.model_selection import GroupShuffleSplit
+from constants import *
 
 def dates2doy(dates):
     """ Transforms list of dates in YYYY-MM-DD format to a vector of days of year
