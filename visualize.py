@@ -212,11 +212,11 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=Fal
         vis_data[f'{split}_acc'].append(acc_epoch)
         vis_data[f'{split}_f1'].append(metrics.get_f1score(all_metrics[f'{split}_cm'], avg=True))
 
-    if vis_data[f'{split}_classf1'] is None:
-        vis_data[f'{split}_classf1'] = metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False)
-        vis_data[f'{split}_classf1'] = np.vstack(vis_data[f'{split}_classf1']).T
-    else:
-        vis_data[f'{split}_classf1'] = np.vstack((vis_data[f'{split}_classf1'], metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False)))
+        if vis_data[f'{split}_classf1'] is None:
+            vis_data[f'{split}_classf1'] = metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False)
+            vis_data[f'{split}_classf1'] = np.vstack(vis_data[f'{split}_classf1']).T
+        else:
+            vis_data[f'{split}_classf1'] = np.vstack((vis_data[f'{split}_classf1'], metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False)))
 
     for cur_metric in ['loss', 'acc', 'f1']:
         visdom_plot_metric(cur_metric, split, f'{split} {cur_metric}', 'Epoch', cur_metric, vis_data, vis)
