@@ -40,6 +40,7 @@ class CropTypeDS(Dataset):
         self.timeslice = args.time_slice
         self.seed = args.seed
         self.least_cloudy = args.least_cloudy
+        self.s2_num_bands = args.s2_num_bands
 
     def __len__(self):
         return self.num_grids
@@ -66,6 +67,7 @@ class CropTypeDS(Dataset):
 
             if self.use_s2:
                 s2 = data['s2'][self.grid_list[idx]]
+                s2 = s2[:self.s2_num_bands , :, :, :] #(10, 64, 64, 48)
                 if self.normalize:
                     s2 = preprocess.normalization(s2, 's2')
                 if self.include_clouds:
