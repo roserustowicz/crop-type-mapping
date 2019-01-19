@@ -67,7 +67,10 @@ class CropTypeDS(Dataset):
 
             if self.use_s2:
                 s2 = data['s2'][self.grid_list[idx]]
-                s2 = s2[:self.s2_num_bands , :, :, :] #(10, 64, 64, 48)
+                if self.s2_num_bands == 4:
+                    s2 = s2[[0, 1, 2, 6], :, :, :] #B, G, R, NIR
+                elif self.s2_num_bands != 10:
+                    print('s2_num_bands must be 4 or 10')
                 if self.normalize:
                     s2 = preprocess.normalization(s2, 's2')
                 if self.include_clouds:
