@@ -78,7 +78,7 @@ def focal_loss(y_true, y_pred, reduction, loss_weight=False, weight_scale=1, gam
         if num_examples == 0:
             return None
         else:
-            return loss / num_examples, y_confidence, None
+            return loss / num_examples, y_confidence
 
           
 def mask_ce_loss(y_true, y_pred, reduction):
