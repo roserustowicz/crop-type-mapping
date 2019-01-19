@@ -206,9 +206,12 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=Fal
     if all_metrics[f'{split}_loss'] is not None: loss_epoch = all_metrics[f'{split}_loss'] / all_metrics[f'{split}_pix']
     if all_metrics[f'{split}_correct'] is not None: acc_epoch = all_metrics[f'{split}_correct'] / all_metrics[f'{split}_pix']
 
-    vis_data[f'{split}_loss'].append(loss_epoch)
-    vis_data[f'{split}_acc'].append(acc_epoch)
-    vis_data[f'{split}_f1'].append(metrics.get_f1score(all_metrics[f'{split}_cm'], avg=True))
+    # don't append if you are saving
+    if save == False:
+        vis_data[f'{split}_loss'].append(loss_epoch)
+        vis_data[f'{split}_acc'].append(acc_epoch)
+        vis_data[f'{split}_f1'].append(metrics.get_f1score(all_metrics[f'{split}_cm'], avg=True))
+
     if vis_data[f'{split}_classf1'] is None:
         vis_data[f'{split}_classf1'] = metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False)
         vis_data[f'{split}_classf1'] = np.vstack(vis_data[f'{split}_classf1']).T
