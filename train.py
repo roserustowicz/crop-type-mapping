@@ -141,6 +141,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
                     batch_num += 1
 
+                visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country)
+                
                 if split == 'val':
                     val_loss = all_metrics['val_loss'] / all_metrics['val_pix']
                     lr_scheduler.step(val_loss)
@@ -161,7 +163,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             visualize.record_epoch(all_metrics, 'train', vis_data, vis, i, args.country, save=True, 
                                                   save_dir=os.path.join(args.save_dir, args.name + "_best"))               
  
-                visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country)
 
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
