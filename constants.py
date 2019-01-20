@@ -6,12 +6,12 @@ import torch
 Constants for file paths
 """
 
-DATA_DIR = '/home/data'
-GHANA_RASTER_DIR = '/home/data/ghana/raster/'
-GHANA_RASTER_NPY_DIR = '/home/data/ghana/raster_npy/'
-GHANA_S1_DIR = '/home/data/ghana/s1_npy'
-GHANA_S2_DIR = '/home/data/ghana/s2_npy'
-GHANA_HDF5_PATH = '/home/data/ghana/data.hdf5'
+DATA_DIR = '~/croptype_data/data/'
+GHANA_RASTER_DIR = '~/croptype_data/data/ghana/raster/'
+GHANA_RASTER_NPY_DIR = '~/croptype_data/data/ghana/raster_npy/'
+GHANA_S1_DIR = '~/croptype_data/data/ghana/s1_npy'
+GHANA_S2_DIR = '~/croptype_data/data/ghana/s2_npy'
+GHANA_HDF5_PATH = '~/croptype_data/data/ghana/data.hdf5'
 
 
 LOSS_WEIGHT = np.array([5.57, 1.67, 5.88, 8.20])
@@ -21,7 +21,7 @@ LOSS_WEIGHT = (1 - 1 / LOSS_WEIGHT.type(torch.FloatTensor).cuda())
 #LOSS_WEIGHT = 1 - np.array([.7265, .1199, .0836, .0710])
 #LOSS_WEIGHT = torch.tensor(LOSS_WEIGHT, dtype=torch.float32).cuda()
 
-DATA_FILE_PATH = "/home/data"
+DATA_FILE_PATH = "~/croptype_data/data"
 CROP_LABELS = ['maize','groundnut', 'rice', 'soya bean', 'sorghum', 'yam', 'sesame', 'beans', 'sunflower', 'chick peas', 'wheat', 'other']
 SPLITS = ['train', 'val', 'test']
 NON_DL_MODELS = ['logreg', 'random_forest']

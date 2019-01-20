@@ -293,7 +293,7 @@ def get_train_parser():
                         default="ghana")
     parser.add_argument('--grid_dir', type=str,
                         help="full path to directory containing grid splits",
-                        default="/home/data/ghana")
+                        default=DATA_DIR + "/ghana")
     parser.add_argument('--epochs', type=int,
                         help="# of times to train over the dataset")
     parser.add_argument('--batch_size', type=int,
