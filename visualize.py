@@ -61,8 +61,6 @@ def visdom_plot_metric(metric_name, split, title, x_label, y_label, vis_data, vi
     Args: 
       metric_name - "loss", "acc", "f1"
     """
-    Y = np.array(vis_data['{}_{}'.format(split, metric_name)])
-    X = np.array(range(len(vis_data['{}_{}'.format(split, metric_name)])))
     vis.line(Y=np.array(vis_data['{}_{}'.format(split, metric_name)]),
              X=np.array(range(len(vis_data['{}_{}'.format(split, metric_name)]))),
              win=title,
@@ -208,7 +206,7 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=Fal
     if all_metrics[f'{split}_loss'] is not None: loss_epoch = all_metrics[f'{split}_loss'] / all_metrics[f'{split}_pix']
     if all_metrics[f'{split}_correct'] is not None: acc_epoch = all_metrics[f'{split}_correct'] / all_metrics[f'{split}_pix']
 
-    # TODO: don't append if you are saving
+    # Don't append if you are saving. Information has already been appended!
     if save == False:
         vis_data[f'{split}_loss'].append(loss_epoch)
         vis_data[f'{split}_acc'].append(acc_epoch)
