@@ -875,11 +875,11 @@ def get_num_bands(kwargs):
         added_clouds = 1
 
     if kwargs.get('use_s1') and kwargs.get('use_s2'):
-        num_bands = S1_NUM_BANDS + S2_NUM_BANDS + 2*added_doy + added_clouds
+        num_bands = S1_NUM_BANDS + kwargs.get('s2_num_bands') + 2*added_doy + added_clouds
     elif kwargs.get('use_s1'):
         num_bands = S1_NUM_BANDS + added_doy + added_clouds
     elif kwargs.get('use_s2'):
-        num_bands = S2_NUM_BANDS + added_doy + added_clouds
+        num_bands = kwargs.get('s2_num_bands') + added_doy + added_clouds
     else:
         raise ValueError("S1 / S2 usage not specified in args!")
     return num_bands

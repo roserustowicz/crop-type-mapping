@@ -27,9 +27,11 @@ def normalization(grid, satellite):
       grid - (tensor) a normalized version of the input grid
     """
     if satellite == 's1':
-        grid = (grid-S1_BAND_MEANS.reshape(S1_NUM_BANDS, 1, 1, 1))/S1_BAND_STDS.reshape(S1_NUM_BANDS, 1, 1, 1)
+        num_bands = grid.shape[0]
+        grid = (grid-S1_BAND_MEANS[:num_bands].reshape(num_bands, 1, 1, 1))/S1_BAND_STDS[:num_bands].reshape(num_bands, 1, 1, 1)
     elif satellite == 's2':
-        grid = (grid-S2_BAND_MEANS.reshape(S2_NUM_BANDS, 1, 1, 1))/S2_BAND_STDS.reshape(S2_NUM_BANDS, 1, 1, 1)
+        num_bands = grid.shape[0]
+        grid = (grid-S2_BAND_MEANS[:num_bands].reshape(num_bands, 1, 1, 1))/S2_BAND_STDS[:num_bands].reshape(num_bands, 1, 1, 1)
     return grid
         
 def reshapeForLoss(y):
