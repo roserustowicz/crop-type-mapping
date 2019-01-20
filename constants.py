@@ -8,12 +8,15 @@ Constants for file paths
 """
 BASE_DIR = os.getenv("HOME")
 
-DATA_DIR = BASE_DIR + '/croptype_data/data'
-GHANA_RASTER_DIR = BASE_DIR + '/croptype_data/data/ghana/raster/'
-GHANA_RASTER_NPY_DIR = BASE_DIR + '/croptype_data/data/ghana/raster_npy/'
-GHANA_S1_DIR = BASE_DIR + '/croptype_data/data/ghana/s1_npy'
-GHANA_S2_DIR = BASE_DIR + '/croptype_data/data/ghana/s2_npy'
-GHANA_HDF5_PATH = BASE_DIR + '/croptype_data/data/ghana/data.hdf5'
+GCP_DATA_DIR = BASE_DIR + '/croptype_data/data'
+LOCAL_DATA_DIR = BASE_DIR + '/croptype_data_local/data'
+
+#DATA_DIR = BASE_DIR + '/croptype_data/data'
+GHANA_RASTER_DIR = GCP_DATA_DIR + '/ghana/raster/'
+GHANA_RASTER_NPY_DIR = GCP_DATA_DIR + '/ghana/raster_npy/'
+GHANA_S1_DIR = GCP_DATA_DIR + '/ghana/s1_npy'
+GHANA_S2_DIR = GCP_DATA_DIR + '/ghana/s2_npy'
+GHANA_HDF5_PATH = LOCAL_DATA_DIR + '/ghana/data.hdf5'
 
 
 LOSS_WEIGHT = np.array([5.57, 1.67, 5.88, 8.20])
@@ -23,7 +26,6 @@ LOSS_WEIGHT = (1 - 1 / LOSS_WEIGHT.type(torch.FloatTensor).cuda())
 #LOSS_WEIGHT = 1 - np.array([.7265, .1199, .0836, .0710])
 #LOSS_WEIGHT = torch.tensor(LOSS_WEIGHT, dtype=torch.float32).cuda()
 
-DATA_FILE_PATH = BASE_DIR + "/croptype_data/data"
 CROP_LABELS = ['maize','groundnut', 'rice', 'soya bean', 'sorghum', 'yam', 'sesame', 'beans', 'sunflower', 'chick peas', 'wheat', 'other']
 SPLITS = ['train', 'val', 'test']
 NON_DL_MODELS = ['logreg', 'random_forest']

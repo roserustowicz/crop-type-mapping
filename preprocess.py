@@ -153,7 +153,7 @@ def retrieve_best_s2_grid(grid_name, country):
     Returns:
         grid - (npy array) concatenation of the s1 and s2 values of the grid over time
     """
-    s2_path = '{}/{}/{}'.format(DATA_FILE_PATH, country, S2_DIR)
+    s2_path = '{}/{}/{}'.format(GCP_DATA_DIR, country, S2_DIR)
     
     # Read in Sentinel-2 stack
     s2_fname = [f for f in os.listdir(s2_path) if f.endswith('_{}.npy'.format(grid_name.zfill(6)))]
