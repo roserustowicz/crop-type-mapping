@@ -99,6 +99,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         best_val_f1 = 0
 
         for i in range(args.epochs):
+            print('Epoch: {}'.format(i))
             all_metrics = {}
             for split in splits:
                 all_metrics[f'{split}_loss'] = 0

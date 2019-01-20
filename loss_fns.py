@@ -71,7 +71,7 @@ def focal_loss(y_true, y_pred, reduction, loss_weight=False, weight_scale=1, gam
 
     if reduction == "sum":
         if num_examples == 0:
-            return None, 0
+            return None, None, 0
         else:
             return loss, y_confidence, num_examples
     else:
