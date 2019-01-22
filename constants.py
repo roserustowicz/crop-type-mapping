@@ -18,10 +18,11 @@ GHANA_S1_DIR = GCP_DATA_DIR + '/ghana/s1_npy'
 GHANA_S2_DIR = GCP_DATA_DIR + '/ghana/s2_npy'
 GHANA_HDF5_PATH = LOCAL_DATA_DIR + '/ghana/data.hdf5'
 
-
+# FOR GHANA
 LOSS_WEIGHT = np.array([5.57, 1.67, 5.88, 8.20])
 LOSS_WEIGHT = torch.tensor(LOSS_WEIGHT)
 LOSS_WEIGHT = (1 - 1 / LOSS_WEIGHT.type(torch.FloatTensor).cuda())
+
 # FOR SOUTH SUDAN
 #LOSS_WEIGHT = 1 - np.array([.7265, .1199, .0836, .0710])
 #LOSS_WEIGHT = torch.tensor(LOSS_WEIGHT, dtype=torch.float32).cuda()
@@ -33,7 +34,7 @@ DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn']
 S1_NUM_BANDS = 3
 S2_NUM_BANDS = 10
 GRID_SIZE = 64
-MIN_TIMESTAMPS = 16
+MIN_TIMESTAMPS = 25
 
 LABEL_DIR = "raster_npy"
 S1_DIR = "s1_npy"
