@@ -432,7 +432,7 @@ if __name__ == '__main__':
                         default=False)
     parser.add_argument('--out_dir', type=str,
                         help='Path to directory outputs should be stored in.',
-                        default=DATA_DIR)
+                        default=LOCAL_DATA_DIR)
     parser.add_argument('--small_seed', type=int,
                         help='Random seed to use for small splitting',
                         default=0)

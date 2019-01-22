@@ -1,4 +1,4 @@
-name: null
+name: croptype
 channels:
   - pytorch
   - anaconda
@@ -114,7 +114,6 @@ dependencies:
   - mako=1.0.7=py_1
   - markdown=2.6.11=py_0
   - markupsafe=1.0=py36h470a237_1
-  - matplotlib=3.0.0=2
   - matplotlib-base=3.0.0=py36hc039c98_2
   - mistune=0.8.3=py36h470a237_2
   - mkl_fft=1.0.6=py36_0
