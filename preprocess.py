@@ -380,7 +380,7 @@ def remap_cloud_stack(cloud_stack):
     return remapped_cloud_stack
 
 
-def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False, sample_w_clouds=True):
+def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False, sample_w_clouds=True, all_samples=False):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
@@ -442,9 +442,13 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
         # Compute probabilities of scores with softmax
         probabilities = softmax(scores)
 
-        # Sample from timestamp indices according to probabilities
-        samples = np.random.choice(timestamps, size=num_samples, replace=False, p=probabilities)
-    
+        if not all_samples:
+            # Sample from timestamp indices according to probabilities
+            samples = np.random.choice(timestamps, size=num_samples, replace=False, p=probabilities)
+        else:
+            # Take all indices as samples
+            samples = list(range(timestamps))   
+ 
     # Sort samples to maintain sequential ordering
     samples.sort()
 
@@ -461,12 +465,24 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
 
     if isinstance(cloud_stack, np.ndarray):
         if remap_clouds:
-            sampled_cloud_stack = remapped_cloud_stack[:, :, samples]
+            if all_samples:
+                sampled_cloud_stack = remapped_cloud_stack
+            else: 
+                sampled_cloud_stack = remapped_cloud_stack[:, :, samples]
         else:
-            sampled_cloud_stack = cloud_stack[:, :, samples]
-        return sampled_img_stack, sampled_dates, sampled_cloud_stack
+            if all_samples:
+                sampled_cloud_stack = cloud_stack
+            else:
+                sampled_cloud_stack = cloud_stack[:, :, samples]
+        if all_samples:
+            return img_stack, dates, sampled_cloud_stack
+        else:
+            return sampled_img_stack, sampled_dates, sampled_cloud_stack
     else:
-        return sampled_img_stack, sampled_dates, None    
+        if all_samples:
+            return img_stack, dates, None
+        else:
+            return sampled_img_stack, sampled_dates, None    
 
     
 def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytime', random_sample = True, num_timestamp = 25, reverse = False, seed = 0):

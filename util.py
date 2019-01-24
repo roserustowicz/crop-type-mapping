@@ -408,4 +408,5 @@ def get_train_parser():
     parser.add_argument('--model_path', type=str)
     parser.add_argument('--eval_on_test', type=str2bool, default=False)
     parser.add_argument('--percent_of_dataset', type=float, default=1)
+    parser.add_argument('--all_samples', type=str2bool, default=False)
     return parser
