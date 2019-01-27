@@ -96,6 +96,11 @@ def generate_hps(train_args, search_range):
             hp_val = generate_string_HP(vars(search_range)[arg])
         elif hp in BOOL_HP:
             hp_val = generate_bool_HP(vars(search_range)[arg])
+            if hp == 's2_num_bands':
+                if hp_val:
+                    hp_val = int(4)
+                else:
+                    hp_val = int(10)
         else:
             raise ValueError(f"HP {hp} unsupported") 
 
@@ -123,11 +128,11 @@ if __name__ ==  "__main__":
     search_parser.add_argument('--num_classes', type=int,
                         default=4)
     search_parser.add_argument('--hdf5_filepath', type=str,
-                        default="data/ghana/data.hdf5")
+                        default=GHANA_HDF5_PATH)
     search_parser.add_argument('--country', type=str,
                         default="ghana")
     search_parser.add_argument('--grid_dir', type=str,
-                        default="data/ghana")
+                        default=LOCAL_DATA_DIR + "/ghana")
     for hp_type in HPS:
         for hp in hp_type:
             search_parser.add_argument('--' + hp + "_range", type=str2tuple)
