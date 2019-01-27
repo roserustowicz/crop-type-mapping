@@ -35,6 +35,7 @@ class CropTypeDS(Dataset):
         self.sample_w_clouds = args.sample_w_clouds
         self.include_clouds = args.include_clouds
         self.include_doy = args.include_doy
+        self.all_samples = args.all_samples
         ## Timeslice for FCN
         self.timeslice = args.time_slice
         self.seed = args.seed
@@ -57,7 +58,7 @@ class CropTypeDS(Dataset):
                     s1 = preprocess.normalization(s1, 's1')
                 if self.include_doy:
                     s1_doy = data['s1_dates'][self.grid_list[idx]][()]
-                s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed)
+                s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed, all_samples=self.all_samples)
 
                 # Concatenate DOY bands
                 if s1_doy is not None and self.include_doy:
@@ -76,7 +77,7 @@ class CropTypeDS(Dataset):
                     cloudmasks = data['cloudmasks'][self.grid_list[idx]][()]
                 if self.include_doy:
                     s2_doy = data['s2_dates'][self.grid_list[idx]][()]
-                s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, MIN_TIMESTAMPS, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, sample_w_clouds=self.sample_w_clouds)
+                s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, MIN_TIMESTAMPS, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, sample_w_clouds=self.sample_w_clouds, all_samples=self.all_samples)
 
                 # Concatenate cloud mask bands
                 if cloudmasks is not None and self.include_clouds:
