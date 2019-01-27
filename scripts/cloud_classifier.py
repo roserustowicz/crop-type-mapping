@@ -9,6 +9,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from util import create_categorical_df_col, split_with_group, plot_confusion_matrix 
 from train import train
 from models import get_model
+from constants import *
 
 def main_cloud_classifier(data_dir, data_fname):
     """
@@ -127,9 +128,9 @@ def save_cloud_masks(s2_data_dir, model, verbose):
         np.save(out_fname, mask_arr)
 
 if __name__ == '__main__':
-    data_dir = '/home/data/clouds/'
+    data_dir = GCP_DATA_DIR + '/clouds/'
     data_fname = 'clean_samples.csv'
-    s2_data_dir = '/home/data/southsudan/s2_extra_npy'
+    s2_data_dir = GCP_DATA_DIR + '/tanzania/s2_npy'
     verbose = 1
     save = 1
 
