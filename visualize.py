@@ -202,6 +202,10 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=Fal
         class_names = GHANA_CROPS
     elif country == 'southsudan':
         class_names = SOUTHSUDAN_CROPS
+    elif country == 'tanzania':
+        class_names = TANZANIA_CROPS
+    else:
+        raise ValueError(f"Country {country} not supported in visualize.py, record_epoch")
 
     if all_metrics[f'{split}_loss'] is not None: loss_epoch = all_metrics[f'{split}_loss'] / all_metrics[f'{split}_pix']
     if all_metrics[f'{split}_correct'] is not None: acc_epoch = all_metrics[f'{split}_correct'] / all_metrics[f'{split}_pix']
