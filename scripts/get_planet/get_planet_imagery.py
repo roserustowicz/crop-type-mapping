@@ -103,7 +103,7 @@ def activate_something(session, item_type, item_id, asset_type):
 
     item_activation_url = item.json()[asset_type]["_links"]["activate"]
     response = session.post(item_activation_url)
-    print('response status code {}: {}'.format(asset_type, response.status_code))
+    #print('response status code {}: {}'.format(asset_type, response.status_code))
                         
     if response.status_code == 429:
         raise Exception("rate limit error")
@@ -172,6 +172,7 @@ def main(raster_dir, save_dir, activate, download, item_type):
     # Read through raster images to get AOIs, then use these AOIs to clip planet imagery?
     raster_fnames = [path.join(raster_dir, f) for f in os.listdir(raster_dir) if f.endswith('.tif')]
     print('total raster fnames: ', len(raster_fnames))
+    raster_fnames.sort()
 
     for idx1 in range(len(raster_fnames)):
         print('\n\nRaster file {} of {}'.format(idx1, len(raster_fnames)))
@@ -220,23 +221,24 @@ def main(raster_dir, save_dir, activate, download, item_type):
             item_ids = []
             for idx in range(len(data['features'])):
                 item_ids.append(data['features'][idx]['id'])
-
+            item_ids.sort()
+             
             if activate:
                 # Make request for analytic asset
                 for asset_type in ["analytic", "analytic_xml"]:
-                     with Pool(5) as pool:
-                         pool.starmap(activate_something, zip(repeat(session), repeat(item_type), item_ids, repeat(asset_type)))
+                     with Pool(8) as pool1:
+                         pool1.starmap(activate_something, zip(repeat(session), repeat(item_type), item_ids, repeat(asset_type)))
             if download:
                 if not path.exists(save_dir):
                     makedirs(save_dir)
 
                 # Download the assets
                 for asset_type in ["analytic"]:
-                    with Pool(5) as pool:
-                        pool.starmap(download_something, zip(repeat(session), repeat(item_type), item_ids, repeat(asset_type), repeat(save_dir), repeat(field_id), repeat(".tif")))
+                    with Pool(8) as pool2:
+                        pool2.starmap(download_something, zip(repeat(session), repeat(item_type), item_ids, repeat(asset_type), repeat(save_dir), repeat(field_id), repeat(".tif")))
                 for asset_type in ["analytic_xml"]:
-                    with Pool(5) as pool:
-                        pool.starmap(download_something, zip(repeat(session), repeat(item_type), item_ids, repeat(asset_type), repeat(save_dir), repeat(field_id), repeat(".xml")))
+                    with Pool(8) as pool3:
+                        pool3.starmap(download_something, zip(repeat(session), repeat(item_type), item_ids, repeat(asset_type), repeat(save_dir), repeat(field_id), repeat(".xml")))
                         
                 print('Downloading Started ... ')
 
@@ -244,9 +246,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--raster_dir', type=str, help='Path to directory of raster data',
                         default=GHANA_RASTER_DIR)
+                        #default=LOCAL_DATA_DIR + '/ghana/raster/')
     parser.add_argument('--save_dir', type=str, 
                         help='Path to save planet assets to',
                         default=GCP_DATA_DIR + '/ghana/planet/')
+                        #default=LOCAL_DATA_DIR + '/ghana/planet')
     parser.add_argument('--activate', type=str2bool,
                         help="Activate planet items",
                         default=False)
