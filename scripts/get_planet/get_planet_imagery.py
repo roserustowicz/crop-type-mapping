@@ -1,5 +1,7 @@
 import os
+import sys
 import numpy as np
+import argparse
 import rasterio
 import rasterio.features
 import rasterio.warp
@@ -12,6 +14,10 @@ from requests import Session, get, post
 from requests.auth import HTTPBasicAuth
 from retrying import retry
 from sys import stdout
+
+sys.path.insert(0, '../')
+from util import str2bool
+from constants import * 
 
 def create_tif_mask(in_fname, out_fname):
     # Open the raster file
@@ -143,14 +149,7 @@ def download_something(session, item_type, item_id, asset_type, save_dir, field_
                         stdout.write("\r[%s%s]" % ('=' * done, ' ' * (50 - done)))
                         stdout.flush()
 
-def main():
-    raster_dir = '/home/roserustowicz/croptype_data/data/ghana/raster/'
-    save_dir = '/home/roserustowicz/croptype_data/data/ghana/planet/'
-    mask_fname = 'tmp_msk.tif'
-    shp_fname = 'tmp_shp'
-    activate = 1
-    download = 1
-    item_type = "PSScene4Band"
+def main(raster_dir, save_dir, activate, download, item_type):
 
     # filter images acquired in a certain date range
     date_range_filter = {
@@ -242,4 +241,21 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--raster_dir', type=str, help='Path to directory of raster data',
+                        default=GHANA_RASTER_DIR)
+    parser.add_argument('--save_dir', type=str, 
+                        help='Path to save planet assets to',
+                        default=GCP_DATA_DIR + '/ghana/planet/')
+    parser.add_argument('--activate', type=str2bool,
+                        help="Activate planet items",
+                        default=False)
+    parser.add_argument('--download', type=str2bool,
+                        help="Download planet items",
+                        default=False)
+    parser.add_argument('--item_type', type=str,
+                        help="Planet item type to download/activate",
+                        default="PSScene4Band")
+
+    args = parser.parse_args()
+    main(args.raster_dir, args.save_dir, args.activate, args.download, args.item_type)
