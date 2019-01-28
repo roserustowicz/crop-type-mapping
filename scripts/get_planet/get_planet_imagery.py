@@ -15,7 +15,13 @@ from requests.auth import HTTPBasicAuth
 from retrying import retry
 from sys import stdout
 
-sys.path.insert(0, '../')
+from functools import partial
+from itertools import repeat
+from multiprocessing import Pool # , freeze_support
+import pdb
+
+sys.path.insert(0, '../../')
+
 from util import str2bool
 from constants import * 
 
@@ -111,7 +117,6 @@ def download_something(session, item_type, item_id, asset_type, save_dir, field_
 
     item = session.get(("https://api.planet.com/data/v1/item-types/" + "{}/items/{}/assets/").format(item_type, item_id))
 
-    print(item.status_code)
     if item.status_code == 429:
         raise Exception("rate limit error")    
     if item.status_code == 202:
@@ -133,7 +138,7 @@ def download_something(session, item_type, item_id, asset_type, save_dir, field_
                 vsicurl_url = '/vsicurl/' + item_download_url
                 output_file = fname
                 gdal.Warp(output_file, vsicurl_url, dstSRS='EPSG:4326', 
-                cutlineDSName=geojson_fname, cropToCutline=True) 
+                          cutlineDSName=geojson_fname, cropToCutline=True) 
             elif 'xml' in ext:
                 r = get(item_download_url, stream=True, allow_redirects=True)
                 total_length = r.headers.get('content-length')
@@ -169,6 +174,7 @@ def main(raster_dir, save_dir, activate, download, item_type):
     print('total raster fnames: ', len(raster_fnames))
 
     for idx1 in range(len(raster_fnames)):
+        print('\n\nRaster file {} of {}'.format(idx1, len(raster_fnames)))
         fname = raster_fnames[idx1]
         field_id = fname.split('_')[-1].replace('.tif', '')
 
@@ -180,7 +186,6 @@ def main(raster_dir, save_dir, activate, download, item_type):
         if np.sum(bnd_arr) == 0:
             print('\n\nPassed on {} of {}, fname {}, raster is all zeros'.format(idx1, len(raster_fnames), fname))
         else:
-
             if download:
                 create_tif_mask(fname, out_fname='tmp_mask_'+field_id+'.tif')
                 create_shp_from_mask(shp_fname='tmp_shp_'+field_id, mask_fname='tmp_mask_'+field_id+'.tif')    
@@ -211,34 +216,29 @@ def main(raster_dir, save_dir, activate, download, item_type):
             # Setup authentication
             session = Session()
             session.auth = (environ['PL_API_KEY'], '')
-            count = 0
+       
+            item_ids = []
             for idx in range(len(data['features'])):
+                item_ids.append(data['features'][idx]['id'])
 
-                item_id = data['features'][idx]['id']
-                cur_feats = data['features'][idx]
-                print('\n\nscene {} of {} for raster file {} of {}'.format(idx, len(data['features']), idx1, len(raster_fnames) ))
-                print('item id: ', item_id)
-                
-                if activate:
-                    # Make request for analytic asset
-                    for asset_type in ["analytic", "analytic_xml"]: #, "analytic_sr"]:
-                         activate_something(session, item_type, item_id, asset_type)
+            if activate:
+                # Make request for analytic asset
+                for asset_type in ["analytic", "analytic_xml"]:
+                     with Pool(5) as pool:
+                         pool.starmap(activate_something, zip(repeat(session), repeat(item_type), item_ids, repeat(asset_type)))
+            if download:
+                if not path.exists(save_dir):
+                    makedirs(save_dir)
 
-                if download:
-                    if not path.exists(save_dir):
-                        makedirs(save_dir)
-
-                    # Download the assets
-                    for asset_type in ["analytic"]: #, "analytic_xml"]: #, "analytic_sr"]:
-                        download_something(session, item_type, item_id, asset_type, save_dir, field_id, ext=".tif")
-                    for asset_type in ["analytic_xml"]: #, "analytic_sr"]:
-                        download_something(session, item_type, item_id, asset_type, save_dir, field_id, ext=".xml")
+                # Download the assets
+                for asset_type in ["analytic"]:
+                    with Pool(5) as pool:
+                        pool.starmap(download_something, zip(repeat(session), repeat(item_type), item_ids, repeat(asset_type), repeat(save_dir), repeat(field_id), repeat(".tif")))
+                for asset_type in ["analytic_xml"]:
+                    with Pool(5) as pool:
+                        pool.starmap(download_something, zip(repeat(session), repeat(item_type), item_ids, repeat(asset_type), repeat(save_dir), repeat(field_id), repeat(".xml")))
                         
-                    print('Downloading Started ... ')
-            count += 1
-
-    print('Total number to be activated: ', count)
-
+                print('Downloading Started ... ')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
