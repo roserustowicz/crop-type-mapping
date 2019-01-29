@@ -201,7 +201,10 @@ if __name__ ==  "__main__":
             print(e)
 
         torch.cuda.empty_cache()
-   
+        
+        with open(search_range.hp_dict_name, "wb") as f:
+            pickle.dump(hps, f)
+
     print("SUMMARY")
 
     for key, value in sorted(experiments.items(), key=lambda x: x[1][-1], reverse=True):
