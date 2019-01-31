@@ -2,6 +2,7 @@ import os
 import sys
 import numpy as np
 import argparse
+import pickle
 import rasterio
 import rasterio.features
 import rasterio.warp
@@ -24,6 +25,13 @@ sys.path.insert(0, '../../')
 
 from util import str2bool
 from constants import * 
+
+def get_grids(train_grids, val_grids, test_grids):
+    grid_list = []
+    for cur_list in [train_grids, val_grids, test_grids]:
+        with open(cur_list, "rb") as f:
+            grid_list += list(pickle.load(f))
+    return grid_list
 
 def create_tif_mask(in_fname, out_fname):
     # Open the raster file
@@ -113,23 +121,25 @@ def activate_something(session, item_type, item_id, asset_type):
                         
 @retry(wait_exponential_multiplier=1000,wait_exponential_max=10000)
 def download_something(session, item_type, item_id, asset_type, save_dir, field_id, ext):
-    geojson_fname = 'tmp_geojson_'+field_id+'.geojson'
-
-    item = session.get(("https://api.planet.com/data/v1/item-types/" + "{}/items/{}/assets/").format(item_type, item_id))
-
-    if item.status_code == 429:
-        raise Exception("rate limit error")    
-    if item.status_code == 202:
-        raise Exception("download request still processing")
-
-    item_download_url = item.json()[asset_type]["location"]
-    fname = save_dir + field_id + '_' + item_type + '_' + item_id + '_' + asset_type + ext
 
     # check if already downloaded first
+    fname = save_dir + field_id + '_' + item_type + '_' + item_id + '_' + asset_type + ext
     my_file = Path(fname)
+    
     if my_file.is_file():
         print("{} file is already downloaded.".format(asset_type))
+    
     else:
+        geojson_fname = 'tmp_geojson_'+field_id+'.geojson'
+        item = session.get(("https://api.planet.com/data/v1/item-types/" + "{}/items/{}/assets/").format(item_type, item_id))
+
+        if item.status_code == 429:
+            raise Exception("rate limit error")    
+        if item.status_code == 202:
+            raise Exception("download request still processing")
+        
+        item_download_url = item.json()[asset_type]["location"]
+
         with open(fname, "wb") as f:
             print("Downloading {}".format(fname))
                              
@@ -154,7 +164,7 @@ def download_something(session, item_type, item_id, asset_type, save_dir, field_
                         stdout.write("\r[%s%s]" % ('=' * done, ' ' * (50 - done)))
                         stdout.flush()
 
-def main(raster_dir, save_dir, activate, download, item_type):
+def main(raster_dir, save_dir, activate, download, item_type, train_grids, val_grids, test_grids):
 
     # filter images acquired in a certain date range
     date_range_filter = {
@@ -169,23 +179,25 @@ def main(raster_dir, save_dir, activate, download, item_type):
       "field_name": "cloud_cover",
       "config": { "lte": 0.10 }}
 
+    # Get grid names that have data we will be using
+    grid_list = get_grids(train_grids, val_grids, test_grids)
+
     # Read through raster images to get AOIs, then use these AOIs to clip planet imagery?
     raster_fnames = [path.join(raster_dir, f) for f in os.listdir(raster_dir) if f.endswith('.tif')]
-    print('total raster fnames: ', len(raster_fnames))
     raster_fnames.sort()
 
-    for idx1 in range(len(raster_fnames)):
+    for idx1 in range(2545, len(raster_fnames)):
         print('\n\nRaster file {} of {}'.format(idx1, len(raster_fnames)))
         fname = raster_fnames[idx1]
         field_id = fname.split('_')[-1].replace('.tif', '')
-
+        
         # If the raster is all zeros, skip it
-        gtif = gdal.Open(fname, gdal.GA_ReadOnly)
-        bnd = gtif.GetRasterBand(1)
-        bnd_arr = gdal_array.BandReadAsArray(bnd)
+        #gtif = gdal.Open(fname, gdal.GA_ReadOnly)
+        #bnd = gtif.GetRasterBand(1)
+        #bnd_arr = gdal_array.BandReadAsArray(bnd)
 
-        if np.sum(bnd_arr) == 0:
-            print('\n\nPassed on {} of {}, fname {}, raster is all zeros'.format(idx1, len(raster_fnames), fname))
+        if not field_id in grid_list: #np.sum(bnd_arr) == 0:
+            print('\n\nPassed on {} of {}, fname {}, field_id is not in grid list'.format(idx1, len(raster_fnames), fname))
         else:
             if download:
                 create_tif_mask(fname, out_fname='tmp_mask_'+field_id+'.tif')
@@ -242,15 +254,22 @@ def main(raster_dir, save_dir, activate, download, item_type):
                         
                 print('Downloading Started ... ')
 
+            # Remove the tmp files 
+            os.remove('tmp_mask_'+field_id+'.tif')
+            os.remove('tmp_geojson_'+field_id+'.geojson')
+            os.remove('tmp_shp_'+field_id+'.shp')
+            os.remove('tmp_shp_'+field_id+'.shx')
+            os.remove('tmp_shp_'+field_id+'.dbf')
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--raster_dir', type=str, help='Path to directory of raster data',
-                        default=GHANA_RASTER_DIR)
-                        #default=LOCAL_DATA_DIR + '/ghana/raster/')
+                        default=LOCAL_DATA_DIR + '/ghana/raster/')
+                        #default=GHANA_RASTER_DIR)
     parser.add_argument('--save_dir', type=str, 
                         help='Path to save planet assets to',
-                        default=GCP_DATA_DIR + '/ghana/planet/')
-                        #default=LOCAL_DATA_DIR + '/ghana/planet')
+                        default=LOCAL_DATA_DIR + '/ghana/planet/')
+                        #default=GCP_DATA_DIR + '/ghana/planet/')
     parser.add_argument('--activate', type=str2bool,
                         help="Activate planet items",
                         default=False)
@@ -260,6 +279,14 @@ if __name__ == '__main__':
     parser.add_argument('--item_type', type=str,
                         help="Planet item type to download/activate",
                         default="PSScene4Band")
-
+    parser.add_argument('--train_grids', type=str,
+                        help="Path to file with train splits",
+                        default=LOCAL_DATA_DIR + '/ghana/ghana_full_train')
+    parser.add_argument('--val_grids', type=str,
+                        help="Path to file with train splits",
+                        default=LOCAL_DATA_DIR + '/ghana/ghana_full_val')
+    parser.add_argument('--test_grids', type=str,
+                        help="Path to file with train splits",
+                        default=LOCAL_DATA_DIR + '/ghana/ghana_full_test')
     args = parser.parse_args()
-    main(args.raster_dir, args.save_dir, args.activate, args.download, args.item_type)
+    main(args.raster_dir, args.save_dir, args.activate, args.download, args.item_type, args.train_grids, args.val_grids, args.test_grids)
