@@ -121,23 +121,25 @@ def activate_something(session, item_type, item_id, asset_type):
                         
 @retry(wait_exponential_multiplier=1000,wait_exponential_max=10000)
 def download_something(session, item_type, item_id, asset_type, save_dir, field_id, ext):
-    geojson_fname = 'tmp_geojson_'+field_id+'.geojson'
-
-    item = session.get(("https://api.planet.com/data/v1/item-types/" + "{}/items/{}/assets/").format(item_type, item_id))
-
-    if item.status_code == 429:
-        raise Exception("rate limit error")    
-    if item.status_code == 202:
-        raise Exception("download request still processing")
-
-    item_download_url = item.json()[asset_type]["location"]
-    fname = save_dir + field_id + '_' + item_type + '_' + item_id + '_' + asset_type + ext
 
     # check if already downloaded first
+    fname = save_dir + field_id + '_' + item_type + '_' + item_id + '_' + asset_type + ext
     my_file = Path(fname)
+    
     if my_file.is_file():
         print("{} file is already downloaded.".format(asset_type))
+    
     else:
+        geojson_fname = 'tmp_geojson_'+field_id+'.geojson'
+        item = session.get(("https://api.planet.com/data/v1/item-types/" + "{}/items/{}/assets/").format(item_type, item_id))
+
+        if item.status_code == 429:
+            raise Exception("rate limit error")    
+        if item.status_code == 202:
+            raise Exception("download request still processing")
+        
+        item_download_url = item.json()[asset_type]["location"]
+
         with open(fname, "wb") as f:
             print("Downloading {}".format(fname))
                              
@@ -184,7 +186,7 @@ def main(raster_dir, save_dir, activate, download, item_type, train_grids, val_g
     raster_fnames = [path.join(raster_dir, f) for f in os.listdir(raster_dir) if f.endswith('.tif')]
     raster_fnames.sort()
 
-    for idx1 in range(2539, len(raster_fnames)):
+    for idx1 in range(2545, len(raster_fnames)):
         print('\n\nRaster file {} of {}'.format(idx1, len(raster_fnames)))
         fname = raster_fnames[idx1]
         field_id = fname.split('_')[-1].replace('.tif', '')
@@ -252,12 +254,12 @@ def main(raster_dir, save_dir, activate, download, item_type, train_grids, val_g
                         
                 print('Downloading Started ... ')
 
-        # Remove the tmp files 
-        os.remove('tmp_mask_'+field_id+'.tif')
-        os.remove('tmp_geojson_'+field_id+'.geojson')
-        os.remove('tmp_shp_'+field_id+'.shp')
-        os.remove('tmp_shp_'+field_id+'.shx')
-        os.remove('tmp_shp_'+field_id+'.dbf')
+            # Remove the tmp files 
+            os.remove('tmp_mask_'+field_id+'.tif')
+            os.remove('tmp_geojson_'+field_id+'.geojson')
+            os.remove('tmp_shp_'+field_id+'.shp')
+            os.remove('tmp_shp_'+field_id+'.shx')
+            os.remove('tmp_shp_'+field_id+'.dbf')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
