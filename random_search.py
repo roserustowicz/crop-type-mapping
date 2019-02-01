@@ -137,8 +137,7 @@ if __name__ ==  "__main__":
     for hp_type in HPS:
         for hp in hp_type:
             search_parser.add_argument('--' + hp + "_range", type=str2tuple)
-    search_range = search_parser.parse_args()
-    
+    search_range = search_parser.parse_args() 
     #TODO: VERY HACKY, SWITCH TO USING PYTHON LOGGING MODULE OR ACTUALLY USING WRITE CALLS
     # CURRENTLY CHANGES STDOUT OF THE PROGRAM
     old_stdout = sys.stdout

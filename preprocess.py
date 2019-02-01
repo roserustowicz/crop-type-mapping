@@ -421,7 +421,7 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
         timestamps = img_stack.shape[0]
     else:
         timestamps = img_stack.shape[3]
-    #np.random.seed(seed)
+    np.random.seed(seed)
 
     # Given a stack of cloud masks, remap it and use to compute scores
     if isinstance(cloud_stack,np.ndarray):
