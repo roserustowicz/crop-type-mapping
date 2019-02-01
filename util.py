@@ -403,7 +403,7 @@ def get_train_parser():
                          help="Model to use for fcn part of fcn + crnn")
     parser.add_argument('--crnn_model_name', type=str, default='clstm',
                          help="Model to use for crnn part of fcn + crnn")
-    parser.add_argument('--pretrained', type=str2bool, default=True,
+    parser.add_argument('--pretrained', type=str2bool, default=False,
                         help="Pretrained unet model for fcn-crnn")
     parser.add_argument('--model_path', type=str)
     parser.add_argument('--eval_on_test', type=str2bool, default=False)
