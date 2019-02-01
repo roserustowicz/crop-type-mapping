@@ -7,7 +7,9 @@ File for visualizing model performance.
 
 import numpy as np
 import os 
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
+plt.switch_backend('agg')
+
 import visdom
 from torchvision.utils import save_image, make_grid
 
