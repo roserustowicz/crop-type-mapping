@@ -183,8 +183,8 @@ if __name__ ==  "__main__":
             for state_dict_name in os.listdir(train_args.save_dir):
                 if (experiment_name + "_best") in state_dict_name:
                     model.load_state_dict(torch.load(os.path.join(train_args.save_dir, state_dict_name)))
-                    train_loss, train_f1 = train.evaluate_split(model, train_args.model_name, dataloaders['train'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, train_args.num_classes)
-                    val_loss, val_f1 = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, train_args.num_classes)
+                    train_loss, train_f1 = train.evaluate_split(model, train_args.model_name, dataloaders['train'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, train_args.num_classes, train_args.country)
+                    val_loss, val_f1 = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, train_args.num_classes, train_args.country)
                     print(f"Best Performance (val): \n\t loss: {val_loss} \n\t f1: {val_f1}\n")
                     print(f"Corresponding Train Performance: \n\t loss: {train_loss} \n\t f1: {train_f1}\n")
 

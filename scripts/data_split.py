@@ -42,10 +42,8 @@ def get_crop_from_field_id(csv, field_id):
     return field.iloc[0]['crop']
     
 def get_crop_labels(country):
-    if country == 'southsudan':
-        return SOUTHSUDAN_CROPS
-    if country == 'ghana':
-        return GHANA_CROPS
+    if country in ['ghana', 'southsudan', 'tanzania']:
+        return CROPS[country]
     raise ValueError(f"Country: {country} not supported!")
     
 def load_csv_for_split(csvname, crop_labels, valid_fields, country):

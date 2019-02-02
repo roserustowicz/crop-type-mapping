@@ -30,7 +30,7 @@ class CropTypeDS(Dataset):
         #    if my_item in self.grid_list:
         #        self.grid_list.remove(my_item)
 
-
+        self.country = args.country
         self.num_grids = len(self.grid_list)
         self.use_s1 = args.use_s1
         self.use_s2 = args.use_s2
@@ -61,7 +61,7 @@ class CropTypeDS(Dataset):
             if self.use_s1:
                 s1 = data['s1'][self.grid_list[idx]]
                 if self.normalize:
-                    s1 = preprocess.normalization(s1, 's1')
+                    s1 = preprocess.normalization(s1, 's1', self.country)
                 if self.include_doy:
                     s1_doy = data['s1_dates'][self.grid_list[idx]][()]
                 s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed, all_samples=self.all_samples)
@@ -78,7 +78,7 @@ class CropTypeDS(Dataset):
                 elif self.s2_num_bands != 10:
                     print('s2_num_bands must be 4 or 10')
                 if self.normalize:
-                    s2 = preprocess.normalization(s2, 's2')
+                    s2 = preprocess.normalization(s2, 's2', self.country)
                 if self.include_clouds:
                     cloudmasks = data['cloudmasks'][self.grid_list[idx]][()]
                 if self.include_doy:

@@ -200,12 +200,8 @@ def clip_boi(boi):
 def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=False, save_dir=None):
     """ Record values for epoch in visdom
     """
-    if country == 'ghana':
-        class_names = GHANA_CROPS
-    elif country == 'southsudan':
-        class_names = SOUTHSUDAN_CROPS
-    elif country == 'tanzania':
-        class_names = TANZANIA_CROPS
+    if country in ['ghana', 'southsudan', 'tanzania']:
+        class_names = CROPS[country]
     else:
         raise ValueError(f"Country {country} not supported in visualize.py, record_epoch")
 
