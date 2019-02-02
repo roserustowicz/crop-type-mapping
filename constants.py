@@ -53,12 +53,6 @@ BOOL_HP = ['use_s1', 'use_s2', 'sample_w_clouds', 'include_clouds', 'include_doy
 
 HPS = [INT_POWER_EXP, REAL_POWER_EXP, INT_HP, FLOAT_HP, STRING_HP, BOOL_HP]
 
-# GHANA
-#S1_BAND_MEANS = np.array([-11.4, -17.9, 1.16])
-#S1_BAND_STDS = np.array([3.7, 5.0, 12.2])
-#S2_BAND_MEANS = np.array([2626.4, 2520.2, 2615.8, 2720.9, 3204.0, 3536.5, 3331.2, 3757.6, 2819.2, 2032.5])
-#S2_BAND_STDS = np.array([2232.5, 2147.3, 2244.5, 2153.5, 2129.3, 2190.9, 2059.9, 2174.9, 1237.3, 937.4])
-
 S1_BAND_MEANS = { 'ghana': np.array([-10.50, -17.24, 1.17]), 
                   'southsudan': np.array([-9.02, -15.26, 1.15]), 
                   'tanzania': np.array([-9.80, -17.05, 1.30])} 

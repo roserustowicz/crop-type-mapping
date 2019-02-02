@@ -26,9 +26,9 @@ class CropTypeDS(Dataset):
             self.grid_list = list(pickle.load(f))
         
         # Rose debugging line to ignore missing S2 files for Tanzania
-        for my_item in ['004125', '004070', '003356', '004324', '004320', '004322', '003706', '004126', '003701', '003700', '003911', '003716', '004323', '004128', '003485', '004365', '004321', '003910', '004129', '003704', '003486', '003488', '003936', '003823']:
-            if my_item in self.grid_list:
-                self.grid_list.remove(my_item)
+        #for my_item in ['004125', '004070', '003356', '004324', '004320', '004322', '003706', '004126', '003701', '003700', '003911', '003716', '004323', '004128', '003485', '004365', '004321', '003910', '004129', '003704', '003486', '003488', '003936', '003823']:
+        #    if my_item in self.grid_list:
+        #        self.grid_list.remove(my_item)
 
         self.country = args.country
         self.num_grids = len(self.grid_list)

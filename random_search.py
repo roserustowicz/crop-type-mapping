@@ -177,7 +177,7 @@ if __name__ ==  "__main__":
         print(f"TRAINING: {experiment_name}")
         for hp in hps:
             print(hp, train_args.__dict__[hp])
-        if True: #try: 
+        try: 
             train.train(model, train_args.model_name, train_args, dataloaders=dataloaders) 
             print("FINISHED TRAINING") 
             for state_dict_name in os.listdir(train_args.save_dir):
@@ -196,9 +196,9 @@ if __name__ ==  "__main__":
                     break
 
 
-        #except Exception as e:
-        #    print("CRASHED!")
-        #    print(e)
+        except Exception as e:
+            print("CRASHED!")
+            print(e)
 
         torch.cuda.empty_cache()
         
