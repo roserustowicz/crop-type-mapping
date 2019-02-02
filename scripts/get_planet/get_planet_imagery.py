@@ -186,7 +186,7 @@ def main(raster_dir, save_dir, activate, download, item_type, train_grids, val_g
     raster_fnames = [path.join(raster_dir, f) for f in os.listdir(raster_dir) if f.endswith('.tif')]
     raster_fnames.sort()
 
-    for idx1 in range(len(raster_fnames)):
+    for idx1 in range(5804, len(raster_fnames)):
         print('\n\nRaster file {} of {}'.format(idx1, len(raster_fnames)))
         fname = raster_fnames[idx1]
         field_id = fname.split('_')[-1].replace('.tif', '')
