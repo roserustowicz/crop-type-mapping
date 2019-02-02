@@ -60,7 +60,7 @@ def get_f1score(cm, avg=True):
         f1 = np.mean(f1)
     return f1
 
-def get_cm(y_pred, y_true):
+def get_cm(y_pred, y_true, country):
     """
     Get confusion matrix from predictions and labels
 
@@ -81,4 +81,4 @@ def get_cm(y_pred, y_true):
     if y_true.shape[0] == 0:
         return None
     else: 
-        return confusion_matrix(y_true, y_pred, labels=CM_LABELS)
+        return confusion_matrix(y_true, y_pred, labels=CM_LABELS[country])

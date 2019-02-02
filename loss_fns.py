@@ -19,7 +19,7 @@ def get_loss_fn(model_name):
     """
     return focal_loss
 
-def focal_loss(y_true, y_pred, reduction, loss_weight=False, weight_scale=1, gamma=2):
+def focal_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_scale=1, gamma=2):
     """ Implementation of focal loss
 
     Args:
@@ -51,7 +51,7 @@ def focal_loss(y_true, y_pred, reduction, loss_weight=False, weight_scale=1, gam
     y_true = y_true.type(torch.LongTensor).cuda()
     
     if loss_weight:
-        loss_fn = nn.NLLLoss(weight = LOSS_WEIGHT ** weight_scale,reduction="none")
+        loss_fn = nn.NLLLoss(weight = LOSS_WEIGHT[country] ** weight_scale,reduction="none")
     else:
         loss_fn = nn.NLLLoss(reduction="none")
     

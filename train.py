@@ -16,7 +16,7 @@ import numpy as np
 from constants import *
 import visualize
 
-def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes):
+def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes, country):
     total_loss = 0
     total_pixels = 0
     total_cm = np.zeros((num_classes, num_classes)).astype(int) 
@@ -26,7 +26,7 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
             inputs.to(device)
             targets.to(device)
             preds = model(inputs)   
-            batch_loss, batch_cm, _, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
+            batch_loss, batch_cm, _, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", country=country, loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
             total_loss += batch_loss.item()
             total_pixels += num_pixels
             total_cm += batch_cm
@@ -34,7 +34,7 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
     f1_avg = metrics.get_f1score(total_cm, avg=True)
     return total_loss / total_pixels, f1_avg 
 
-def evaluate(preds, labels, loss_fn, reduction, loss_weight, weight_scale, gamma):
+def evaluate(preds, labels, loss_fn, reduction, country, loss_weight, weight_scale, gamma):
     """ Evalautes loss and metrics for predictions vs labels.
 
     Args:
@@ -52,14 +52,14 @@ def evaluate(preds, labels, loss_fn, reduction, loss_weight, weight_scale, gamma
         total_correct - (int) given "sum" reduction, gives total correct pixels
         num_pixels - (int) given "sum" reduction, gives total number of valid pixels
     """
-    cm = metrics.get_cm(preds, labels)
+    cm = metrics.get_cm(preds, labels, country)
 
     if reduction == "avg":
-        loss, confidence = loss_fn(labels, preds, reduction, loss_weight, weight_scale, gamma)
+        loss, confidence = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale, gamma)
         accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, accuracy, confidence
     elif reduction == "sum":
-        loss, confidence, _ = loss_fn(labels, preds, reduction, loss_weight, weight_scale, gamma)
+        loss, confidence, _ = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale, gamma)
         total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, total_correct, num_pixels, confidence
 
@@ -117,7 +117,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         preds = model(inputs)   
                         
                         if split == 'train':
-                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
+                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", country=args.country, loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                             if cm_cur is not None:        
                                 # If there are valid pixels, update weights
                                 optimizer.zero_grad()
@@ -128,7 +128,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     
                         
                         elif split in ['val', 'test']:
-                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", loss_weight = args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
+                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", country=args.country, loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                         
                         if cm_cur is not None:
                             # If there are valid pixels, update metrics
