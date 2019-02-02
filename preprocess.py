@@ -17,7 +17,7 @@ import os
 import random
 
 
-def normalization(grid, satellite):
+def normalization(grid, satellite, country):
     """ Normalization based on values defined in constants.py
     Args: 
       grid - (tensor) grid to be normalized
@@ -28,10 +28,14 @@ def normalization(grid, satellite):
     """
     if satellite == 's1':
         num_bands = grid.shape[0]
-        grid = (grid-S1_BAND_MEANS[:num_bands].reshape(num_bands, 1, 1, 1))/S1_BAND_STDS[:num_bands].reshape(num_bands, 1, 1, 1)
+        s1_band_means = S1_BAND_MEANS[country]
+        s1_band_stds = S1_BAND_STDS[country]
+        grid = (grid-s1_band_means[:num_bands].reshape(num_bands, 1, 1, 1))/s1_band_stds[:num_bands].reshape(num_bands, 1, 1, 1)
     elif satellite == 's2':
         num_bands = grid.shape[0]
-        grid = (grid-S2_BAND_MEANS[:num_bands].reshape(num_bands, 1, 1, 1))/S2_BAND_STDS[:num_bands].reshape(num_bands, 1, 1, 1)
+        s2_band_means = S2_BAND_MEANS[country]
+        s2_band_stds = S2_BAND_STDS[country]
+        grid = (grid-s2_band_means[:num_bands].reshape(num_bands, 1, 1, 1))/s2_band_stds[:num_bands].reshape(num_bands, 1, 1, 1)
     return grid
         
 def reshapeForLoss(y):
