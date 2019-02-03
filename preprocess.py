@@ -359,7 +359,6 @@ def concat_s1_s2(s1, s2):
     if s2 is None:
         return s1
     if s1.shape[-1] > s2.shape[-1]:
-        print('inside s1')
         s1, _, _ = sample_timeseries(s1, s2.shape[-1])
     elif s2.shape[-1] > s1.shape[-1]:
         s2, _, _ = sample_timeseries(s2, s1.shape[-1])
