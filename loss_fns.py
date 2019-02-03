@@ -100,7 +100,6 @@ def mask_ce_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_s
     """
     y_true = preprocess.reshapeForLoss(y_true)
     num_examples = torch.sum(y_true, dtype=torch.float32).cuda()
-    #num_examples = torch.sum(y_true).item()
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
    
