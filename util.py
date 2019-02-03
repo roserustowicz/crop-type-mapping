@@ -70,7 +70,7 @@ def create_categorical_df_col(df, from_col, to_col):
     return df
 
 def plot_confusion_matrix(cm, classes,
-                          normalize=False,
+                          normalize=True,
                           title='Confusion matrix',
                           cmap=plt.cm.Blues):
     """
