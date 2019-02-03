@@ -32,6 +32,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
 from constants import *
+from modelling.recurrent_norm import RecurrentNorm2d
 
 def initialize_weights(*models):
     for model in models:
@@ -715,19 +716,29 @@ class ConvLSTMCell(nn.Module):
         self.padding     = kernel_size[0] // 2, kernel_size[1] // 2
         self.bias        = bias
         
-        self.conv = nn.Conv2d(in_channels=self.input_dim + self.hidden_dim,
+        self.h_conv = nn.Conv2d(in_channels=self.hidden_dim,
                               out_channels=4 * self.hidden_dim,
                               kernel_size=self.kernel_size,
                               padding=self.padding,
                               bias=self.bias)
-
-    def forward(self, input_tensor, cur_state):
+        
+        
+        self.input_conv = nn.Conv2d(in_channels=self.input_dim,
+                              out_channels=4 * self.hidden_dim,
+                              kernel_size=self.kernel_size,
+                              padding=self.padding,
+                              bias=self.bias)
+        self.h_norm = RecurrentNorm2d(4 * self.hidden_dim, MIN_TIMESTAMPS)
+        self.input_norm = RecurrentNorm2d(4 * self.hidden_dim, MIN_TIMESTAMPS)
+        self.cell_norm = RecurrentNorm2d(self.hidden_dim, MIN_TIMESTAMPS)
+        
+    def forward(self, input_tensor, cur_state, timestep):
         
         h_cur, c_cur = cur_state
-
-        combined = torch.cat([input_tensor.cuda(), h_cur], dim=1)  # concatenate along channel axis
+        # BN over the outputs of these convs
         
-        combined_conv = self.conv(combined)
+        combined_conv = self.h_norm(self.h_conv(h_cur), timestep) + self.input_norm(self.input_conv(input_tensor), timestep)
+        
         cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1) 
         i = torch.sigmoid(cc_i)
         f = torch.sigmoid(cc_f)
@@ -735,7 +746,9 @@ class ConvLSTMCell(nn.Module):
         g = torch.tanh(cc_g)
 
         c_next = f * c_cur + i * g
-        h_next = o * torch.tanh(c_next)
+        # BN over the tanh
+        h_next = o * self.cell_norm(torch.tanh(c_next), timestep)
+        
         
         return h_next, c_next
 
@@ -762,7 +775,6 @@ class CLSTM(nn.Module):
         self.start_num_channels = input_size[1]
         self.lstm_num_layers = lstm_num_layers
         self.bias = bias
-       
         if isinstance(kernel_sizes, list):
             if len(kernel_sizes) != lstm_num_layers and len(kernel_sizes) == 1:
                 self.kernel_sizes = kernel_sizes * lstm_num_layers
@@ -793,9 +805,9 @@ class CLSTM(nn.Module):
 
     def forward(self, input_tensor, hidden_state=None):
 
-        # figure out what this is doing
+        # TODO: make this learnable
         hidden_state = self._init_hidden(batch_size=input_tensor.size(0))
-
+        print(hidden_state)
         layer_output_list = []
         last_state_list = []
 
@@ -803,13 +815,13 @@ class CLSTM(nn.Module):
         cur_layer_input = input_tensor
 
         for layer_idx in range(self.lstm_num_layers):
-
+            # double check that this is right? i.e not resetting every time to 0?
             h, c = hidden_state[layer_idx]
             output_inner_layers = []
             
             for t in range(seq_len):
                 h, c = self.cell_list[layer_idx](input_tensor=cur_layer_input[:, t, :, :, :],
-                                                 cur_state=[h, c])
+                                                 cur_state=[h, c], timestep=t)
 
                 output_inner_layers.append(h)
 
