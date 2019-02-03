@@ -48,8 +48,8 @@ def focal_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_sca
     y_confidence, _ = torch.sort(y_pred, dim=1, descending=True)
     y_confidence = y_confidence[:, 0] - y_confidence[:, 1]
     y_confidence = y_confidence.view([bs, rows, cols]).detach().cpu().numpy() * 255
-    
     y_true = y_true.type(torch.LongTensor).cuda()
+    
     if loss_weight:
         loss_fn = nn.NLLLoss(weight = LOSS_WEIGHT[country] ** weight_scale,reduction="none")
     else:
