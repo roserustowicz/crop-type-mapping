@@ -250,7 +250,7 @@ def preprocessLabel(label, num_classes, transform, rot):
         label = np.fliplr(label)
         label = np.rot90(label, k=rot)
     label = onehot_mask(label, num_classes)
-    label =  np.transpose(label, [2, 0, 1])
+    label = np.transpose(label, [2, 0, 1])
     label = torch.tensor(label.copy(), dtype=torch.float32)
     return label
 
@@ -266,7 +266,6 @@ def saveGridAsImg(grid, fname):
 def preprocessGrid(grid, transform, rot, time_slice=None):
     grid = moveTimeToStart(grid)
     if transform:
-        #TODO: This flips columns? Should this also be random? And have another option to flop rows?
         grid = grid[:, :, :, ::-1]
         grid = np.rot90(grid, k=rot, axes=(2, 3))
     grid = torch.tensor(grid.copy(), dtype=torch.float32)
@@ -428,8 +427,8 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     else:
         timestamps = img_stack.shape[3]
     
-    if seed is not None:
-        np.random.seed(seed)
+    #if seed is not None:
+    #    np.random.seed(seed)
 
     # Given a stack of cloud masks, remap it and use to compute scores
     if isinstance(cloud_stack,np.ndarray):

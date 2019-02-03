@@ -95,9 +95,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         vis = visualize.setup_visdom(args.env_name, model_name)
         loss_fn = loss_fns.get_loss_fn(model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)
-        # TODO: is the lr_scheduler used when Adam is used? Should we let adam decide on it's own lr?
-        # maybe only call the lr_scheduler if args.optimizer == 'sgd' ?
+        
+        if args.optimizer == 'sgd':
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)
         best_val_f1 = 0
 
         for i in range(args.epochs):
@@ -149,7 +149,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 
                 if split == 'val':
                     val_loss = all_metrics['val_loss'] / all_metrics['val_pix']
-                    lr_scheduler.step(val_loss)
+                    if args.optimizer == 'sgd':
+                        lr_scheduler.step(val_loss)
                     val_f1 = metrics.get_f1score(all_metrics['val_cm'], avg=True)                 
  
                     if val_f1 > best_val_f1:
