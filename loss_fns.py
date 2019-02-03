@@ -17,10 +17,7 @@ def get_loss_fn(model_name):
         Allows for changing the loss function depending on the model.
         Currently always returns the focal_loss.
     """
-    #TODO: Did we decide that focal loss was better and better captured what we are trying to 
-    # optimize? I think it's worth putting the weighting into the cross entropy loss 
-    # and running some tests to compare the two losses. 
-    return focal_loss
+    return mask_ce_loss
 
 def focal_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_scale=1, gamma=2):
     """ Implementation of focal loss
@@ -50,9 +47,6 @@ def focal_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_sca
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
     y_confidence, _ = torch.sort(y_pred, dim=1, descending=True)
     y_confidence = y_confidence[:, 0] - y_confidence[:, 1]
-    y_confidence = y_confidence.view([bs, rows, cols]).detach().cpu().numpy() * 255
-    y_true = y_true.type(torch.LongTensor).cuda()
-    
     if loss_weight:
         loss_fn = nn.NLLLoss(weight = LOSS_WEIGHT[country] ** weight_scale,reduction="none")
     else:
@@ -84,7 +78,7 @@ def focal_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_sca
             return loss / num_examples, y_confidence
 
           
-def mask_ce_loss(y_true, y_pred, reduction):
+def mask_ce_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_scale=1):
     """
     Args:
       y_true - (torch tensor) torch.Size([batch_size, num_classes, img_height, img_width]) 
@@ -102,23 +96,31 @@ def mask_ce_loss(y_true, y_pred, reduction):
 
     """
     y_true = preprocess.reshapeForLoss(y_true)
-    num_examples = torch.sum(y_true).item()
+    num_examples = torch.sum(y_true, dtype=torch.float32).cuda()
+    #num_examples = torch.sum(y_true).item()
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
    
-    loss_fn = nn.NLLLoss(reduction="sum")
-    total_loss = loss_fn(y_pred, y_true.type(torch.LongTensor).cuda())
+    if loss_weight:
+        loss_fn = nn.NLLLoss(weight=LOSS_WEIGHT[country] ** weight_scale.reduction="none")
+    else:
+        loss_fn = nn.NLLLoss(reduction="none") 
+
+    total_loss = loss_fn(y_pred, y_true)
    
+    if num_examples == 0:
+        print("WARNING: NUMBER OF EXAMPLES IS 0")
+
     if reduction == "sum":
         if num_examples == 0:
-            return None, 0
+            return None, None, 0
         else:
-            return total_loss, num_examples
+            return total_loss, _, num_examples
     else:
         if num_examples == 0:
             return None
         else:
-            return total_loss / (num_examples)
+            return total_loss / num_examples, _
 
 def get_optimizer(params, optimizer_name, lr, momentum, weight_decay):
     """ Define optimizer for model training
