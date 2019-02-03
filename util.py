@@ -330,7 +330,7 @@ def get_train_parser():
                         help="Cuda or CPU",
                         default='cuda')
     parser.add_argument('--save_dir', type=str,
-                        help="Directory to save the models in. If unspecified, saves the model to ./models.",
+                        help="Directory to save the models in. If unspecified, saves the model to ./runs.",
                         default='./runs')
     parser.add_argument('--save_best', type=str2bool, default=True,
                         help="Whether to save plots and images for best epoch according to validation f1-score")
