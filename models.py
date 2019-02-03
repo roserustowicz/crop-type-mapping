@@ -272,7 +272,8 @@ def make_UNet_model(n_class, n_channel, for_fcn=False, pretrained=True):
     """
     model = UNet(n_class, n_channel, for_fcn)
     
-    if pretrained: 
+    if pretrained:
+        # TODO: Why are pretrained weights from vgg13? 
         pre_trained = models.vgg13(pretrained=True)
         pre_trained_features = list(pre_trained.features)
         model.enc1.encode[3] = pre_trained_features[2]
@@ -280,7 +281,7 @@ def make_UNet_model(n_class, n_channel, for_fcn=False, pretrained=True):
         model.enc2.encode[0] = pre_trained_features[5]
         model.enc2.encode[3] = pre_trained_features[7]
         model.enc2.encode[6] = pre_trained_features[9]
-        model.enc2.encode[6] = pre_trained_features[9]
+        #model.enc2.encode[6] = pre_trained_features[9]
         model.center.decode[0] = pre_trained_features[10]
         model.center.decode[3] = pre_trained_features[12]
         
@@ -722,7 +723,6 @@ class ConvLSTMCell(nn.Module):
                               padding=self.padding,
                               bias=self.bias)
         
-        
         self.input_conv = nn.Conv2d(in_channels=self.input_dim,
                               out_channels=4 * self.hidden_dim,
                               kernel_size=self.kernel_size,
@@ -732,7 +732,9 @@ class ConvLSTMCell(nn.Module):
         self.input_norm = RecurrentNorm2d(4 * self.hidden_dim, MIN_TIMESTAMPS)
         self.cell_norm = RecurrentNorm2d(self.hidden_dim, MIN_TIMESTAMPS)
         
-    def forward(self, input_tensor, cur_state, timestep):
+        initialize_weights(self)
+
+    def forward(self, input_tensor, cur_state):
         
         h_cur, c_cur = cur_state
         # BN over the outputs of these convs
@@ -800,6 +802,7 @@ class CLSTM(nn.Module):
                                           bias=self.bias))
 
         self.cell_list = nn.ModuleList(cell_list)
+        initialize_weights(self)
 
     def forward(self, input_tensor, hidden_state=None):
 
@@ -858,6 +861,7 @@ class CLSTMSegmenter(nn.Module):
         in_channels = hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))
         self.softmax = nn.Softmax2d()
+        initialize_weights(self)
 
     def forward(self, inputs):
         layer_output_list, last_state_list = self.clstm(inputs)

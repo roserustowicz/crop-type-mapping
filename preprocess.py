@@ -123,6 +123,7 @@ def onehot_mask(mask, num_classes):
       it has 0's in all channels of the one hot mask at that pixel location.
     """
     if num_classes == 2:
+        # TODO: why do we treat this as a separate case?
         mask[(mask != 2) & (mask > 0)] = 1
     else:
         mask[mask > num_classes] = 0
@@ -265,6 +266,7 @@ def saveGridAsImg(grid, fname):
 def preprocessGrid(grid, transform, rot, time_slice=None):
     grid = moveTimeToStart(grid)
     if transform:
+        #TODO: This flips columns? Should this also be random? And have another option to flop rows?
         grid = grid[:, :, :, ::-1]
         grid = np.rot90(grid, k=rot, axes=(2, 3))
     grid = torch.tensor(grid.copy(), dtype=torch.float32)
@@ -425,7 +427,9 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
         timestamps = img_stack.shape[0]
     else:
         timestamps = img_stack.shape[3]
-    np.random.seed(seed)
+    
+    if seed is not None:
+        np.random.seed(seed)
 
     # Given a stack of cloud masks, remap it and use to compute scores
     if isinstance(cloud_stack,np.ndarray):

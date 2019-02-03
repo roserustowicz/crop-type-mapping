@@ -17,6 +17,9 @@ def get_loss_fn(model_name):
         Allows for changing the loss function depending on the model.
         Currently always returns the focal_loss.
     """
+    #TODO: Did we decide that focal loss was better and better captured what we are trying to 
+    # optimize? I think it's worth putting the weighting into the cross entropy loss 
+    # and running some tests to compare the two losses. 
     return focal_loss
 
 def focal_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_scale=1, gamma=2):

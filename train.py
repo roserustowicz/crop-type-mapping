@@ -12,6 +12,7 @@ import datasets
 import metrics
 import util
 import numpy as np
+import pdb
 
 from constants import *
 import visualize
@@ -96,6 +97,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         loss_fn = loss_fns.get_loss_fn(model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)
+        # TODO: is the lr_scheduler used when Adam is used? Should we let adam decide on it's own lr?
+        # maybe only call the lr_scheduler if args.optimizer == 'sgd' ?
         best_val_f1 = 0
 
         for i in range(args.epochs):
@@ -112,6 +115,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 batch_num = 0
                 for inputs, targets, cloudmasks in dl:
                     with torch.set_grad_enabled(True):
+                        # Where is grad_enabled set? Is it defaulted to true during model definition?
+                        # Are we ever turning this off during pretraining or it's always on?
                         inputs.to(args.device)
                         targets.to(args.device)
                         preds = model(inputs)   
@@ -152,6 +157,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_f1 = val_f1
                         if args.save_best: 
+                            # TODO: Ideally, this would save any batch except the last one so that the saved images
+                            #  are not only the remainder from the last batch 
                             visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, args.num_classes, 
                                                    split, vis_data, vis, args.include_doy, args.use_s1, 
                                                    args.use_s2, model_name, args.time_slice, save=True, 
