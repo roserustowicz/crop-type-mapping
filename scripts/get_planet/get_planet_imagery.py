@@ -178,8 +178,12 @@ def main(raster_dir, save_dir, activate, download, item_type, train_grids, val_g
         "field_name": "acquired",
         "config": { "gte": "2017-01-01T00:00:00.000Z", 
                     "lte": "2017-04-30T23:59:59.999Z" }}
-        #"config": { "gte": "2017-05-01T00:00:00.000Z", 
-        #            "lte": "2017-10-31T23:59:59.999Z" }}
+   
+    #date_range_filter = {
+    #    "type": "DateRangeFilter",
+    #    "field_name": "acquired",
+    #    "config": { "gte": "2017-05-01T00:00:00.000Z", 
+    #                "lte": "2017-10-31T23:59:59.999Z" }}
 
     date_range_filter = {"type": "OrFilter", "config": [date_range_filter1, date_range_filter2]}
 

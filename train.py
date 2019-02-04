@@ -87,7 +87,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         for rep in range(args.num_repeat):
             for split in ['train', 'val'] if not args.eval_on_test else ['test']:
                 dl = dataloaders[split]
-                X, y = get_Xy(dl)            
+                X, y = datasets.get_Xy(dl)            
 
                 if split == 'train':
                     model.fit(X, y)
@@ -98,10 +98,12 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                     # save model
                     with open(os.path.join(args.save_dir, args.name + "_pkl"), "wb") as output_file:
                         pickle.dump(model, output_file)
+
                 elif split in ['val', 'test']:
                     preds = model.predict(X)
                     _, cm, accuracy, _ = evaluate(model_name, preds, y, args.country, reduction='avg')
                     f1 = metrics.get_f1score(cm, avg=True) 
+
                 print('{} accuracy: {}, {} f1-score: {}'.format(split, accuracy, split, f1))
                 results[f'{split}_acc'].append(accuracy)
                 results[f'{split}_f1'].append(f1)
