@@ -82,33 +82,47 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     if model_name in NON_DL_MODELS:
         if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
         if args is None: raise ValueError("Args is NONE")
-        splits = ['train', 'val'] if not args.eval_on_test else ['test']
-
-        for split in ['train', 'val'] if not args.eval_on_test else ['test']:
-            dl = dataloaders[split]
+        
+        results = {'train_acc': [], 'train_f1': [], 'val_acc': [], 'val_f1': [], 'test_acc': [], 'test_f1': []}
+        for rep in range(args.num_repeat):
+            for split in ['train', 'val'] if not args.eval_on_test else ['test']:
+                dl = dataloaders[split]
             
-            # Populate data and labels of classes we care about
-            X = []
-            y = [] 
-            for inputs, targets, cloudmasks in dl:
-                X, y = datasets.get_Xy_for_pixelbased(inputs, targets, X, y)        
-            X = np.vstack(X)       
-            y = np.squeeze(np.vstack(y))
+                # Populate data and labels of classes we care about
+                X = []
+                y = [] 
+                for inputs, targets, cloudmasks in dl:
+                    X, y = datasets.get_Xy_for_pixelbased(inputs, targets, X, y)        
+                X = np.vstack(X)       
+                y = np.squeeze(np.vstack(y))
+            
+                # shuffle
+                indices = np.array(list(range(y.shape[0])))
+                indices = np.random.shuffle(indices)
+                X = np.squeeze(X[indices, :])
+                y = np.squeeze(y[indices])
 
-            if split == 'train':
-                model.fit(X, y)
-                preds = model.predict(X)
-                _, cm, accuracy, _ = evaluate(model_name, preds, y, args.country, reduction='avg')
-                f1 = metrics.get_f1score(cm, avg=True) 
+                if split == 'train':
+                    model.fit(X, y)
+                    preds = model.predict(X)
+                    _, cm, accuracy, _ = evaluate(model_name, preds, y, args.country, reduction='avg')
+                    f1 = metrics.get_f1score(cm, avg=True) 
                 
-                # save model
-                with open(os.path.join(args.save_dir, args.name + "_pkl"), "wb") as output_file:
-                    pickle.dump(model, output_file)
-            elif split in ['val', 'test']:
-                preds = model.predict(X)
-                _, cm, accuracy, _ = evaluate(model_name, preds, y, args.country, reduction='avg')
-                f1 = metrics.get_f1score(cm, avg=True) 
-            print('{} accuracy: {}, {} f1-score: {}'.format(split, accuracy, split, f1))
+                    # save model
+                    with open(os.path.join(args.save_dir, args.name + "_pkl"), "wb") as output_file:
+                        pickle.dump(model, output_file)
+                elif split in ['val', 'test']:
+                    preds = model.predict(X)
+                    _, cm, accuracy, _ = evaluate(model_name, preds, y, args.country, reduction='avg')
+                    f1 = metrics.get_f1score(cm, avg=True) 
+                print('{} accuracy: {}, {} f1-score: {}'.format(split, accuracy, split, f1))
+                results[f'{split}_acc'].append(accuracy)
+                results[f'{split}_f1'].append(f1)
+
+        for split in ['train', 'val'] if not args.eval_on_test else ['test']: 
+            print('{} accuracy: {} +/- {}'.format(split, np.mean(results[f'{split}_acc']), np.std(results[f'{split}_acc'])))
+            print('{} f1-score: {} +/- {}'.format(split, np.mean(results[f'{split}_f1']), np.std(results[f'{split}_f1'])))
+
 
     elif model_name in DL_MODELS:
         if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
