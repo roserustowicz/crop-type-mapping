@@ -170,8 +170,10 @@ def main(raster_dir, save_dir, activate, download, item_type, train_grids, val_g
     date_range_filter = {
         "type": "DateRangeFilter",
         "field_name": "acquired",
-        "config": { "gte": "2017-05-01T00:00:00.000Z", 
-                    "lte": "2017-10-31T23:59:59.999Z" }}
+        "config": { "gte": "2017-01-01T00:00:00.000Z", 
+                    "lte": "2017-04-30T23:59:59.999Z" }}
+        #"config": { "gte": "2017-05-01T00:00:00.000Z", 
+        #            "lte": "2017-10-31T23:59:59.999Z" }}
 
     # filter images with <= 10% cloud coverage
     cloud_cover_filter = {
@@ -264,11 +266,11 @@ def main(raster_dir, save_dir, activate, download, item_type, train_grids, val_g
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--raster_dir', type=str, help='Path to directory of raster data',
-                        default=LOCAL_DATA_DIR + '/ghana/raster/')
+                        default=LOCAL_DATA_DIR + '/tanzania/raster/')
                         #default=GHANA_RASTER_DIR)
     parser.add_argument('--save_dir', type=str, 
                         help='Path to save planet assets to',
-                        default=LOCAL_DATA_DIR + '/ghana/planet/')
+                        default=LOCAL_DATA_DIR + '/tanzania/planet/')
                         #default=GCP_DATA_DIR + '/ghana/planet/')
     parser.add_argument('--activate', type=str2bool,
                         help="Activate planet items",
@@ -281,12 +283,12 @@ if __name__ == '__main__':
                         default="PSScene4Band")
     parser.add_argument('--train_grids', type=str,
                         help="Path to file with train splits",
-                        default=LOCAL_DATA_DIR + '/ghana/ghana_full_train')
+                        default=LOCAL_DATA_DIR + '/tanzania/tanzania_full_train')
     parser.add_argument('--val_grids', type=str,
                         help="Path to file with train splits",
-                        default=LOCAL_DATA_DIR + '/ghana/ghana_full_val')
+                        default=LOCAL_DATA_DIR + '/tanzania/tanzania_full_val')
     parser.add_argument('--test_grids', type=str,
                         help="Path to file with train splits",
-                        default=LOCAL_DATA_DIR + '/ghana/ghana_full_test')
+                        default=LOCAL_DATA_DIR + '/tanzania/tanzania_full_test')
     args = parser.parse_args()
     main(args.raster_dir, args.save_dir, args.activate, args.download, args.item_type, args.train_grids, args.val_grids, args.test_grids)

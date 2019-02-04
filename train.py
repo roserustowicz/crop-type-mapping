@@ -55,11 +55,11 @@ def evaluate(preds, labels, loss_fn, reduction, country, loss_weight, weight_sca
     cm = metrics.get_cm(preds, labels, country)
 
     if reduction == "avg":
-        loss, confidence = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale, gamma)
+        loss, confidence = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale)
         accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, accuracy, confidence
     elif reduction == "sum":
-        loss, confidence, _ = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale, gamma)
+        loss, confidence, _ = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale) 
         total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, total_correct, num_pixels, confidence
 
@@ -95,7 +95,9 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         vis = visualize.setup_visdom(args.env_name, model_name)
         loss_fn = loss_fns.get_loss_fn(model_name)
         optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)
+        
+        if args.optimizer == 'sgd':
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)
         best_val_f1 = 0
 
         for i in range(args.epochs):
@@ -145,13 +147,16 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 
                 if split == 'val':
                     val_loss = all_metrics['val_loss'] / all_metrics['val_pix']
-                    lr_scheduler.step(val_loss)
+                    if args.optimizer == 'sgd':
+                        lr_scheduler.step(val_loss)
                     val_f1 = metrics.get_f1score(all_metrics['val_cm'], avg=True)                 
  
                     if val_f1 > best_val_f1:
                         torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
                         best_val_f1 = val_f1
                         if args.save_best: 
+                            # TODO: Ideally, this would save any batch except the last one so that the saved images
+                            #  are not only the remainder from the last batch 
                             visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, args.num_classes, 
                                                    split, vis_data, vis, args.include_doy, args.use_s1, 
                                                    args.use_s2, model_name, args.time_slice, save=True, 

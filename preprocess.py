@@ -123,6 +123,7 @@ def onehot_mask(mask, num_classes):
       it has 0's in all channels of the one hot mask at that pixel location.
     """
     if num_classes == 2:
+        # TODO: why do we treat this as a separate case?
         mask[(mask != 2) & (mask > 0)] = 1
     else:
         mask[mask > num_classes] = 0
@@ -249,7 +250,7 @@ def preprocessLabel(label, num_classes, transform, rot):
         label = np.fliplr(label)
         label = np.rot90(label, k=rot)
     label = onehot_mask(label, num_classes)
-    label =  np.transpose(label, [2, 0, 1])
+    label = np.transpose(label, [2, 0, 1])
     label = torch.tensor(label.copy(), dtype=torch.float32)
     return label
 
@@ -425,7 +426,9 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
         timestamps = img_stack.shape[0]
     else:
         timestamps = img_stack.shape[3]
-    np.random.seed(seed)
+    
+    #if seed is not None:
+    #    np.random.seed(seed)
 
     # Given a stack of cloud masks, remap it and use to compute scores
     if isinstance(cloud_stack,np.ndarray):

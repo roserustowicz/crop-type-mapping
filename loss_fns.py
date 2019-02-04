@@ -17,7 +17,7 @@ def get_loss_fn(model_name):
         Allows for changing the loss function depending on the model.
         Currently always returns the focal_loss.
     """
-    return focal_loss
+    return mask_ce_loss
 
 def focal_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_scale=1, gamma=2):
     """ Implementation of focal loss
@@ -81,7 +81,7 @@ def focal_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_sca
             return loss / num_examples, y_confidence
 
           
-def mask_ce_loss(y_true, y_pred, reduction):
+def mask_ce_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_scale=1):
     """
     Args:
       y_true - (torch tensor) torch.Size([batch_size, num_classes, img_height, img_width]) 
@@ -99,23 +99,30 @@ def mask_ce_loss(y_true, y_pred, reduction):
 
     """
     y_true = preprocess.reshapeForLoss(y_true)
-    num_examples = torch.sum(y_true).item()
+    num_examples = torch.sum(y_true, dtype=torch.float32).cuda()
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
    
-    loss_fn = nn.NLLLoss(reduction="sum")
-    total_loss = loss_fn(y_pred, y_true.type(torch.LongTensor).cuda())
+    if loss_weight:
+        loss_fn = nn.NLLLoss(weight=LOSS_WEIGHT[country] ** weight_scale, reduction="none")
+    else:
+        loss_fn = nn.NLLLoss(reduction="none") 
+
+    total_loss = torch.sum(loss_fn(y_pred, y_true.cuda()))
    
+    if num_examples == 0:
+        print("WARNING: NUMBER OF EXAMPLES IS 0")
+
     if reduction == "sum":
         if num_examples == 0:
-            return None, 0
+            return None, None, 0
         else:
-            return total_loss, num_examples
+            return total_loss, None, num_examples
     else:
         if num_examples == 0:
             return None
         else:
-            return total_loss / (num_examples)
+            return total_loss / num_examples, None
 
 def get_optimizer(params, optimizer_name, lr, momentum, weight_decay):
     """ Define optimizer for model training
@@ -133,7 +140,8 @@ def get_optimizer(params, optimizer_name, lr, momentum, weight_decay):
     if optimizer_name == "sgd":
         return optim.SGD(params, lr=lr, momentum=momentum, weight_decay=weight_decay)
     elif optimizer_name == "adam":
-        return optim.Adam(params, lr=lr, weight_decay=weight_decay)
+        #TODO activate amsgrad=True?
+        return optim.Adam(params, lr=lr, weight_decay=weight_decay) 
 
     raise ValueError(f"Optimizer: {optimizer_name} unsupported")
 
