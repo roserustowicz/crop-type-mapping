@@ -32,6 +32,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
 from constants import *
+from modelling.recurrent_norm import RecurrentNorm2d
 
 def initialize_weights(*models):
     for model in models:
@@ -715,19 +716,29 @@ class ConvLSTMCell(nn.Module):
         self.padding     = kernel_size[0] // 2, kernel_size[1] // 2
         self.bias        = bias
         
-        self.conv = nn.Conv2d(in_channels=self.input_dim + self.hidden_dim,
+        self.h_conv = nn.Conv2d(in_channels=self.hidden_dim,
                               out_channels=4 * self.hidden_dim,
                               kernel_size=self.kernel_size,
                               padding=self.padding,
                               bias=self.bias)
-
-    def forward(self, input_tensor, cur_state):
+        
+        
+        self.input_conv = nn.Conv2d(in_channels=self.input_dim,
+                              out_channels=4 * self.hidden_dim,
+                              kernel_size=self.kernel_size,
+                              padding=self.padding,
+                              bias=self.bias)
+        self.h_norm = RecurrentNorm2d(4 * self.hidden_dim, MIN_TIMESTAMPS)
+        self.input_norm = RecurrentNorm2d(4 * self.hidden_dim, MIN_TIMESTAMPS)
+        self.cell_norm = RecurrentNorm2d(self.hidden_dim, MIN_TIMESTAMPS)
+        
+    def forward(self, input_tensor, cur_state, timestep):
         
         h_cur, c_cur = cur_state
-
-        combined = torch.cat([input_tensor.cuda(), h_cur], dim=1)  # concatenate along channel axis
+        # BN over the outputs of these convs
         
-        combined_conv = self.conv(combined)
+        combined_conv = self.h_norm(self.h_conv(h_cur), timestep) + self.input_norm(self.input_conv(input_tensor.cuda()), timestep)
+        
         cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1) 
         i = torch.sigmoid(cc_i)
         f = torch.sigmoid(cc_f)
@@ -735,14 +746,11 @@ class ConvLSTMCell(nn.Module):
         g = torch.tanh(cc_g)
 
         c_next = f * c_cur + i * g
-        h_next = o * torch.tanh(c_next)
+        # BN over the tanh
+        h_next = o * self.cell_norm(torch.tanh(c_next), timestep)
+        
         
         return h_next, c_next
-
-    def init_hidden(self, batch_size):
-        return (torch.zeros(batch_size, self.hidden_dim, self.height, self.width).cuda(),
-                torch.zeros(batch_size, self.hidden_dim, self.height, self.width).cuda())
-
 
 class CLSTM(nn.Module):
 
@@ -762,7 +770,6 @@ class CLSTM(nn.Module):
         self.start_num_channels = input_size[1]
         self.lstm_num_layers = lstm_num_layers
         self.bias = bias
-       
         if isinstance(kernel_sizes, list):
             if len(kernel_sizes) != lstm_num_layers and len(kernel_sizes) == 1:
                 self.kernel_sizes = kernel_sizes * lstm_num_layers
@@ -778,7 +785,10 @@ class CLSTM(nn.Module):
                 self.hidden_dims = hidden_dims
         else:
             self.hidden_dims = [hidden_dims] * lstm_num_layers       
-
+        
+        self.init_hidden_state = self._init_hidden()
+        self.init_cell_state = self._init_hidden()
+        
         cell_list = []
         for i in range(self.lstm_num_layers):
             cur_input_dim = self.start_num_channels if i == 0 else self.hidden_dims[i-1]
@@ -793,23 +803,22 @@ class CLSTM(nn.Module):
 
     def forward(self, input_tensor, hidden_state=None):
 
-        # figure out what this is doing
-        hidden_state = self._init_hidden(batch_size=input_tensor.size(0))
-
         layer_output_list = []
         last_state_list = []
 
         seq_len = input_tensor.size(1)
         cur_layer_input = input_tensor
-
+        
         for layer_idx in range(self.lstm_num_layers):
-
-            h, c = hidden_state[layer_idx]
+            # double check that this is right? i.e not resetting every time to 0?
+            h, c = self.init_hidden_state[layer_idx], self.init_cell_state[layer_idx]
+            h = h.expand(input_tensor.size(0), h.shape[1], h.shape[2], h.shape[3]).cuda()
+            c = c.expand(input_tensor.size(0), c.shape[1], c.shape[2], c.shape[3]).cuda()
             output_inner_layers = []
             
             for t in range(seq_len):
                 h, c = self.cell_list[layer_idx](input_tensor=cur_layer_input[:, t, :, :, :],
-                                                 cur_state=[h, c])
+                                                 cur_state=[h, c], timestep=t)
 
                 output_inner_layers.append(h)
 
@@ -825,11 +834,11 @@ class CLSTM(nn.Module):
 
         return layer_output_list, last_state_list
 
-    def _init_hidden(self, batch_size):
+    def _init_hidden(self):
         init_states = []
         for i in range(self.lstm_num_layers):
-            init_states.append(self.cell_list[i].init_hidden(batch_size))
-        return init_states
+            init_states.append(nn.Parameter(torch.zeros(1, self.hidden_dims[i], self.width, self.height)))
+        return nn.ParameterList(init_states)
 
 
 class CLSTMSegmenter(nn.Module):

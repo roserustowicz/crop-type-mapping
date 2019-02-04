@@ -70,7 +70,7 @@ def create_categorical_df_col(df, from_col, to_col):
     return df
 
 def plot_confusion_matrix(cm, classes,
-                          normalize=False,
+                          normalize=True,
                           title='Confusion matrix',
                           cmap=plt.cm.Blues):
     """
@@ -330,8 +330,8 @@ def get_train_parser():
                         help="Cuda or CPU",
                         default='cuda')
     parser.add_argument('--save_dir', type=str,
-                        help="Directory to save the models in. If unspecified, saves the model to ./models.",
-                        default='./models')
+                        help="Directory to save the models in. If unspecified, saves the model to ./runs.",
+                        default='./runs')
     parser.add_argument('--save_best', type=str2bool, default=True,
                         help="Whether to save plots and images for best epoch according to validation f1-score")
     parser.add_argument('--name', type=str,
