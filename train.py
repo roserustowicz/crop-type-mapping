@@ -87,20 +87,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         for rep in range(args.num_repeat):
             for split in ['train', 'val'] if not args.eval_on_test else ['test']:
                 dl = dataloaders[split]
-            
-                # Populate data and labels of classes we care about
-                X = []
-                y = [] 
-                for inputs, targets, cloudmasks in dl:
-                    X, y = datasets.get_Xy_for_pixelbased(inputs, targets, X, y)        
-                X = np.vstack(X)       
-                y = np.squeeze(np.vstack(y))
-            
-                # shuffle
-                indices = np.array(list(range(y.shape[0])))
-                indices = np.random.shuffle(indices)
-                X = np.squeeze(X[indices, :])
-                y = np.squeeze(y[indices])
+                X, y = get_Xy(dl)            
 
                 if split == 'train':
                     model.fit(X, y)
@@ -120,6 +107,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 results[f'{split}_f1'].append(f1)
 
         for split in ['train', 'val'] if not args.eval_on_test else ['test']: 
+            print('\n------------------------\nOverall Results:\n')
             print('{} accuracy: {} +/- {}'.format(split, np.mean(results[f'{split}_acc']), np.std(results[f'{split}_acc'])))
             print('{} f1-score: {} +/- {}'.format(split, np.mean(results[f'{split}_f1']), np.std(results[f'{split}_f1'])))
 
@@ -159,8 +147,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 batch_num = 0
                 for inputs, targets, cloudmasks in dl:
                     with torch.set_grad_enabled(True):
-                        # Where is grad_enabled set? Is it defaulted to true during model definition?
-                        # Are we ever turning this off during pretraining or it's always on?
                         inputs.to(args.device)
                         targets.to(args.device)
                         preds = model(inputs)   

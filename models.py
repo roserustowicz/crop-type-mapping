@@ -912,9 +912,15 @@ def get_model(model_name, **kwargs):
     model = None
 
     if model_name == 'random_forest':
+        # use class weights
+        class_weights=None
+        if args.loss_weight:
+            class_weights = 'balanced'
+
         model = make_rf_model(random_state=kwargs.get('seed', None),
-                                        n_jobs=kwargs.get('n_jobs', None),
-                                        n_estimators=kwargs.get('n_estimators', 100))
+                              n_jobs=kwargs.get('n_jobs', None),
+                              n_estimators=kwargs.get('n_estimators', 100),
+                              class_weights=class_weights)
 
     elif model_name == 'bidir_clstm':
         num_bands = get_num_bands(kwargs)

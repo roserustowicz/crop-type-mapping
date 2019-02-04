@@ -15,7 +15,24 @@ import preprocess
 from constants import *
 from random import shuffle
 
-def get_Xy_for_pixelbased(inputs, targets, X, y):
+
+def get_Xy(dl):
+    # Populate data and labels of classes we care about
+    X = []
+    y = []
+    for inputs, targets, cloudmasks in dl:
+        X, y = get_Xy_batch(inputs, targets, X, y)
+    X = np.vstack(X)
+    y = np.squeeze(np.vstack(y))
+
+    # shuffle
+    indices = np.array(list(range(y.shape[0])))
+    indices = np.random.shuffle(indices)
+    X = np.squeeze(X[indices, :])
+    y = np.squeeze(y[indices])
+    return X, y
+
+def get_Xy_batch(inputs, targets, X, y):
     """ 
     Constructs necessary pixel array for pixel based methods. The 
     function takes one case of inputs, targets each time it is called
@@ -49,9 +66,9 @@ class CropTypeDS(Dataset):
             self.grid_list = list(pickle.load(f))
         
         # Rose debugging line to ignore missing S2 files for Tanzania
-        #for my_item in ['004125', '004070', '003356', '004324', '004320', '004322', '003706', '004126', '003701', '003700', '003911', '003716', '004323', '004128', '003485', '004365', '004321', '003910', '004129', '003704', '003486', '003488', '003936', '003823']:
-        #    if my_item in self.grid_list:
-        #        self.grid_list.remove(my_item)
+        for my_item in ['004125', '004070', '003356', '004324', '004320', '004322', '003706', '004126', '003701', '003700', '003911', '003716', '004323', '004128', '003485', '004365', '004321', '003910', '004129', '003704', '003486', '003488', '003936', '003823']:
+            if my_item in self.grid_list:
+                self.grid_list.remove(my_item)
 
         self.country = args.country
         self.num_grids = len(self.grid_list)
