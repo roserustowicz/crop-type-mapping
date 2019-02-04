@@ -16,8 +16,10 @@ from constants import *
 from random import shuffle
 
 def get_Xy_for_pixelbased(inputs, targets, X, y):
-    """ Constructs necessary pixel array for pixel based methods 
-    Created for Random Forest
+    """ 
+    Constructs necessary pixel array for pixel based methods. The 
+    function takes one case of inputs, targets each time it is called
+    and builds up X, y as the dataloader goes through all batches 
     """
     # For each input example and corresponding target,
     for ex_idx in range(inputs.shape[0]):
