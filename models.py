@@ -912,9 +912,9 @@ def get_model(model_name, **kwargs):
     model = None
 
     if model_name == 'random_forest':
-        model = make_rf_model(random_state=kwargs.get('random_state', None),
-                                        n_jobs=kwargs.get('n_jobs', -1),
-                                        n_estimators=kwargs.get('n_estimators', 50))
+        model = make_rf_model(random_state=kwargs.get('seed', None),
+                                        n_jobs=kwargs.get('n_jobs', None),
+                                        n_estimators=kwargs.get('n_estimators', 100))
 
     elif model_name == 'bidir_clstm':
         num_bands = get_num_bands(kwargs)

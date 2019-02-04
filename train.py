@@ -12,7 +12,7 @@ import datasets
 import metrics
 import util
 import numpy as np
-import pdb
+import pickle 
 
 from constants import *
 import visualize
@@ -95,14 +95,15 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             X = np.vstack(X)       
             y = np.squeeze(np.vstack(y))
 
-            if X is None: raise ValueError("X not provided!")
-            if y is None: raise ValueError("y nor provided!")
-            
             if split == 'train':
                 model.fit(X, y)
                 preds = model.predict(X)
                 _, cm, accuracy, _ = evaluate(model_name, preds, y, args.country, reduction='avg')
                 f1 = metrics.get_f1score(cm, avg=True) 
+                
+                # save model
+                with open(os.path.join(args.save_dir, args.name + "_pkl"), "wb") as output_file:
+                    pickle.dump(model, output_file)
             elif split in ['val', 'test']:
                 preds = model.predict(X)
                 _, cm, accuracy, _ = evaluate(model_name, preds, y, args.country, reduction='avg')
