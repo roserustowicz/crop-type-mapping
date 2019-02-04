@@ -15,6 +15,54 @@ import preprocess
 from constants import *
 from random import shuffle
 
+
+def get_Xy(dl):
+    """ 
+    Constructs data (X) and labels (y) for pixel-based methods. 
+    Args: 
+      dl - pytorch data loader
+    Returns: 
+      X - matrix of data of shape [examples, features] 
+      y - vector of labels of shape [examples,] 
+    """
+    # Populate data and labels of classes we care about
+    X = []
+    y = []
+    for inputs, targets, cloudmasks in dl:
+        X, y = get_Xy_batch(inputs, targets, X, y)
+    X = np.vstack(X)
+    y = np.squeeze(np.vstack(y))
+
+    # shuffle
+    indices = np.array(list(range(y.shape[0])))
+    indices = np.random.shuffle(indices)
+    X = np.squeeze(X[indices, :])
+    y = np.squeeze(y[indices])
+    return X, y
+
+def get_Xy_batch(inputs, targets, X, y):
+    """ 
+    Constructs necessary pixel array for pixel based methods. The 
+    function takes one case of inputs, targets each time it is called
+    and builds up X, y as the dataloader goes through all batches 
+    """
+    # For each input example and corresponding target,
+    for ex_idx in range(inputs.shape[0]):
+        for crop_idx in range(targets.shape[1]):
+            cur_inputs = np.transpose(np.reshape(inputs[ex_idx, :, :, :, :], (-1, 64*64)), (1, 0))
+            cur_targets = np.squeeze(np.reshape(targets[ex_idx, crop_idx, :, :], (-1, 64*64)))
+            # Index pixels of desired crop
+            valid_inputs = cur_inputs[cur_targets == 1, :]
+            if valid_inputs.shape[0] == 0:
+                pass
+            else:
+                # Append valid examples to X
+                X.append(valid_inputs)
+                # Append valid labels to y
+                labels = torch.ones((int(torch.sum(cur_targets).numpy()), 1)) * crop_idx
+                y.append(labels)
+    return X, y 
+
 class CropTypeDS(Dataset):
 
     def __init__(self, args, grid_path, split):

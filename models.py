@@ -62,7 +62,7 @@ def get_upsampling_weight(in_channels, out_channels, kernel_size):
     return torch.from_numpy(weight).float()
 
 
-def make_rf_model(random_state, n_jobs, n_estimators):
+def make_rf_model(random_state, n_jobs, n_estimators, class_weight):
     """
     Defines a sklearn random forest model. See sci-kit learn
     documentation of sklearn.ensemble.RandomForestClassifier
@@ -74,11 +74,12 @@ def make_rf_model(random_state, n_jobs, n_estimators):
                 for both fit and predict. None means 1, -1 means
                 using all processors
       n_estimators - (int) number of trees in the forest
+      class_weights - (string) set "balanced" if class weights are to be used
 
     Returns:
       model - a sklearn random forest model
     """
-    model = RandomForestClassifier(random_state=random_state, n_jobs=n_jobs, n_estimators=n_estimators)
+    model = RandomForestClassifier(random_state=random_state, n_jobs=n_jobs, n_estimators=n_estimators, class_weight=class_weight)
     return model
 
 def make_logreg_model(random_state=None, solver='lbfgs', multi_class='multinomial'):
@@ -912,9 +913,15 @@ def get_model(model_name, **kwargs):
     model = None
 
     if model_name == 'random_forest':
-        model = make_rf_model(random_state=kwargs.get('random_state', None),
-                                        n_jobs=kwargs.get('n_jobs', -1),
-                                        n_estimators=kwargs.get('n_estimators', 50))
+        # use class weights
+        class_weight=None
+        if kwargs.get('loss_weight'):
+            class_weight = 'balanced'
+
+        model = make_rf_model(random_state=kwargs.get('seed', None),
+                              n_jobs=kwargs.get('n_jobs', None),
+                              n_estimators=kwargs.get('n_estimators', 100),
+                              class_weight=class_weight)
 
     elif model_name == 'bidir_clstm':
         num_bands = get_num_bands(kwargs)

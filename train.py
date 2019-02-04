@@ -12,6 +12,7 @@ import datasets
 import metrics
 import util
 import numpy as np
+import pickle 
 
 from constants import *
 import visualize
@@ -26,7 +27,7 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
             inputs.to(device)
             targets.to(device)
             preds = model(inputs)   
-            batch_loss, batch_cm, _, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", country=country, loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
+            batch_loss, batch_cm, _, num_pixels, confidence = evaluate(model_name, preds, targets, country, loss_fn=loss_fn, reduction="sum", loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
             total_loss += batch_loss.item()
             total_pixels += num_pixels
             total_cm += batch_cm
@@ -34,7 +35,7 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
     f1_avg = metrics.get_f1score(total_cm, avg=True)
     return total_loss / total_pixels, f1_avg 
 
-def evaluate(preds, labels, loss_fn, reduction, country, loss_weight, weight_scale, gamma):
+def evaluate(model_name, preds, labels, country, loss_fn=None, reduction=None, loss_weight=None, weight_scale=None, gamma=None):
     """ Evalautes loss and metrics for predictions vs labels.
 
     Args:
@@ -52,16 +53,20 @@ def evaluate(preds, labels, loss_fn, reduction, country, loss_weight, weight_sca
         total_correct - (int) given "sum" reduction, gives total correct pixels
         num_pixels - (int) given "sum" reduction, gives total number of valid pixels
     """
-    cm = metrics.get_cm(preds, labels, country)
-
-    if reduction == "avg":
-        loss, confidence = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale)
-        accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
-        return loss, cm, accuracy, confidence
-    elif reduction == "sum":
-        loss, confidence, _ = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale) 
-        total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
-        return loss, cm, total_correct, num_pixels, confidence
+    cm = metrics.get_cm(preds, labels, country, model_name)
+    
+    if model_name in NON_DL_MODELS:
+        accuracy = metrics.get_accuracy(model_name, preds, labels, reduction=reduction)
+        return None, cm, accuracy, None
+    elif model_name in DL_MODELS:
+        if reduction == "avg":
+            loss, confidence = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale)
+            accuracy = metrics.get_accuracy(model_name, labels, model_name, reduction=reduction)
+            return loss, cm, accuracy, confidence
+        elif reduction == "sum":
+            loss, confidence, _ = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale) 
+            total_correct, num_pixels = metrics.get_accuracy(model_name, preds, labels, reduction=reduction)
+            return loss, cm, total_correct, num_pixels, confidence
 
 def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """ Trains the model on the inputs
@@ -75,9 +80,39 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         y - (npy arr) labels for non-dl models
     """
     if model_name in NON_DL_MODELS:
-        if X is None: raise ValueError("X not provided!")
-        if y is None: raise ValueError("y nor provided!")
-        model.fit(X, y)
+        if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
+        if args is None: raise ValueError("Args is NONE")
+        
+        results = {'train_acc': [], 'train_f1': [], 'val_acc': [], 'val_f1': [], 'test_acc': [], 'test_f1': []}
+        for rep in range(args.num_repeat):
+            for split in ['train', 'val'] if not args.eval_on_test else ['test']:
+                dl = dataloaders[split]
+                X, y = datasets.get_Xy(dl)            
+
+                if split == 'train':
+                    model.fit(X, y)
+                    preds = model.predict(X)
+                    _, cm, accuracy, _ = evaluate(model_name, preds, y, args.country, reduction='avg')
+                    f1 = metrics.get_f1score(cm, avg=True) 
+                
+                    # save model
+                    with open(os.path.join(args.save_dir, args.name + "_pkl"), "wb") as output_file:
+                        pickle.dump(model, output_file)
+
+                elif split in ['val', 'test']:
+                    preds = model.predict(X)
+                    _, cm, accuracy, _ = evaluate(model_name, preds, y, args.country, reduction='avg')
+                    f1 = metrics.get_f1score(cm, avg=True) 
+
+                print('{} accuracy: {}, {} f1-score: {}'.format(split, accuracy, split, f1))
+                results[f'{split}_acc'].append(accuracy)
+                results[f'{split}_f1'].append(f1)
+
+        for split in ['train', 'val'] if not args.eval_on_test else ['test']: 
+            print('\n------------------------\nOverall Results:\n')
+            print('{} accuracy: {} +/- {}'.format(split, np.mean(results[f'{split}_acc']), np.std(results[f'{split}_acc'])))
+            print('{} f1-score: {} +/- {}'.format(split, np.mean(results[f'{split}_f1']), np.std(results[f'{split}_f1'])))
+
 
     elif model_name in DL_MODELS:
         if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
@@ -119,7 +154,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         preds = model(inputs)   
                         
                         if split == 'train':
-                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", country=args.country, loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
+                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                             if cm_cur is not None:        
                                 # If there are valid pixels, update weights
                                 optimizer.zero_grad()
@@ -130,7 +165,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     
                         
                         elif split in ['val', 'test']:
-                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", country=args.country, loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
+                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                         
                         if cm_cur is not None:
                             # If there are valid pixels, update metrics

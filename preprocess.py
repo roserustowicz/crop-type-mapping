@@ -197,7 +197,7 @@ def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None
         time_slice - (int) which timestamp to be used in FCN
     """
 
-    if model_name in ["bidir_clstm", "fcn_crnn", "fcn"]:
+    if model_name in ["bidir_clstm", "fcn_crnn", "fcn", "random_forest"]:
         return preprocessGrid(grid, transform, rot, time_slice)
     
     elif model_name == "unet":
@@ -216,7 +216,7 @@ def preprocess_clouds(clouds, model_name, time_slice=None, transform=False, rot=
         model_name - (string) type of model (ex: "C-LSTM")
         time_slice - (int) which timestamp to be used in FCN
     """
-    if model_name in ["bidir_clstm", "fcn", "unet", "fcn_crnn", "unet3d"]:
+    if model_name in ["bidir_clstm", "fcn", "unet", "fcn_crnn", "unet3d", "random_forest"]:
         return preprocessClouds(clouds)
     
     raise ValueError(f'Model: {model_name} unsupported')
@@ -233,7 +233,7 @@ def preprocess_label(label, model_name, num_classes=None, transform=False, rot=N
     Returns:
         (npy arr) [num_classes x 64 x 64]
     """
-    if model_name in ["bidir_clstm", "fcn", "fcn_crnn", "unet", "unet3d"]:
+    if model_name in ["bidir_clstm", "fcn", "fcn_crnn", "unet", "unet3d", "random_forest"]:
         assert not num_classes is None
         return preprocessLabel(label, num_classes, transform, rot)
     
@@ -426,10 +426,7 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
         timestamps = img_stack.shape[0]
     else:
         timestamps = img_stack.shape[3]
-    
-    #if seed is not None:
-    #    np.random.seed(seed)
-
+   
     # Given a stack of cloud masks, remap it and use to compute scores
     if isinstance(cloud_stack,np.ndarray):
         remapped_cloud_stack = remap_cloud_stack(cloud_stack)
