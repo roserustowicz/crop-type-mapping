@@ -104,11 +104,11 @@ def mask_ce_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_s
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
    
     if loss_weight:
-        loss_fn = nn.NLLLoss(weight=LOSS_WEIGHT[country] ** weight_scale.reduction="none")
+        loss_fn = nn.NLLLoss(weight=LOSS_WEIGHT[country] ** weight_scale, reduction="none")
     else:
         loss_fn = nn.NLLLoss(reduction="none") 
 
-    total_loss = loss_fn(y_pred, y_true)
+    total_loss = torch.sum(loss_fn(y_pred, y_true.cuda()))
    
     if num_examples == 0:
         print("WARNING: NUMBER OF EXAMPLES IS 0")
@@ -117,12 +117,12 @@ def mask_ce_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_s
         if num_examples == 0:
             return None, None, 0
         else:
-            return total_loss, _, num_examples
+            return total_loss, None, num_examples
     else:
         if num_examples == 0:
             return None
         else:
-            return total_loss / num_examples, _
+            return total_loss / num_examples, None
 
 def get_optimizer(params, optimizer_name, lr, momentum, weight_decay):
     """ Define optimizer for model training
