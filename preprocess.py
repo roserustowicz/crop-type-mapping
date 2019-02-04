@@ -266,7 +266,6 @@ def saveGridAsImg(grid, fname):
 def preprocessGrid(grid, transform, rot, time_slice=None):
     grid = moveTimeToStart(grid)
     if transform:
-        #TODO: This flips columns? Should this also be random? And have another option to flop rows?
         grid = grid[:, :, :, ::-1]
         grid = np.rot90(grid, k=rot, axes=(2, 3))
     grid = torch.tensor(grid.copy(), dtype=torch.float32)
