@@ -831,9 +831,10 @@ class CLSTM(nn.Module):
             layer_output_list.append(layer_output)
             last_state_list.append([h, c])
 
+        # TODO: Rework this so that we concatenate all the internal outputs as features for classification
         # Just take last output for prediction
-        layer_output_list = layer_output_list[-1:]
-        last_state_list = last_state_list[-1:]
+        #layer_output_list = layer_output_list[-1:]
+        #last_state_list = last_state_list[-1:]
 
         return layer_output_list, last_state_list
 
@@ -865,6 +866,7 @@ class CLSTMSegmenter(nn.Module):
 
     def forward(self, inputs):
         layer_output_list, last_state_list = self.clstm(inputs)
+        print(len(layer_output_list[0])) 
         final_state = last_state_list[0][0]
         if self.bidirectional:
             rev_inputs = torch.tensor(inputs.cpu().detach().numpy()[::-1].copy(), dtype=torch.float32).cuda()

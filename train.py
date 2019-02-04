@@ -55,11 +55,11 @@ def evaluate(preds, labels, loss_fn, reduction, country, loss_weight, weight_sca
     cm = metrics.get_cm(preds, labels, country)
 
     if reduction == "avg":
-        loss, confidence = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale, gamma)
+        loss, confidence = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale)
         accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, accuracy, confidence
     elif reduction == "sum":
-        loss, confidence, _ = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale, gamma)
+        loss, confidence, _ = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale) 
         total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
         return loss, cm, total_correct, num_pixels, confidence
 
