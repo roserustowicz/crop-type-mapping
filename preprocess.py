@@ -427,7 +427,8 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
         timestamps = img_stack.shape[0]
     else:
         timestamps = img_stack.shape[3]
-    
+   
+    # TODO: What do we want to do with this seed? 
     #if seed is not None:
     #    np.random.seed(seed)
 
