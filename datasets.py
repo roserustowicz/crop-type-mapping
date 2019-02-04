@@ -15,6 +15,32 @@ import preprocess
 from constants import *
 from random import shuffle
 
+import pdb
+
+def get_Xy_for_pixelbased(inputs, targets, X, y):
+    """ Constructs necessary pixel array for pixel based methods 
+    Created for Random Forest
+    """
+    # For each input example and corresponding target,
+    for ex_idx in range(inputs.shape[0]):
+        # Index pixels of desired crop
+        for crop_idx in range(targets.shape[1]):
+            cur_inputs = np.transpose(np.reshape(inputs[ex_idx, :, :, :, :], (-1, 64*64)), (1, 0))
+            cur_targets = np.squeeze(np.reshape(targets[ex_idx, crop_idx, :, :], (-1, 64*64)))
+
+            valid_inputs = cur_inputs[cur_targets == 1, :]
+            if valid_inputs.shape[0] == 0:
+                pass
+            else:
+                # Append valid examples to X
+                X.append(valid_inputs)
+                # Append valid labels to y
+                labels = torch.ones((int(torch.sum(cur_targets).numpy()), 1)) * crop_idx
+                y.append(labels)
+    
+    return X, y 
+
+
 class CropTypeDS(Dataset):
 
     def __init__(self, args, grid_path, split):

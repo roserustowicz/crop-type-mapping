@@ -27,7 +27,7 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
             inputs.to(device)
             targets.to(device)
             preds = model(inputs)   
-            batch_loss, batch_cm, _, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", country=country, loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
+            batch_loss, batch_cm, _, num_pixels, confidence = evaluate(model_name, preds, targets, country, loss_fn=loss_fn, reduction="sum", loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
             total_loss += batch_loss.item()
             total_pixels += num_pixels
             total_cm += batch_cm
@@ -35,7 +35,7 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
     f1_avg = metrics.get_f1score(total_cm, avg=True)
     return total_loss / total_pixels, f1_avg 
 
-def evaluate(preds, labels, loss_fn, reduction, country, loss_weight, weight_scale, gamma):
+def evaluate(model_name, preds, labels, country, loss_fn=None, reduction=None, loss_weight=None, weight_scale=None, gamma=None):
     """ Evalautes loss and metrics for predictions vs labels.
 
     Args:
@@ -53,16 +53,20 @@ def evaluate(preds, labels, loss_fn, reduction, country, loss_weight, weight_sca
         total_correct - (int) given "sum" reduction, gives total correct pixels
         num_pixels - (int) given "sum" reduction, gives total number of valid pixels
     """
-    cm = metrics.get_cm(preds, labels, country)
-
-    if reduction == "avg":
-        loss, confidence = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale)
-        accuracy = metrics.get_accuracy(preds, labels, reduction=reduction)
-        return loss, cm, accuracy, confidence
-    elif reduction == "sum":
-        loss, confidence, _ = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale) 
-        total_correct, num_pixels = metrics.get_accuracy(preds, labels, reduction=reduction)
-        return loss, cm, total_correct, num_pixels, confidence
+    cm = metrics.get_cm(preds, labels, country, model_name)
+    
+    if model_name in NON_DL_MODELS:
+        accuracy = metrics.get_accuracy(model_name, preds, labels, reduction=reduction)
+        return None, cm, accuracy, None
+    elif model_name in DL_MODELS:
+        if reduction == "avg":
+            loss, confidence = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale)
+            accuracy = metrics.get_accuracy(model_name, labels, model_name, reduction=reduction)
+            return loss, cm, accuracy, confidence
+        elif reduction == "sum":
+            loss, confidence, _ = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale) 
+            total_correct, num_pixels = metrics.get_accuracy(model_name, preds, labels, reduction=reduction)
+            return loss, cm, total_correct, num_pixels, confidence
 
 def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """ Trains the model on the inputs
@@ -76,9 +80,34 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         y - (npy arr) labels for non-dl models
     """
     if model_name in NON_DL_MODELS:
-        if X is None: raise ValueError("X not provided!")
-        if y is None: raise ValueError("y nor provided!")
-        model.fit(X, y)
+        if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
+        if args is None: raise ValueError("Args is NONE")
+        splits = ['train', 'val'] if not args.eval_on_test else ['test']
+
+        for split in ['train', 'val'] if not args.eval_on_test else ['test']:
+            dl = dataloaders[split]
+            
+            # Populate data and labels of classes we care about
+            X = []
+            y = [] 
+            for inputs, targets, cloudmasks in dl:
+                X, y = datasets.get_Xy_for_pixelbased(inputs, targets, X, y)        
+            X = np.vstack(X)       
+            y = np.squeeze(np.vstack(y))
+
+            if X is None: raise ValueError("X not provided!")
+            if y is None: raise ValueError("y nor provided!")
+            
+            if split == 'train':
+                model.fit(X, y)
+                preds = model.predict(X)
+                _, cm, accuracy, _ = evaluate(model_name, preds, y, args.country, reduction='avg')
+                f1 = metrics.get_f1score(cm, avg=True) 
+            elif split in ['val', 'test']:
+                preds = model.predict(X)
+                _, cm, accuracy, _ = evaluate(model_name, preds, y, args.country, reduction='avg')
+                f1 = metrics.get_f1score(cm, avg=True) 
+            print('{} accuracy: {}, {} f1-score: {}'.format(split, accuracy, split, f1))
 
     elif model_name in DL_MODELS:
         if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
@@ -122,7 +151,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         preds = model(inputs)   
                         
                         if split == 'train':
-                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", country=args.country, loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
+                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                             if cm_cur is not None:        
                                 # If there are valid pixels, update weights
                                 optimizer.zero_grad()
@@ -133,7 +162,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     
                         
                         elif split in ['val', 'test']:
-                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(preds, targets, loss_fn, reduction="sum", country=args.country, loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
+                            loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                         
                         if cm_cur is not None:
                             # If there are valid pixels, update metrics

@@ -6,7 +6,7 @@ import preprocess
 from constants import *
 from sklearn.metrics import confusion_matrix, f1_score
 
-def get_accuracy(y_pred, y_true, reduction='avg'):
+def get_accuracy(model_name, y_pred, y_true, reduction='avg'):
     """
     Get accuracy from predictions and labels 
 
@@ -24,17 +24,22 @@ def get_accuracy(y_pred, y_true, reduction='avg'):
       num_pixels - (int) number of pixels that are valid, i.e. have a ground truth label
       
     """
-    # Reshape truth labels into [N, num_classes]
-    y_true = preprocess.reshapeForLoss(y_true)
+        
+    if model_name in DL_MODELS:
+        # Reshape truth labels into [N, num_classes]
+        y_true = preprocess.reshapeForLoss(y_true)
 
-    # Reshape predictions into [N, num_classes]
-    y_pred = preprocess.reshapeForLoss(y_pred)
+        # Reshape predictions into [N, num_classes]
+        y_pred = preprocess.reshapeForLoss(y_pred)
 
-    # Get rid of invalid pixels and take argmax
-    y_pred, y_true = preprocess.maskForMetric(y_pred, y_true)
+        # Get rid of invalid pixels and take argmax
+        y_pred, y_true = preprocess.maskForMetric(y_pred, y_true)
+    
+        # Get metrics for accuracy
+        total_correct = np.sum([y_true.numpy() == y_pred.cpu().numpy()])
+    elif model_name in NON_DL_MODELS:
+        total_correct = np.sum(y_true == y_pred)
 
-    # Get metrics for accuracy
-    total_correct = np.sum([y_true.numpy() == y_pred.cpu().numpy()])
     num_pixels = y_pred.shape[0]
     if reduction == 'avg':
         if num_pixels == 0:
@@ -60,7 +65,7 @@ def get_f1score(cm, avg=True):
         f1 = np.mean(f1)
     return f1
 
-def get_cm(y_pred, y_true, country):
+def get_cm(y_pred, y_true, country, model_name):
     """
     Get confusion matrix from predictions and labels
 
@@ -73,12 +78,15 @@ def get_cm(y_pred, y_true, country):
     Returns: 
       cm - confusion matrix 
     """ 
-    # Reshape truth labels into [N, num_classes]
-    y_true = preprocess.reshapeForLoss(y_true)
-    # Reshape predictions into [N, num_classes]
-    y_pred = preprocess.reshapeForLoss(y_pred)
-    y_pred, y_true = preprocess.maskForMetric(y_pred, y_true)
-    if y_true.shape[0] == 0:
-        return None
-    else: 
+    if model_name in NON_DL_MODELS:
         return confusion_matrix(y_true, y_pred, labels=CM_LABELS[country])
+    elif model_name in DL_MODELS:
+        # Reshape truth labels into [N, num_classes]
+        y_true = preprocess.reshapeForLoss(y_true)
+        # Reshape predictions into [N, num_classes]
+        y_pred = preprocess.reshapeForLoss(y_pred)
+        y_pred, y_true = preprocess.maskForMetric(y_pred, y_true)
+        if y_true.shape[0] == 0:
+            return None
+        else: 
+            return confusion_matrix(y_true, y_pred, labels=CM_LABELS[country])
