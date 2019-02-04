@@ -114,8 +114,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 batch_num = 0
                 for inputs, targets, cloudmasks in dl:
                     with torch.set_grad_enabled(True):
-                        # Where is grad_enabled set? Is it defaulted to true during model definition?
-                        # Are we ever turning this off during pretraining or it's always on?
                         inputs.to(args.device)
                         targets.to(args.device)
                         preds = model(inputs)   

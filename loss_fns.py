@@ -140,7 +140,8 @@ def get_optimizer(params, optimizer_name, lr, momentum, weight_decay):
     if optimizer_name == "sgd":
         return optim.SGD(params, lr=lr, momentum=momentum, weight_decay=weight_decay)
     elif optimizer_name == "adam":
-        return optim.Adam(params, lr=lr, weight_decay=weight_decay, amsgrad=True)
+        #TODO activate amsgrad=True?
+        return optim.Adam(params, lr=lr, weight_decay=weight_decay) 
 
     raise ValueError(f"Optimizer: {optimizer_name} unsupported")
 
