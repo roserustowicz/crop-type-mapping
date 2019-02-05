@@ -7,6 +7,10 @@ from keras.layers import Bidirectional, TimeDistributed, concatenate
 from keras.backend import reverse
 from keras.engine.input_layer import Input
 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+
+
 def make_rf_model(random_state, n_jobs, n_estimators, class_weight):
     """
     Defines a sklearn random forest model. See sci-kit learn

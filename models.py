@@ -17,24 +17,59 @@ import torch.nn.functional as F
 from torchvision import models
 
 import numpy as np
-import yaml
 import torchfcn
 import fcn
 
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-
 from constants import *
+from modelling.baselines import make_rf_model, make_logreg_model, make_1d_nn_model, make_1d_2layer_nn_model, make_1d_cnn_model
 from modelling.recurrent_norm import RecurrentNorm2d
 from modelling.clstm_cell import ConvLSTMCell
 from modelling.clstm import CLSTM
 from modelling.clstm_segmenter import CLSTMSegmenter
-from modelling.util import initialize_weights, get_num_bands, get_upsampling_weight
+from modelling.util import initialize_weights, get_num_bands, get_upsampling_weight, get_num_s1_bands, get_num_s2_bands
 from modelling.fcn8 import FCN8
 from modelling.unet import UNet
 from modelling.unet3d import UNet3D
-from modelling.baselines import make_rf_model, make_logreg_model, make_1d_nn_model, make_1d_2layer_nn_model, make_1d_cnn_model
+from modelling.multi_input_clstm import MI_CLSTM
 
+
+# TODO: figure out how to decompose this       
+class FCN_CRNN(nn.Module):
+    def __init__(self, fcn_input_size, fcn_model_name, 
+                       crnn_input_size, crnn_model_name, 
+                       hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained):
+        super(FCN_CRNN, self).__init__()
+        
+        self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
+        
+        if fcn_model_name == 'simpleCNN':
+            self.fcn = simple_CNN(fcn_input_size, crnn_input_size[1])
+        elif fcn_model_name == 'fcn8':
+            self.fcn = make_fcn_model(crnn_input_size[1], fcn_input_size[1], freeze=False)
+        elif fcn_model_name == 'unet':
+            self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], for_fcn=True, pretrained = pretrained)
+        
+        
+
+    def forward(self, input_tensor):
+        batch, timestamps, bands, rows, cols = input_tensor.size()
+        fcn_input = input_tensor.view(batch * timestamps, bands, rows, cols)
+        fcn_output = self.fcn(fcn_input)
+ 
+        crnn_input = fcn_output.view(batch, timestamps, -1, rows, cols)
+        preds = self.crnn(crnn_input)
+        return preds
+
+def make_MI_CLSTM_model(s1_input_size, s2_input_size, 
+                        unet_out_channels,
+                        hidden_dims, lstm_kernel_sizes, lstm_num_layers, 
+                        conv_kernel_size, 
+                        num_classes, bidirectional):
+    model = MI_CLSTM(s1_input_size, s2_input_size,
+                     unet_out_channels,
+                     hidden_dims, lstm_kernel_sizes, lstm_num_layers, 
+                     conv_kernel_size, num_classes, bidirectional)
+    return model
 
 def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional):
     """ Defines a (bidirectional) CLSTM model 
@@ -151,28 +186,6 @@ def make_UNet3D_model(n_class, n_channel):
     model = UNet3D(n_channel, n_class)
     model = model.cuda()
     return model
-        
-class FCN_CRNN(nn.Module):
-    def __init__(self, fcn_input_size, fcn_model_name, 
-                       crnn_input_size, crnn_model_name, 
-                       hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained):
-        super(FCN_CRNN, self).__init__()
-        if fcn_model_name == 'simpleCNN':
-            self.fcn = simple_CNN(fcn_input_size, crnn_input_size[1])
-        elif fcn_model_name == 'fcn8':
-            self.fcn = make_fcn_model(crnn_input_size[1], fcn_input_size[1], freeze=False)
-        elif fcn_model_name == 'unet':
-            self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], for_fcn=True, pretrained = pretrained)
-        self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
-
-    def forward(self, input_tensor):
-        batch, timestamps, bands, rows, cols = input_tensor.size()
-        fcn_input = input_tensor.view(batch * timestamps, bands, rows, cols)
-        fcn_output = self.fcn(fcn_input)
- 
-        crnn_input = fcn_output.view(batch, timestamps, -1, rows, cols)
-        preds = self.crnn(crnn_input)
-        return preds
 
 
 def get_model(model_name, **kwargs):
@@ -224,7 +237,6 @@ def get_model(model_name, **kwargs):
     
     elif model_name == 'fcn_crnn':
         num_bands = get_num_bands(kwargs)
-        print(kwargs.get('crnn_model_name'))
         model = make_fcn_clstm_model(fcn_input_size=(MIN_TIMESTAMPS, num_bands, GRID_SIZE, GRID_SIZE), 
                                      fcn_model_name=kwargs.get('fcn_model_name'),
                                      crnn_input_size=(MIN_TIMESTAMPS, kwargs.get('fcn_out_feats'), GRID_SIZE, GRID_SIZE),
@@ -239,6 +251,20 @@ def get_model(model_name, **kwargs):
     elif model_name == 'unet3d':
         num_bands = get_num_bands(kwargs)
         model = make_UNet3D_model(n_class = kwargs.get('num_classes'), n_channel = num_bands)
-  
+    elif model_name == 'mi_clstm':
+        num_s1_bands, num_s2_bands = get_num_s1_bands(kwargs), get_num_s2_bands(kwargs)
+        model = make_MI_CLSTM_model(s1_input_size=(MIN_TIMESTAMPS, num_s1_bands, GRID_SIZE, GRID_SIZE),
+                                    s2_input_size=(MIN_TIMESTAMPS, num_s2_bands, GRID_SIZE, GRID_SIZE),
+                                    unet_out_channels=kwargs.get('fcn_out_feats'),
+                                    hidden_dims=kwargs.get('hidden_dims'), 
+                                    lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
+                                    conv_kernel_size=kwargs.get('conv_kernel_size'), 
+                                    lstm_num_layers=kwargs.get('crnn_num_layers'), 
+                                    num_classes=kwargs.get('num_classes'),
+                                    bidirectional=kwargs.get('bidirectional'))
+    else:
+        raise ValueError(f"Model {model_name} unsupported, check `model_name` arg") 
+        
+
     return model
 
