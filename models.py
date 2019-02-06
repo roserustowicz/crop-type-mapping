@@ -192,7 +192,6 @@ def make_UNet3D_model(n_class, n_channel):
     model = model.cuda()
     return model
 
-
 def get_model(model_name, **kwargs):
     """ Get appropriate model based on model_name and input arguments
     Args: 
