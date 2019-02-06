@@ -48,7 +48,7 @@ INT_POWER_EXP = ["hidden_dims"]
 REAL_POWER_EXP = ["weight_decay", "lr"]
 INT_HP = ['batch_size', 'crnn_num_layers', 'gamma', 'patience']
 FLOAT_HP = ['momentum', 'weight_scale', 'percent_of_dataset']
-STRING_HP = ['optimizer']
+STRING_HP = ['optimizer', 'crnn_model_name']
 BOOL_HP = ['use_s1', 'use_s2', 'sample_w_clouds', 'include_clouds', 'include_doy', 'bidirectional', 'least_cloudy', 's2_num_bands']
 
 HPS = [INT_POWER_EXP, REAL_POWER_EXP, INT_HP, FLOAT_HP, STRING_HP, BOOL_HP]

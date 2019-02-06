@@ -15,6 +15,7 @@ import numpy as np
 import pickle 
 
 from constants import *
+from tqdm import tqdm
 import visualize
 
 def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes, country):
@@ -147,7 +148,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             for split in ['train', 'val'] if not args.eval_on_test else ['test']:
                 dl = dataloaders[split]
                 batch_num = 0
-                for inputs, targets, cloudmasks in dl:
+                for inputs, targets, cloudmasks in tqdm(dl):
                     with torch.set_grad_enabled(True):
                         inputs.to(args.device)
                         targets.to(args.device)

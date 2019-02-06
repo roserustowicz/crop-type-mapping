@@ -234,7 +234,7 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=Fal
     visdom_plot_many_metrics('classf1', split, f'{split}_per_class_f1-score', 'Epoch', 'per class f1-score', class_names, vis_data, vis)
 
     fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], class_names,
-                                     normalize=False,
+                                     normalize=True,
                                      title='{} confusion matrix, epoch {}'.format(split, epoch_num),
                                      cmap=plt.cm.Blues)
 

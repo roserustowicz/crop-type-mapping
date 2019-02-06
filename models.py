@@ -25,6 +25,7 @@ from modelling.baselines import make_rf_model, make_logreg_model, make_1d_nn_mod
 from modelling.recurrent_norm import RecurrentNorm2d
 from modelling.clstm_cell import ConvLSTMCell
 from modelling.clstm import CLSTM
+from modelling.cgru_segmenter import CGRUSegmenter
 from modelling.clstm_segmenter import CLSTMSegmenter
 from modelling.util import initialize_weights, get_num_bands, get_upsampling_weight, get_num_s1_bands, get_num_s2_bands
 from modelling.fcn8 import FCN8
@@ -39,8 +40,12 @@ class FCN_CRNN(nn.Module):
                        crnn_input_size, crnn_model_name, 
                        hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained):
         super(FCN_CRNN, self).__init__()
-        
-        self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
+        if crnn_model_name == "gru":
+            self.crnn = CGRUSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
+                                      conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
+        elif crnn_model_name == "clstm":
+            self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
+                                       conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
         
         if fcn_model_name == 'simpleCNN':
             self.fcn = simple_CNN(fcn_input_size, crnn_input_size[1])
