@@ -33,7 +33,7 @@ LOSS_WEIGHT = { 'ghana': GHANA_LOSS_WEIGHT, 'southsudan': SSUDAN_LOSS_WEIGHT, 't
 #CROP_LABELS = ['maize','groundnut', 'rice', 'soya bean', 'sorghum', 'yam', 'sesame', 'beans', 'sunflower', 'chick peas', 'wheat', 'other']
 SPLITS = ['train', 'val', 'test']
 NON_DL_MODELS = ['logreg', 'random_forest']
-DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn']
+DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm']
 S1_NUM_BANDS = 3
 S2_NUM_BANDS = 10
 GRID_SIZE = 64
@@ -48,7 +48,7 @@ INT_POWER_EXP = ["hidden_dims"]
 REAL_POWER_EXP = ["weight_decay", "lr"]
 INT_HP = ['batch_size', 'crnn_num_layers', 'gamma', 'patience']
 FLOAT_HP = ['momentum', 'weight_scale', 'percent_of_dataset']
-STRING_HP = ['optimizer']
+STRING_HP = ['optimizer', 'crnn_model_name']
 BOOL_HP = ['use_s1', 'use_s2', 'sample_w_clouds', 'include_clouds', 'include_doy', 'bidirectional', 'least_cloudy', 's2_num_bands']
 
 HPS = [INT_POWER_EXP, REAL_POWER_EXP, INT_HP, FLOAT_HP, STRING_HP, BOOL_HP]
