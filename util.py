@@ -316,11 +316,14 @@ def get_train_parser():
     parser.add_argument('--use_s1', type=str2bool,
                         help="use s1 data?",
                         default=True)
+    parser.add_argument('--use_s2', type=str2bool,
+                        help="use s2 data?",
+                        default=True)
     parser.add_argument('--s1_agg', type=str2bool,
                         help="aggregate s1 data across time?",
                         default=True)
-    parser.add_argument('--use_s2', type=str2bool,
-                        help="use s2 data?",
+    parser.add_argument('--s2_agg', type=str2bool,
+                        help="aggregate s2 data across time?",
                         default=True)
     parser.add_argument('--num_classes', type=int,
                         help="Number of crops to predict over",
