@@ -15,7 +15,6 @@ import preprocess
 from constants import *
 from random import shuffle
 
-import pdb
 
 def get_Xy(dl):
     """ 
