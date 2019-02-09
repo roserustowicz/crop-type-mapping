@@ -423,10 +423,7 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
            dates = json.load(f)['dates']
 
     """
-    if timestamps_first:
-        timestamps = img_stack.shape[0]
-    else:
-        timestamps = img_stack.shape[3]
+    timestamps = img_stack.shape[0] if timestamps_first else img_stack.shape[3]
    
     # Given a stack of cloud masks, remap it and use to compute scores
     if isinstance(cloud_stack,np.ndarray):
