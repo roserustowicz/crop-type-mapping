@@ -15,6 +15,7 @@ import preprocess
 from constants import *
 from random import shuffle
 
+import pdb
 
 def get_Xy(dl):
     """ 
@@ -63,6 +64,40 @@ def get_Xy_batch(inputs, targets, X, y):
                 y.append(labels)
     return X, y 
 
+def split_and_aggregate(arr, doys, ndays):
+    """
+    Aggregates an array along the time dimension, grouping by every ndays
+    
+    Args: 
+      arr - array of images of dimensions
+      doys - vector / list of days of year associated with images stored in arr
+      ndays - number of days to aggregate together
+    """
+    total_days = 364
+    obs_idxs = list(doys.astype(int) // ndays)
+    split_idxs = []
+    for idx in range(1, int(total_days//ndays)):
+        if idx in obs_idxs:
+            split_idxs.append(obs_idxs.index(idx))
+        elif idx == 1:
+            split_idxs.append(0)
+        else:
+            split_idxs.append(prev_split_idx)
+        prev_split_idx = split_idxs[-1]
+        
+    split_arr = np.split(arr, split_idxs, axis=3)
+    
+    composites = []
+    for a in split_arr:
+        if a.shape[3] == 0:
+            a = np.zeros((a.shape[0], a.shape[1], a.shape[2], 1))
+        cur_mean = np.mean(a, axis=3)
+        composites.append(np.expand_dims(cur_mean, axis=3))
+
+    new_arr = np.concatenate(composites, axis=3)
+    new_doys = np.asarray(list(range(0, total_days-ndays, ndays)))
+    return new_arr, new_doys
+
 class CropTypeDS(Dataset):
 
     def __init__(self, args, grid_path, split):
@@ -81,6 +116,7 @@ class CropTypeDS(Dataset):
         self.country = args.country
         self.num_grids = len(self.grid_list)
         self.use_s1 = args.use_s1
+        self.s1_agg = args.s1_agg
         self.use_s2 = args.use_s2
         self.num_classes = args.num_classes
         self.split = split
@@ -108,10 +144,15 @@ class CropTypeDS(Dataset):
             s2_doy = None
             if self.use_s1:
                 s1 = data['s1'][self.grid_list[idx]]
-                if self.normalize:
-                    s1 = preprocess.normalization(s1, 's1', self.country)
+
                 if self.include_doy:
                     s1_doy = data['s1_dates'][self.grid_list[idx]][()]
+
+                if self.s1_agg:
+                    s1, s1_doy = split_and_aggregate(s1, s1_doy, ndays=15)
+ 
+                if self.normalize:
+                    s1 = preprocess.normalization(s1, 's1', self.country)
                 s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed, all_samples=self.all_samples)
 
                 # Concatenate DOY bands
