@@ -70,9 +70,12 @@ class MI_CLSTM(nn.Module):
         s2_layer_output_list, s2_last_state_list = self.s2_clstm(clstm_s2_input)
         
         # gets last hidden state 
-        s1_final_state = s1_last_state_list[0][0]
-        s2_final_state = s2_last_state_list[0][0]
+#         s1_final_state = s1_last_state_list[0][0]
+#         s2_final_state = s2_last_state_list[0][0]
         
+        s1_final_state = torch.mean(s1_layer_output_list[0], dim=1)
+        s2_final_state = torch.mean(s2_layer_output_list[0], dim=1)
+    
         final_state = torch.cat((s1_final_state, s2_final_state), dim=1)
         
 #         assert False
