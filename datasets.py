@@ -194,7 +194,7 @@ class CropTypeDS(Dataset):
                     s2_doy = data['s2_dates'][self.grid_list[idx]][()]
 
                 if self.s2_agg:
-                    s2, s2_doy = split_and_aggregate(s2, s2_doy, 15, reduction='min')
+                    s2, s2_doy = split_and_aggregate(s2, s2_doy, 30, reduction='min')
 
                 if self.normalize:
                     s2 = preprocess.normalization(s2, 's2', self.country)
