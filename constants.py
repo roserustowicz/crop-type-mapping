@@ -19,15 +19,12 @@ GHANA_S2_DIR = GCP_DATA_DIR + '/ghana/s2_npy'
 GHANA_HDF5_PATH = LOCAL_DATA_DIR + '/ghana/data.hdf5'
 
 # LOSS WEIGHTS
-#GHANA_LOSS_WEIGHT = 1 - np.array([.1795, .5988, .1701, .1220])
 GHANA_LOSS_WEIGHT = 1 - np.array([.17, .56, .16, .11])
 GHANA_LOSS_WEIGHT = torch.tensor(GHANA_LOSS_WEIGHT, dtype=torch.float32).cuda()
 
-#SSUDAN_LOSS_WEIGHT = 1 - np.array([.7265, .1199, .0836, .0710])
 SSUDAN_LOSS_WEIGHT = 1 - np.array([.72, .11, .10, .07])
 SSUDAN_LOSS_WEIGHT = torch.tensor(SSUDAN_LOSS_WEIGHT, dtype=torch.float32).cuda()
 
-#TANZ_LOSS_WEIGHT = 1 - np.array([.53, .12, .1, .04, .04])
 TANZ_LOSS_WEIGHT = 1 - np.array([.64, .14, .12, .05, .05])
 TANZ_LOSS_WEIGHT = torch.tensor(TANZ_LOSS_WEIGHT, dtype=torch.float32).cuda()
 
