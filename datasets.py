@@ -123,6 +123,8 @@ class CropTypeDS(Dataset):
                 s2 = data['s2'][self.grid_list[idx]]
                 if self.s2_num_bands == 4:
                     s2 = s2[[0, 1, 2, 6], :, :, :] #B, G, R, NIR
+                elif self.s2_num_bands == 10:
+                    s2 = s2[:10, :, :, :]
                 elif self.s2_num_bands != 10:
                     print('s2_num_bands must be 4 or 10')
                 if self.normalize:
