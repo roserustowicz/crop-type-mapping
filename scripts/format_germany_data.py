@@ -21,6 +21,7 @@ crop_dict = {'1': 1, '2': 2, '3': 3, '5': 4, '8': 5, '9': 6, '12': 7, '13': 8,
              '15': 9, '16': 10, '17': 11, '19': 12, '22': 13, '23': 14, '24': 15, '25': 16, '26': 17} 
 
 fileids = [os.path.join(in_dir, f) for f in os.listdir(in_dir) if f.isdigit()]
+fileids.sort()
 
 for id_dir in fileids:
     print(id_dir)
@@ -50,7 +51,7 @@ for id_dir in fileids:
         with rasterio.open(fname_20m) as src:
             imgs_20m.append(np.expand_dims(src.read(), 3))
     imgs_20m = np.concatenate(imgs_20m, axis=3)
-    imgs_20m = resize(imgs_20m, (imgs_20m.shape[0], imgs_10m.shape[1], imgs_10m.shape[2], imgs_20m.shape[3]), mode='reflect')
+    imgs_20m = 100000 * resize(imgs_20m, (imgs_20m.shape[0], imgs_10m.shape[1], imgs_10m.shape[2], imgs_20m.shape[3]), mode='reflect')
 
     # Create timestack of 60m images
     imgs_60m = []
@@ -58,7 +59,7 @@ for id_dir in fileids:
         with rasterio.open(fname_60m) as src:
             imgs_60m.append(np.expand_dims(src.read(), 3))
     imgs_60m = np.concatenate(imgs_60m, axis=3)
-    imgs_60m = resize(imgs_60m, (imgs_20m.shape[0], imgs_10m.shape[1], imgs_10m.shape[2], imgs_20m.shape[3]), mode='reflect')
+    imgs_60m = 100000 * resize(imgs_60m, (imgs_20m.shape[0], imgs_10m.shape[1], imgs_10m.shape[2], imgs_60m.shape[3]), mode='reflect')
     
     # Reorder and concatenate all bands
     all_bands = [np.expand_dims(imgs_10m[0], 0), np.expand_dims(imgs_10m[1], 0), np.expand_dims(imgs_10m[2], 0),
