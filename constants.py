@@ -40,8 +40,6 @@ SPLITS = ['train', 'val', 'test']
 NON_DL_MODELS = ['logreg', 'random_forest']
 DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm']
 S1_NUM_BANDS = 3
-S2_NUM_BANDS = 10
-GRID_SIZE = 48
 MIN_TIMESTAMPS = 14
 
 LABEL_DIR = "raster_npy"
