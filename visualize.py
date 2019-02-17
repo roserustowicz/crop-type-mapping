@@ -202,7 +202,7 @@ def clip_boi(boi):
 def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=False, save_dir=None):
     """ Record values for epoch in visdom
     """
-    if country in ['ghana', 'southsudan', 'tanzania']:
+    if country in ['ghana', 'southsudan', 'tanzania', 'germany']:
         class_names = CROPS[country]
     else:
         raise ValueError(f"Country {country} not supported in visualize.py, record_epoch")
@@ -248,7 +248,10 @@ def visualize_rgb(argmax_array, num_classes, class_colors=None):
     rgb_output = np.zeros((argmax_array.shape[0], 3, argmax_array.shape[2], argmax_array.shape[3]))
 
     if class_colors == None:
-        rgbs = [ [255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 255, 255], [0, 0, 255] ]
+        rgbs = [ [255, 0, 0], [255, 255, 0], [0, 255, 0], [0, 255, 255], [0, 0, 255], 
+                 [192, 0, 0], [192, 192, 0], [0, 192, 0], [0, 192, 192], [0, 0, 192],
+                 [128, 0, 0], [128, 128, 0], [0, 128, 0], [0, 128, 128], [0, 0, 128],
+                 [64, 0, 0], [64, 64, 0], [0, 64, 0], [0, 64, 64], [0, 0, 64] ]
         rgbs = rgbs[:num_classes]
  
     assert len(rgbs) == num_classes
