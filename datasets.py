@@ -89,6 +89,7 @@ class CropTypeDS(Dataset):
         self.sample_w_clouds = args.sample_w_clouds
         self.include_clouds = args.include_clouds
         self.include_doy = args.include_doy
+        self.num_timesteps = args.num_timesteps
         self.all_samples = args.all_samples
         ## Timeslice for FCN
         self.timeslice = args.time_slice
@@ -112,7 +113,7 @@ class CropTypeDS(Dataset):
                     s1 = preprocess.normalization(s1, 's1', self.country)
                 if self.include_doy:
                     s1_doy = data['s1_dates'][self.grid_list[idx]][()]
-                s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed, all_samples=self.all_samples)
+                s1, s1_doy, _ = preprocess.sample_timeseries(s1, self.num_timesteps, s1_doy, seed=self.seed, all_samples=self.all_samples)
 
                 # Concatenate DOY bands
                 if s1_doy is not None and self.include_doy:
@@ -131,7 +132,7 @@ class CropTypeDS(Dataset):
                     cloudmasks = data['cloudmasks'][self.grid_list[idx]][()]
                 if self.include_doy:
                     s2_doy = data['s2_dates'][self.grid_list[idx]][()]
-                s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, MIN_TIMESTAMPS, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, sample_w_clouds=self.sample_w_clouds, all_samples=self.all_samples)
+                s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, self.num_timesteps, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, sample_w_clouds=self.sample_w_clouds, all_samples=self.all_samples)
 
                 # Concatenate cloud mask bands
                 if cloudmasks is not None and self.include_clouds:
@@ -152,17 +153,17 @@ class CropTypeDS(Dataset):
         
         if cloudmasks is None:
             cloudmasks = False
-        if self.split == 'train':
-            x_start = np.random.randint(0, 32)
-            y_start = np.random.randint(0, 32)
-#             while torch.sum(label[:, x_start:x_start+32, y_start:y_start+32]) == 0:
-#                 x_start = np.random.randint(0, 32)
-#                 y_start = np.random.randint(0, 32)
-            label = label[:, x_start:x_start+32, y_start:y_start+32]
-            grid = grid[:, :, x_start:x_start+32, y_start:y_start+32]
+#         if self.split == 'train':
+#             x_start = np.random.randint(0, 32)
+#             y_start = np.random.randint(0, 32)
+# #             while torch.sum(label[:, x_start:x_start+32, y_start:y_start+32]) == 0:
+# #                 x_start = np.random.randint(0, 32)
+# #                 y_start = np.random.randint(0, 32)
+#             label = label[:, x_start:x_start+32, y_start:y_start+32]
+#             grid = grid[:, :, x_start:x_start+32, y_start:y_start+32]
 
-            if cloudmasks is not None:
-                cloudmasks = cloudmasks[:, x_start:x_start+32, y_start:y_start+32, :]
+#             if cloudmasks is not None:
+#                 cloudmasks = cloudmasks[:, x_start:x_start+32, y_start:y_start+32, :]
 
         return grid, label, cloudmasks
 

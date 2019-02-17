@@ -377,6 +377,8 @@ def get_train_parser():
                          help="Whether to use least cloudy samples (True) or sample from cloudiness (False)")
     parser.add_argument('--include_doy', type=str2bool, default=True,
                          help="Include day of year as input feature")
+    parser.add_argument('--num_timesteps', type=int, default=25,
+                        help="Number of timesteps to include")
     # Args for CLSTM model
     parser.add_argument('--hidden_dims', type=int, 
                         help="Number of channels in hidden state used in convolutional RNN",
@@ -393,6 +395,8 @@ def get_train_parser():
     parser.add_argument('--bidirectional', type=str2bool,
                         help='Use bidirectional?',
                         default=False)
+    parser.add_argument('--avg_hidden_states', type=bool,
+                        help="average hidden states for each timestep?")
     # Arguments for number of bands to use
     parser.add_argument('--s2_num_bands', type=int, default=10,
                          help="Number of bands to use from Sentinel-2")

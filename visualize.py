@@ -112,7 +112,7 @@ def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split,
     if torch.sum(clouds) != 0 and len(clouds.shape) > 1: 
         best = np.argmax(np.mean(np.mean(clouds.numpy()[:, 0, :, :, :], axis=1), axis=1), axis=1)
     else:
-        best = np.random.randint(0, high=MIN_TIMESTAMPS, size=(inputs.shape[0],))
+        best = np.random.randint(0, high=inputs.shape[1], size=(inputs.shape[0],))
     best = np.zeros_like(best)
 
     # Get bands of interest (boi) to show best rgb version of s2 or vv, vh, vv version of s1
@@ -128,7 +128,7 @@ def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split,
     elif model_name in ['fcn', 'unet'] and time_slice is not None:
         boi = inputs[:, start_idx+add_doy:end_idx+add_doy, :, :]
     elif model_name in ['unet'] and time_slice is None:
-        inputs = inputs.view(inputs.shape[0], MIN_TIMESTAMPS, -1, inputs.shape[2], inputs.shape[3])  
+        inputs = inputs.view(inputs.shape[0], inputs.shape[1], -1, inputs.shape[2], inputs.shape[3])  
         for idx, b in enumerate(best):
             boi.append(inputs[idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
         boi = torch.cat(boi, dim=0)

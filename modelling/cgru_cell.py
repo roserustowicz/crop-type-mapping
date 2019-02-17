@@ -13,7 +13,7 @@ class ConvGRUCell(nn.Module):
     """
         
     """
-    def __init__(self, input_size, input_dim, hidden_dim, kernel_size, bias):
+    def __init__(self, input_size, input_dim, hidden_dim, num_timesteps, kernel_size, bias):
         """
         Initialize ConvGRU cell.
         
@@ -36,7 +36,7 @@ class ConvGRUCell(nn.Module):
         self.height, self.width = input_size
         self.input_dim  = input_dim
         self.hidden_dim = hidden_dim
-
+        self.num_timesteps = num_timesteps
         self.kernel_size = kernel_size
         self.padding     = kernel_size[0] // 2, kernel_size[1] // 2
         self.bias        = bias
@@ -65,8 +65,8 @@ class ConvGRUCell(nn.Module):
                              padding=self.padding,
                              bias=self.bias)
         
-        self.h_norm = RecurrentNorm2d(2 * self.hidden_dim, MIN_TIMESTAMPS)
-        self.input_norm = RecurrentNorm2d(2 * self.hidden_dim, MIN_TIMESTAMPS)
+        self.h_norm = RecurrentNorm2d(2 * self.hidden_dim, self.num_timesteps)
+        self.input_norm = RecurrentNorm2d(2 * self.hidden_dim, self.num_timesteps)
         
         initialize_weights(self)
 

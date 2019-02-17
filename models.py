@@ -38,14 +38,15 @@ from modelling.multi_input_clstm import MI_CLSTM
 class FCN_CRNN(nn.Module):
     def __init__(self, fcn_input_size, fcn_model_name, 
                        crnn_input_size, crnn_model_name, 
-                       hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained):
+                       hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states, 
+                       num_classes, bidirectional, pretrained):
         super(FCN_CRNN, self).__init__()
         if crnn_model_name == "gru":
             self.crnn = CGRUSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
-                                      conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
+                                      conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states)
         elif crnn_model_name == "clstm":
             self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
-                                       conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
+                                       conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states)
         
         if fcn_model_name == 'simpleCNN':
             self.fcn = simple_CNN(fcn_input_size, crnn_input_size[1])
@@ -153,7 +154,10 @@ def make_UNet_model(n_class, n_channel, for_fcn=False, pretrained=True):
         
     return model
 
-def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained):
+def make_fcn_clstm_model(fcn_input_size, fcn_model_name, 
+                         crnn_input_size, crnn_model_name, 
+                         hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states,
+                         num_classes, bidirectional, pretrained):
     """ Defines a fully-convolutional-network + CLSTM model
     Args:
       fcn_input_size - (tuple) input dimensions for FCN model
@@ -173,7 +177,9 @@ def make_fcn_clstm_model(fcn_input_size, fcn_model_name, crnn_input_size, crnn_m
       returns the model!
     """
 
-    model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, pretrained)
+    model = FCN_CRNN(fcn_input_size, fcn_model_name, 
+                     crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, 
+                     avg_hidden_states, num_classes, bidirectional, pretrained)
     model = model.cuda()
 
     return model
@@ -217,10 +223,11 @@ def get_model(model_name, **kwargs):
 
     elif model_name == 'bidir_clstm':
         num_bands = get_num_bands(kwargs)
+        num_timesteps = kwargs.get('num_timesteps')
 
         # TODO: change the timestamps passed in to be more flexible (i.e allow specify variable length / fixed / truncuate / pad)
         # TODO: don't hardcode values
-        model = make_bidir_clstm_model(input_size=(MIN_TIMESTAMPS, num_bands, GRID_SIZE, GRID_SIZE), 
+        model = make_bidir_clstm_model(input_size=(num_timesteps, num_bands, GRID_SIZE, GRID_SIZE), 
                                        hidden_dims=kwargs.get('hidden_dims'), 
                                        lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
                                        conv_kernel_size=kwargs.get('conv_kernel_size'), 
@@ -235,20 +242,22 @@ def get_model(model_name, **kwargs):
         num_bands = get_num_bands(kwargs)
         
         if kwargs.get('time_slice') is None:
-            model = make_UNet_model(n_class=kwargs.get('num_classes'), n_channel = num_bands*MIN_TIMESTAMPS)
+            model = make_UNet_model(n_class=kwargs.get('num_classes'), n_channel = num_bands*num_timesteps)
         else: 
             model = make_UNet_model(n_class=kwargs.get('num_classes'), n_channel = num_bands)
     
     elif model_name == 'fcn_crnn':
-        num_bands = get_num_bands(kwargs)
-        model = make_fcn_clstm_model(fcn_input_size=(MIN_TIMESTAMPS, num_bands, GRID_SIZE, GRID_SIZE), 
+        num_bands = get_num_bands(kwargs) 
+        num_timesteps = kwargs.get('num_timesteps')
+        model = make_fcn_clstm_model(fcn_input_size=(num_timesteps, num_bands, GRID_SIZE, GRID_SIZE), 
                                      fcn_model_name=kwargs.get('fcn_model_name'),
-                                     crnn_input_size=(MIN_TIMESTAMPS, kwargs.get('fcn_out_feats'), GRID_SIZE, GRID_SIZE),
+                                     crnn_input_size=(num_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE, GRID_SIZE),
                                      crnn_model_name=kwargs.get('crnn_model_name'),
                                      hidden_dims=kwargs.get('hidden_dims'), 
                                      lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
                                      conv_kernel_size=kwargs.get('conv_kernel_size'), 
                                      lstm_num_layers=kwargs.get('crnn_num_layers'), 
+                                     avg_hidden_states=kwargs.get('avg_hidden_states'), 
                                      num_classes=kwargs.get('num_classes'),
                                      bidirectional=kwargs.get('bidirectional'),                                       
                                      pretrained = kwargs.get('pretrained'))
@@ -257,13 +266,14 @@ def get_model(model_name, **kwargs):
         model = make_UNet3D_model(n_class = kwargs.get('num_classes'), n_channel = num_bands)
     elif model_name == 'mi_clstm':
         num_s1_bands, num_s2_bands = get_num_s1_bands(kwargs), get_num_s2_bands(kwargs)
-        model = make_MI_CLSTM_model(s1_input_size=(MIN_TIMESTAMPS, num_s1_bands, GRID_SIZE, GRID_SIZE),
-                                    s2_input_size=(MIN_TIMESTAMPS, num_s2_bands, GRID_SIZE, GRID_SIZE),
+        model = make_MI_CLSTM_model(s1_input_size=(num_timesteps, num_s1_bands, GRID_SIZE, GRID_SIZE),
+                                    s2_input_size=(num_timesteps, num_s2_bands, GRID_SIZE, GRID_SIZE),
                                     unet_out_channels=kwargs.get('fcn_out_feats'),
                                     hidden_dims=kwargs.get('hidden_dims'), 
                                     lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
                                     conv_kernel_size=kwargs.get('conv_kernel_size'), 
                                     lstm_num_layers=kwargs.get('crnn_num_layers'), 
+                                    avg_hidden_states=kwargs.get('avg_hidden_states'), 
                                     num_classes=kwargs.get('num_classes'),
                                     bidirectional=kwargs.get('bidirectional'))
     else:
