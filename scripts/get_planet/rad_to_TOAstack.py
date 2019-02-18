@@ -20,6 +20,7 @@ import matplotlib.colors as colors
 sys.path.insert(0, '../')
 import mk_data_cube 
 
+import pdb
 
 def get_radiance(filename):
     ''' 
@@ -53,7 +54,7 @@ def extract_coeffs(xml_fname):
             value = node.getElementsByTagName("ps:reflectanceCoefficient")[0].firstChild.data
             coeffs[i] = float(value)
 
-    #print("Conversion coefficients:", coeffs)
+    print("Conversion coefficients:", coeffs)
     return coeffs
 
 def rad2toa(img_fname, xml_fname):
@@ -66,21 +67,21 @@ def rad2toa(img_fname, xml_fname):
     
     if any(coeffs):
         # Multiply the Digital Number (DN) values in each band by the TOA reflectance coefficients
-        scale = 10000
-        blue_toa = np.expand_dims(scale * rad['blue'] * coeffs[1], axis=0)
-        green_toa = np.expand_dims(scale * rad['green'] * coeffs[2], axis=0)
-        red_toa = np.expand_dims(scale * rad['red'] * coeffs[3], axis=0)
-        nir_toa = np.expand_dims(scale * rad['nir'] * coeffs[4], axis=0)
+        scale = 10000.
+        blue_toa = np.expand_dims(scale * (rad['blue'] * coeffs[1]), axis=0)
+        green_toa = np.expand_dims(scale * (rad['green'] * coeffs[2]), axis=0)
+        red_toa = np.expand_dims(scale * (rad['red'] * coeffs[3]), axis=0)
+        nir_toa = np.expand_dims(scale * (rad['nir'] * coeffs[4]), axis=0)
 
-        toa = np.concatenate([red_toa, green_toa, blue_toa, nir_toa], axis=0)
-        #print("Red band radiance is from {} to {}".format(np.amin(band_red_radiance), np.amax(band_red_radiance)))
-        #print("Red band reflectance is from {} to {}".format(np.amin(band_red_reflectance), np.amax(band_red_reflectance)))
+        toa = np.concatenate([blue_toa, green_toa, red_toa, nir_toa], axis=0)
+        print("Red band radiance is from {} to {}".format(np.amin(rad['red']), np.amax(rad['red'])))
+        print("Red band reflectance is from {} to {}".format(np.amin(red_toa), np.amax(red_toa)))
         return toa
     else:
         return None
 
 def main(args):
-
+    #pdb.set_trace()
     # Get lists of imagery and xml files
     cur_path = os.path.join(args.home, args.country, args.source)
     files = [os.path.join(cur_path, f) for f in os.listdir(cur_path) if f.endswith('.tif')]
@@ -106,6 +107,9 @@ def main(args):
         data_array = []
         npix = []
         for idx, fname in enumerate(cur_grid_files):
+            print('img: ', fname)
+            print('xml: ', cur_grid_xmls[idx])
+ 
             statinfo = os.stat(fname)
             # Check if tif file is empty
             if statinfo.st_size == 0:
@@ -152,22 +156,28 @@ def main(args):
         # Check that all images in list have the same height / width
         if len(np.unique(npix)) == 1:
             data_array = np.concatenate(data_array, axis=3) 
+            data_array = data_array.astype(np.uint16)
+            print('min in dataarray: ', np.min(data_array))
+            print('max in dataarray: ', np.max(data_array))
             np.save(output_fname + '.npy', data_array)
         else:
             cur_npix = np.max(np.unique(npix))
             data_tmp = np.zeros((args.bands, cur_npix, cur_npix, len(data_array)))
-            for idx, arr in enumerate(data_array):
-                data_tmp[:, :arr.shape[1], :arr.shape[2], idx] = np.squeeze(arr)
+            for arr_idx, arr in enumerate(data_array):
+                data_tmp[:, :arr.shape[1], :arr.shape[2], arr_idx] = np.squeeze(arr)
+            print('min in dataarray: ', np.min(data_tmp))
+            print('max in dataarray: ', np.max(data_tmp))
+            data_tmp = data_tmp.astype(np.uint16)
             np.save(output_fname + '.npy', data_tmp)
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--home', type=str,
                         help='Path to directory containing data.',
-                        default='/home/roserustowicz/croptype_data_local/data')
+                        default='/home/data')
     parser.add_argument('--country', type=str,
                         help='Country of interest: "ghana", "southsudan", "tanzania"',
-                        default='tanzania')
+                        default='ghana')
     parser.add_argument('--source', type=str,
                         help='Satellite source.',
                         default='planet')
