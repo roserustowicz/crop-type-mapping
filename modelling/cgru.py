@@ -17,10 +17,8 @@ class CGRU(nn.Module):
         """
 
         super(CGRU, self).__init__()
+        (self.num_timesteps, self.start_num_channels, self.height, self.width) = input_size
 
-        self.height = input_size[2]
-        self.width = input_size[3]
-        self.start_num_channels = input_size[1]
         self.gru_num_layers = gru_num_layers
         self.bias = bias
         
@@ -49,6 +47,7 @@ class CGRU(nn.Module):
             cell_list.append(ConvGRUCell(input_size=(self.height, self.width),
                                          input_dim = cur_input_dim,
                                          hidden_dim = self.hidden_dims[i],
+                                         num_timesteps = self.num_timesteps,
                                          kernel_size = self.kernel_sizes[i],
                                          bias=self.bias))
 

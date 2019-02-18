@@ -5,7 +5,7 @@ File that houses the dataset wrappers we have.
 """
 
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Sampler
 import pickle
 import h5py
 import numpy as np
@@ -144,6 +144,7 @@ class CropTypeDS(Dataset):
         self.sample_w_clouds = args.sample_w_clouds
         self.include_clouds = args.include_clouds
         self.include_doy = args.include_doy
+        self.num_timesteps = args.num_timesteps
         self.all_samples = args.all_samples
         ## Timeslice for FCN
         self.timeslice = args.time_slice
@@ -228,8 +229,51 @@ class CropTypeDS(Dataset):
         
         if cloudmasks is None:
             cloudmasks = False
+#         if self.split == 'train':
+#             x_start = np.random.randint(0, 32)
+#             y_start = np.random.randint(0, 32)
+# #             while torch.sum(label[:, x_start:x_start+32, y_start:y_start+32]) == 0:
+# #                 x_start = np.random.randint(0, 32)
+# #                 y_start = np.random.randint(0, 32)
+#             label = label[:, x_start:x_start+32, y_start:y_start+32]
+#             grid = grid[:, :, x_start:x_start+32, y_start:y_start+32]
+
+#             if cloudmasks is not None:
+#                 cloudmasks = cloudmasks[:, x_start:x_start+32, y_start:y_start+32, :]
+
         return grid, label, cloudmasks
-      
+
+class CropTypeBatchSampler(Sampler):
+    """
+        Groups sequences of similiar length into the same batch to prevent unnecessary computation.
+    """
+    def __init__(self, dataset, batch_size):
+        super(CropTypeBatchSampler, self).__init__(dataset)
+        batches = []
+        count = 1
+        cur_list = []
+        for i in range(len(dataset)):
+            if count % batch_size != 0:
+                cur_list.append(i)
+            else:
+                batches.append(cur_list)
+                cur_list = []
+            count += 1
+#           for i in range(len(dataset)):
+#             grid, label, cloudmasks = dataset[i]
+#             batches.append(dataset[i])
+        print(len(batches))
+        self.batches = batches
+        
+    def __iter__(self):
+        for b in self.batches:
+            yield(b)
+        
+    def __len__(self):
+        return len(self.batches)
+
+
+
 class GridDataLoader(DataLoader):
 
     def __init__(self, args, grid_path, split):
