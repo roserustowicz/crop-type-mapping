@@ -156,8 +156,8 @@ def main(args):
         else:
             cur_npix = np.max(np.unique(npix))
             data_tmp = np.zeros((args.bands, cur_npix, cur_npix, len(data_array)))
-            for arr_idx in data_array:
-                data_tmp[:, :data_array.shape[1], :data_array.shape[2], arr_idx] = data_array
+            for idx, arr in enumerate(data_array):
+                data_tmp[:, :arr.shape[1], :arr.shape[2], idx] = np.squeeze(arr)
             np.save(output_fname + '.npy', data_tmp)
 
 if __name__ =='__main__':
@@ -167,17 +167,13 @@ if __name__ =='__main__':
                         default='/home/roserustowicz/croptype_data_local/data')
     parser.add_argument('--country', type=str,
                         help='Country of interest: "ghana", "southsudan", "tanzania"',
-                        default='ghana')
+                        default='tanzania')
     parser.add_argument('--source', type=str,
                         help='Satellite source.',
                         default='planet')
     parser.add_argument('--bands', type=int,
                         help='Number of image bands.',
                         default=4)
-    parser.add_argument('--npix', type=int,
-                        help='Img height, width.',
-                        default=214)
-
     args = parser.parse_args()
     main(args)
 
