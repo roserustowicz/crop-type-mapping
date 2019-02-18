@@ -113,9 +113,9 @@ def main(args):
         data_array = []
         npix = []
         for idx, fname in enumerate(cur_grid_files):
-            statinfo_img = os.stat(fname)
+            statinfo = os.stat(fname)
             # Check if tif file is empty
-            if statinfo_img.st_size == 0:
+            if statinfo.st_size == 0:
                 logfile=open("logfile_errors.txt","a+")
                 logfile.write("Image is empty, passed: " + fname + "\n")
                 logfile.close()
