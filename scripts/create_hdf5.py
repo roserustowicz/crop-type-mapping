@@ -70,6 +70,7 @@ def create_hdf5(data_dir, output_dir):
             hdf5_filename = f'/{group_name}/{grid_num}'
             hdf5_file.create_dataset(hdf5_filename, data=data, dtype='i2', chunks=True)
             print(f"Processed {os.path.join(group_name, filepath)} as {hdf5_filename}")
+
     hdf5_file.close()
 
 
