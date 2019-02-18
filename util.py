@@ -315,9 +315,15 @@ def get_train_parser():
                         default=True)
     parser.add_argument('--use_s1', type=str2bool,
                         help="use s1 data?",
-                        default=False)
+                        default=True)
     parser.add_argument('--use_s2', type=str2bool,
                         help="use s2 data?",
+                        default=True)
+    parser.add_argument('--s1_agg', type=str2bool,
+                        help="aggregate s1 data across time?",
+                        default=True)
+    parser.add_argument('--s2_agg', type=str2bool,
+                        help="aggregate s2 data across time?",
                         default=True)
     parser.add_argument('--num_classes', type=int,
                         help="Number of crops to predict over",
@@ -414,4 +420,6 @@ def get_train_parser():
     parser.add_argument('--percent_of_dataset', type=float, default=1)
     parser.add_argument('--all_samples', type=str2bool, default=False)
     parser.add_argument('--num_repeat', type=int, default=1)
+    parser.add_argument('--grid_size', type=int, default=64,   
+                        help="Width and height of input grids")
     return parser

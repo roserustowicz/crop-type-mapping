@@ -19,7 +19,14 @@ class CLSTMSegmenter(nn.Module):
         self.clstm = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers)
         
         self.bidirectional = bidirectional
+
         self.avg_hidden_states = avg_hidden_states
+
+        
+#         self.attention_conv_proj = nn.Conv2d(in_channels=in_channels, out_channels=1, kernel_size=conv_kernel_size, padding=int((conv_kernel_size-1) / 2))
+        
+#         self.crop_encs = nn.Parameter(torch.randn())
+#         self.attention_matrix = nn.Parameter(torch.randn((in_channels, in_channels)))
         
         in_channels = hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))
@@ -29,7 +36,6 @@ class CLSTMSegmenter(nn.Module):
     def forward(self, inputs):
         layer_output_list, last_state_list = self.clstm(inputs)
         final_state = last_state_list[0][0] if not self.avg_hidden_states else torch.mean(layer_output_list[0], dim=1)
-#         print(last_state_list[0][0].shape, torch.mean(layer_output_list[0], dim=1).shape)
         if self.bidirectional:
             rev_inputs = torch.tensor(inputs.cpu().detach().numpy()[::-1].copy(), dtype=torch.float32).cuda()
             rev_layer_output_list, rev_last_state_list = self.clstm(rev_inputs)
@@ -39,3 +45,5 @@ class CLSTMSegmenter(nn.Module):
         preds = torch.log(preds)
 
         return preds
+
+        

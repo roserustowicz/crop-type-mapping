@@ -228,6 +228,7 @@ def get_model(model_name, **kwargs):
         # TODO: change the timestamps passed in to be more flexible (i.e allow specify variable length / fixed / truncuate / pad)
         # TODO: don't hardcode values
         model = make_bidir_clstm_model(input_size=(num_timesteps, num_bands, GRID_SIZE, GRID_SIZE), 
+
                                        hidden_dims=kwargs.get('hidden_dims'), 
                                        lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
                                        conv_kernel_size=kwargs.get('conv_kernel_size'), 
