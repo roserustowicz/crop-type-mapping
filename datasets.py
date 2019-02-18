@@ -174,7 +174,9 @@ class CropTypeDS(Dataset):
                 
                 if self.normalize:
                     s1 = preprocess.normalization(s1, 's1', self.country)
-                s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed, all_samples=self.all_samples)
+                
+                if not self.s1_agg:
+                    s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed, all_samples=self.all_samples)
 
                 # Concatenate DOY bands
                 if s1_doy is not None and self.include_doy:
@@ -203,7 +205,9 @@ class CropTypeDS(Dataset):
                 
                 if self.include_clouds:
                     cloudmasks = data['cloudmasks'][self.grid_list[idx]][()]
-                s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, MIN_TIMESTAMPS, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, sample_w_clouds=self.sample_w_clouds, all_samples=self.all_samples)
+                
+                if not self.s2_agg:
+                    s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, MIN_TIMESTAMPS, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, sample_w_clouds=self.sample_w_clouds, all_samples=self.all_samples)
 
                 # Concatenate cloud mask bands
                 if cloudmasks is not None and self.include_clouds:
