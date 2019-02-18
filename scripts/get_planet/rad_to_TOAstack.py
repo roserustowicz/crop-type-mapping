@@ -20,8 +20,6 @@ import matplotlib.colors as colors
 sys.path.insert(0, '../')
 import mk_data_cube 
 
-import pdb
-
 def get_radiance(filename):
     ''' 
     2.) Extract data from each spectral band:
@@ -43,7 +41,14 @@ def extract_coeffs(xml_fname):
     '''
     3.) Extract the coefficients from xml file
     '''
-    xmldoc = minidom.parse(xml_fname)
+    try:
+        xmldoc = minidom.parse(xml_fname)
+    except:
+        logfile=open("logfile_errors.txt","a+")
+        logfile.write("XML parse error, passed: " + xml_fname + "\n")
+        logfile.close()
+        return None
+        
     nodes = xmldoc.getElementsByTagName("ps:bandSpecificMetadata")
     # XML parser refers to bands by numbers 1-4
     coeffs = {}
@@ -54,7 +59,7 @@ def extract_coeffs(xml_fname):
             value = node.getElementsByTagName("ps:reflectanceCoefficient")[0].firstChild.data
             coeffs[i] = float(value)
 
-    print("Conversion coefficients:", coeffs)
+    #print("Conversion coefficients:", coeffs)
     return coeffs
 
 def rad2toa(img_fname, xml_fname):
@@ -64,7 +69,9 @@ def rad2toa(img_fname, xml_fname):
 
     rad = get_radiance(img_fname)
     coeffs = extract_coeffs(xml_fname)
-    
+   
+    if coeffs is None:
+        return None 
     if any(coeffs):
         # Multiply the Digital Number (DN) values in each band by the TOA reflectance coefficients
         scale = 10000.
@@ -74,14 +81,13 @@ def rad2toa(img_fname, xml_fname):
         nir_toa = np.expand_dims(scale * (rad['nir'] * coeffs[4]), axis=0)
 
         toa = np.concatenate([blue_toa, green_toa, red_toa, nir_toa], axis=0)
-        print("Red band radiance is from {} to {}".format(np.amin(rad['red']), np.amax(rad['red'])))
-        print("Red band reflectance is from {} to {}".format(np.amin(red_toa), np.amax(red_toa)))
+        #print("Red band radiance is from {} to {}".format(np.amin(rad['red']), np.amax(rad['red'])))
+        #print("Red band reflectance is from {} to {}".format(np.amin(red_toa), np.amax(red_toa)))
         return toa
     else:
         return None
 
 def main(args):
-    #pdb.set_trace()
     # Get lists of imagery and xml files
     cur_path = os.path.join(args.home, args.country, args.source)
     files = [os.path.join(cur_path, f) for f in os.listdir(cur_path) if f.endswith('.tif')]
@@ -107,12 +113,9 @@ def main(args):
         data_array = []
         npix = []
         for idx, fname in enumerate(cur_grid_files):
-            print('img: ', fname)
-            print('xml: ', cur_grid_xmls[idx])
- 
-            statinfo = os.stat(fname)
+            statinfo_img = os.stat(fname)
             # Check if tif file is empty
-            if statinfo.st_size == 0:
+            if statinfo_img.st_size == 0:
                 logfile=open("logfile_errors.txt","a+")
                 logfile.write("Image is empty, passed: " + fname + "\n")
                 logfile.close()
@@ -177,7 +180,7 @@ if __name__ =='__main__':
                         default='/home/data')
     parser.add_argument('--country', type=str,
                         help='Country of interest: "ghana", "southsudan", "tanzania"',
-                        default='ghana')
+                        default='southsudan')
     parser.add_argument('--source', type=str,
                         help='Satellite source.',
                         default='planet')
