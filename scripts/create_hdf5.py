@@ -23,6 +23,7 @@ def get_grid_num(filename, ext, group_name):
         grid_num = filename.split('_')[-2]
     else:
         grid_num = None
+    print(grid_num)
     return grid_num
 
 def create_hdf5(data_dir, output_dir):
@@ -32,9 +33,10 @@ def create_hdf5(data_dir, output_dir):
         data_dir - (string) path to directory containing data which has three subdirectories: s1, s2, masks
         output_dir - (string) path to output directory
     """
+    count = 0
     hdf5_file = h5py.File(os.path.join(output_dir, 'data.hdf5'), 'a')
     # subdivide the hdf5 directory into grids and masks
-    for group_name in ['s1', 's2', 'labels', 'cloudmasks', 's1_dates', 's2_dates']:
+    for group_name in ['s2', 'labels', 's2_dates']:
         if group_name not in hdf5_file:
             hdf5_file.create_group(f'/{group_name}')
 
@@ -56,6 +58,7 @@ def create_hdf5(data_dir, output_dir):
             if ext == 'npy':
                 data = np.load(os.path.join(data_dir, actual_dir_name, filepath))
             elif ext == 'json':
+                count += 1
                 # open json of dates
                 with open(os.path.join(data_dir, actual_dir_name, filepath)) as f:
                     dates = json.load(f)['dates']
@@ -65,7 +68,7 @@ def create_hdf5(data_dir, output_dir):
             hdf5_filename = f'/{group_name}/{grid_num}'
             hdf5_file.create_dataset(hdf5_filename, data=data, dtype='i2', chunks=True)
             print(f"Processed {os.path.join(group_name, filepath)} as {hdf5_filename}")
-
+            print(count)
     hdf5_file.close()
 
 
@@ -73,10 +76,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,
                         help='Path to directory containing data.',
-                        default='/home/data/southsudan/')
+                        default='/home/data/germany/')
     parser.add_argument('--output_dir', type=str,
                         help='Path to directory to output the hdf5 file.',
-                        default='/home/data/southsudan/')
+                        default='/home/data/germany/')
 
     args = parser.parse_args()
     create_hdf5(args.data_dir, args.output_dir)
