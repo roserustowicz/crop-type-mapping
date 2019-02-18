@@ -63,6 +63,59 @@ def get_Xy_batch(inputs, targets, X, y):
                 y.append(labels)
     return X, y 
 
+def split_and_aggregate(arr, doys, ndays, reduction='avg'):
+    """
+    Aggregates an array along the time dimension, grouping by every ndays
+    
+    Args: 
+      arr - array of images of dimensions
+      doys - vector / list of days of year associated with images stored in arr
+      ndays - number of days to aggregate together
+    """
+    total_days = 364
+    
+    # Get index of observations corresponding to time bins
+    # // ndays gives index from 0 to total_days // ndays
+    obs_idxs = list(doys.astype(int) // ndays)
+    split_idxs = []
+    # Get the locations within the obs_idxs vector that change
+    # to a new time bin (will be used for splitting)
+    for idx in range(1, int(total_days//ndays)):
+        if idx in obs_idxs:
+            split_idxs.append(obs_idxs.index(idx))
+        # if no observations are in bin 1, append the 0 index
+        # to indicate that the bin is empty
+        elif idx == 1:
+            split_idxs.append(0)
+        # if observations are not in the bin, use the same index 
+        #  as the previous bin, to indicate the bin is empty
+        else:
+            split_idxs.append(prev_split_idx)
+        prev_split_idx = split_idxs[-1]
+        
+    # split the array according to the indices of the time bins
+    split_arr = np.split(arr, split_idxs, axis=3)
+    
+    # For each bin, create a composite according to a "reduction"
+    #  and append for concatenation into a new reduced array
+    composites = []
+    for a in split_arr:
+        if a.shape[3] == 0:
+            a = np.zeros((a.shape[0], a.shape[1], a.shape[2], 1))
+        if reduction == 'avg':
+            cur_agg = np.mean(a, axis=3)
+        elif reduction == 'min':
+            cur_agg = np.min(a, axis=3)
+        elif reduction == 'max':
+            cur_agg = np.max(a, axis=3)
+        elif reduction == 'median':
+            cur_agg = np.median(a, axis=3)
+        composites.append(np.expand_dims(cur_agg, axis=3))
+
+    new_arr = np.concatenate(composites, axis=3)
+    new_doys = np.asarray(list(range(0, total_days-ndays, ndays)))
+    return new_arr, new_doys
+
 class CropTypeDS(Dataset):
 
     def __init__(self, args, grid_path, split):
@@ -82,6 +135,8 @@ class CropTypeDS(Dataset):
         self.num_grids = len(self.grid_list)
         self.use_s1 = args.use_s1
         self.use_s2 = args.use_s2
+        self.s1_agg = args.s1_agg
+        self.s2_agg = args.s2_agg
         self.num_classes = args.num_classes
         self.split = split
         self.apply_transforms = args.apply_transforms
@@ -108,11 +163,20 @@ class CropTypeDS(Dataset):
             s2_doy = None
             if self.use_s1:
                 s1 = data['s1'][self.grid_list[idx]]
-                if self.normalize:
-                    s1 = preprocess.normalization(s1, 's1', self.country)
+
                 if self.include_doy:
                     s1_doy = data['s1_dates'][self.grid_list[idx]][()]
-                s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed, all_samples=self.all_samples)
+
+                if self.s1_agg:
+                    s1, s1_doy = split_and_aggregate(s1, s1_doy, 15, reduction='avg')
+ 
+                #TODO: compute VH / VV from aggregated VV, VH
+                #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
+                if self.normalize:
+                    s1 = preprocess.normalization(s1, 's1', self.country)
+                
+                if not self.s1_agg:
+                    s1, s1_doy, _ = preprocess.sample_timeseries(s1, MIN_TIMESTAMPS, s1_doy, seed=self.seed, all_samples=self.all_samples)
 
                 # Concatenate DOY bands
                 if s1_doy is not None and self.include_doy:
@@ -127,13 +191,23 @@ class CropTypeDS(Dataset):
                     s2 = s2[:10, :, :, :]
                 elif self.s2_num_bands != 10:
                     print('s2_num_bands must be 4 or 10')
-                if self.normalize:
-                    s2 = preprocess.normalization(s2, 's2', self.country)
-                if self.include_clouds:
-                    cloudmasks = data['cloudmasks'][self.grid_list[idx]][()]
+
                 if self.include_doy:
                     s2_doy = data['s2_dates'][self.grid_list[idx]][()]
-                s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, MIN_TIMESTAMPS, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, sample_w_clouds=self.sample_w_clouds, all_samples=self.all_samples)
+
+                if self.s2_agg:
+                    s2, s2_doy = split_and_aggregate(s2, s2_doy, 30, reduction='min')
+
+                if self.normalize:
+                    s2 = preprocess.normalization(s2, 's2', self.country)
+ 
+                #TODO: include NDVI and GCVI
+                
+                if self.include_clouds:
+                    cloudmasks = data['cloudmasks'][self.grid_list[idx]][()]
+                
+                if not self.s2_agg:
+                    s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, MIN_TIMESTAMPS, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, sample_w_clouds=self.sample_w_clouds, all_samples=self.all_samples)
 
                 # Concatenate cloud mask bands
                 if cloudmasks is not None and self.include_clouds:
