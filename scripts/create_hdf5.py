@@ -17,8 +17,10 @@ import util
 def get_grid_num(filename, ext, group_name):
     if ext == 'json' and group_name in ['s1_dates', 's2_dates']:
         grid_num = filename.split('_')[-1]
-    elif ext == 'npy' and group_name in ['s1', 's2', 'labels'] and 'mask' not in filename:
-        grid_num = filename.split('_')[-1] if group_name not in ['labels'] else filename.split('_')[-2]
+    elif ext == 'json' and group_name in ['planet_dates']:
+        grid_num = filename.split('_')[-2]
+    elif ext == 'npy' and group_name in ['s1', 's2', 'labels', 'planet'] and 'mask' not in filename:
+        grid_num = filename.split('_')[-1] if group_name not in ['labels', 'planet'] else filename.split('_')[-2]
     elif ext == 'npy' and group_name == 'cloudmasks' and 'mask' in filename:
         grid_num = filename.split('_')[-2]
     else:
@@ -46,8 +48,10 @@ def create_hdf5(data_dir, output_dir):
         actual_dir_name = None
         if group_name in ['s1', 's1_dates']:
             actual_dir_name = "s1_npy"
-        elif group_name in ['s2', 'cloudmasks', 's2_dates']:
+        elif group_name in ['s2', 's2_dates', 'cloudmasks']:
             actual_dir_name = "s2_npy"
+        elif group_name in ['planet', 'planet_dates']:
+            actual_dir_name = "planet_npy"
         elif group_name == 'labels':
             actual_dir_name = "raster_npy"
 

@@ -135,6 +135,7 @@ class CropTypeDS(Dataset):
         self.num_grids = len(self.grid_list)
         self.use_s1 = args.use_s1
         self.use_s2 = args.use_s2
+        self.use_planet = args.use_planet
         self.s1_agg = args.s1_agg
         self.s2_agg = args.s2_agg
         self.agg_days = args.agg_days
@@ -160,9 +161,11 @@ class CropTypeDS(Dataset):
         with h5py.File(self.hdf5_filepath, 'r') as data:
             s1 = None
             s2 = None
+            planet = None
             cloudmasks = None
             s1_doy = None
             s2_doy = None
+            planet_doy = None
             if self.use_s1:
                 s1 = data['s1'][self.grid_list[idx]]
 
@@ -221,6 +224,20 @@ class CropTypeDS(Dataset):
                     doy_stack = preprocess.doy2stack(s2_doy, s2.shape)
                     s2 = np.concatenate((s2, doy_stack), 0)
 
+            if self.use_planet:
+                planet = data['planet'][self.grid_list[idx]]
+                if self.include_doy:
+                    planet_doy = data['planet_dates'][self.grid_list[idx]][()]
+                if self.planet_agg:
+                    planet, planet_doy = split_and_aggregate(planet, planet_doy, self.agg_days, reduction='median')
+                if self.normalize:
+                    planet = preprocess.normalization(planet, 'planet', self.country)
+                if not self.planet_agg:
+                    planet, planet_doy, _ = preprocess.sample_timeseries(planet, MIN_TIMESTAMPS, planet_doy, cloud_stack=None, seed=self.seed)
+                if planet_doy is not None and self.include_doy:
+                    doy_stack = preprocess.doy2stack(planet_doy, planet.shape)
+                    planet = np.concatenate((planet, doy_stack), 0)
+   
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
             grid = preprocess.concat_s1_s2(s1, s2)
