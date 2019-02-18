@@ -171,7 +171,7 @@ class CropTypeDS(Dataset):
                     s1, s1_doy = split_and_aggregate(s1, s1_doy, 15, reduction='avg')
  
                 #TODO: compute VH / VV from aggregated VV, VH
-                
+                #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
                 if self.normalize:
                     s1 = preprocess.normalization(s1, 's1', self.country)
                 
