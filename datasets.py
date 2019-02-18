@@ -137,6 +137,7 @@ class CropTypeDS(Dataset):
         self.use_s2 = args.use_s2
         self.s1_agg = args.s1_agg
         self.s2_agg = args.s2_agg
+        self.agg_days = args.agg_days
         self.num_classes = args.num_classes
         self.split = split
         self.apply_transforms = args.apply_transforms
@@ -168,7 +169,7 @@ class CropTypeDS(Dataset):
                     s1_doy = data['s1_dates'][self.grid_list[idx]][()]
 
                 if self.s1_agg:
-                    s1, s1_doy = split_and_aggregate(s1, s1_doy, 15, reduction='avg')
+                    s1, s1_doy = split_and_aggregate(s1, s1_doy, self.agg_days, reduction='avg')
  
                 #TODO: compute VH / VV from aggregated VV, VH
                 #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
@@ -196,7 +197,7 @@ class CropTypeDS(Dataset):
                     s2_doy = data['s2_dates'][self.grid_list[idx]][()]
 
                 if self.s2_agg:
-                    s2, s2_doy = split_and_aggregate(s2, s2_doy, 30, reduction='min')
+                    s2, s2_doy = split_and_aggregate(s2, s2_doy, self.agg_days, reduction='min')
 
                 if self.normalize:
                     s2 = preprocess.normalization(s2, 's2', self.country)
