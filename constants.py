@@ -33,11 +33,10 @@ LOSS_WEIGHT = { 'ghana': GHANA_LOSS_WEIGHT, 'southsudan': SSUDAN_LOSS_WEIGHT, 't
 #CROP_LABELS = ['maize','groundnut', 'rice', 'soya bean', 'sorghum', 'yam', 'sesame', 'beans', 'sunflower', 'chick peas', 'wheat', 'other']
 SPLITS = ['train', 'val', 'test']
 NON_DL_MODELS = ['logreg', 'random_forest']
-DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm']
+DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm', 'unet3d']
 S1_NUM_BANDS = 3
 S2_NUM_BANDS = 10
 GRID_SIZE = 64
-MIN_TIMESTAMPS = 25
 
 LABEL_DIR = "raster_npy"
 S1_DIR = "s1_npy"
@@ -46,14 +45,14 @@ NROW = 8
 
 INT_POWER_EXP = ["hidden_dims"]
 REAL_POWER_EXP = ["weight_decay", "lr"]
-INT_HP = ['batch_size', 'crnn_num_layers', 'gamma', 'patience', 'num_timesteps']
-FLOAT_HP = ['momentum', 'weight_scale', 'percent_of_dataset']
-STRING_HP = ['optimizer', 'crnn_model_name']
-BOOL_HP = ['use_s1', 'use_s2', 'sample_w_clouds', 'include_clouds', 
-           'include_doy', 'bidirectional', 'least_cloudy', 's2_num_bands',
+INT_HP = ['batch_size', 'crnn_num_layers']
+FLOAT_HP = ['weight_scale', 'percent_of_dataset']
+STRING_HP = ['crnn_model_name']
+BOOL_HP = ['use_s1', 'use_s2', 'include_clouds', 'bidirectional', 'least_cloudy',
            'avg_hidden_states']
+INT_CHOICE_HP = ['num_timesteps', 's2_num_bands']
 
-HPS = [INT_POWER_EXP, REAL_POWER_EXP, INT_HP, FLOAT_HP, STRING_HP, BOOL_HP]
+HPS = [INT_POWER_EXP, REAL_POWER_EXP, INT_HP, FLOAT_HP, STRING_HP, BOOL_HP, INT_CHOICE_HP]
 
 S1_BAND_MEANS = { 'ghana': np.array([-10.50, -17.24, 1.17]), 
                   'southsudan': np.array([-9.02, -15.26, 1.15]), 

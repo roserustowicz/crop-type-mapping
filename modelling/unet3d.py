@@ -24,7 +24,7 @@ def up_conv_block(in_dim, out_dim):
 
 
 class UNet3D(nn.Module):
-    def __init__(self, in_channel, n_classes):
+    def __init__(self, in_channel, n_classes, timesteps):
         super(UNet3D, self).__init__()
         self.in_channel = in_channel
         self.n_classes = n_classes
@@ -44,7 +44,7 @@ class UNet3D(nn.Module):
         self.trans2 = up_conv_block(128, 128)
         self.dc2 = conv_block(128+64, 64, 64)
         self.final = nn.Conv3d(64, n_classes, kernel_size=3, stride=1, padding=1)    
-        self.fn = nn.Linear(MIN_TIMESTAMPS, 1)
+        self.fn = nn.Linear(timesteps, 1)
         self.softmax = nn.Softmax2d()
         
     def forward(self, x):
@@ -57,13 +57,13 @@ class UNet3D(nn.Module):
         pool_3 = self.pool_3(en3)
         
         en4 = self.en4(pool_3)
-        trans4 = self.trans4(en4)
+        trans4  = self.trans4(en4)
         concat4 = torch.cat([trans4,en3],dim=1)
         dc4     = self.dc4(concat4)
-        trans3     = self.trans3(dc4)
+        trans3  = self.trans3(dc4)
         concat3 = torch.cat([trans3,en2],dim=1)
         dc3     = self.dc3(concat3)
-        trans2     = self.trans2(dc3)
+        trans2  = self.trans2(dc3)
         concat2 = torch.cat([trans2,en1],dim=1)
         dc2     = self.dc2(concat2)
         final   = self.final(dc2)

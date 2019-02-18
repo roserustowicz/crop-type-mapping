@@ -61,6 +61,11 @@ def generate_bool_HP(choices):
     """
     return np.random.choice(choices)
 
+def generate_int_choice_HP(choices):
+    """ Chooses from one of the choices in `choices` and casts to int.
+    """
+    return int(np.random.choice(choices))
+
 def str2tuple(arg):
     """ Converts a tuple in string format to a tuple.
 
@@ -97,11 +102,8 @@ def generate_hps(train_args, search_range):
             hp_val = generate_string_HP(vars(search_range)[arg])
         elif hp in BOOL_HP:
             hp_val = generate_bool_HP(vars(search_range)[arg])
-            if hp == 's2_num_bands':
-                if hp_val:
-                    hp_val = int(4)
-                else:
-                    hp_val = int(10)
+        elif hp in INT_CHOICE_HP:
+            hp_val = generate_int_choice_HP(vars(search_range)[arg])
         else:
             raise ValueError(f"HP {hp} unsupported") 
 
