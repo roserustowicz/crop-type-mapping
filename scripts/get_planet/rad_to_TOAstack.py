@@ -40,7 +40,7 @@ def get_radiance(filename):
 
 def extract_coeffs(xml_fname):
     '''
-    3.) Extract the coefficients
+    3.) Extract the coefficients from xml file
     '''
     xmldoc = minidom.parse(xml_fname)
     nodes = xmldoc.getElementsByTagName("ps:bandSpecificMetadata")
@@ -58,7 +58,7 @@ def extract_coeffs(xml_fname):
 
 def rad2toa(img_fname, xml_fname):
     '''
-    Convert Radiance to Reflectance
+    Convert Radiance to Reflectance using coefficients
     '''
 
     rad = get_radiance(img_fname)
@@ -73,7 +73,6 @@ def rad2toa(img_fname, xml_fname):
         nir_toa = np.expand_dims(scale * rad['nir'] * coeffs[4], axis=0)
 
         toa = np.concatenate([red_toa, green_toa, blue_toa, nir_toa], axis=0)
-        #print('toa: ', toa.shape)
         #print("Red band radiance is from {} to {}".format(np.amin(band_red_radiance), np.amax(band_red_radiance)))
         #print("Red band reflectance is from {} to {}".format(np.amin(band_red_reflectance), np.amax(band_red_reflectance)))
         return toa
@@ -82,7 +81,7 @@ def rad2toa(img_fname, xml_fname):
 
 def main(args):
 
-    # Get list of planet imagery
+    # Get lists of imagery and xml files
     cur_path = os.path.join(args.home, args.country, args.source)
     files = [os.path.join(cur_path, f) for f in os.listdir(cur_path) if f.endswith('.tif')]
     xmls = [os.path.join(cur_path, f) for f in os.listdir(cur_path) if f.endswith('.xml')]
@@ -100,15 +99,15 @@ def main(args):
         cur_grid_xmls = [f for f in xmls if f.split('/')[-1].startswith(grid + '_')]
         cur_grid_xmls.sort() # sorts in time
 
+        # Image files and xml files should match up
         assert len(cur_grid_files) == len(cur_grid_xmls)
-
-        #data_array = np.zeros((args.bands, args.npix, args.npix, len(cur_grid_files)))
 
         dates = []
         data_array = []
         npix = []
         for idx, fname in enumerate(cur_grid_files):
             statinfo = os.stat(fname)
+            # Check if tif file is empty
             if statinfo.st_size == 0:
                 logfile=open("logfile_errors.txt","a+")
                 logfile.write("Image is empty, passed: " + fname + "\n")
@@ -118,22 +117,22 @@ def main(args):
                 with rasterio.open(fname) as src:
                     cur_img = src.read()
                     npix.append(cur_img.shape[1])
-                    #npix.append(cur_img.shape
                     # convert to toa reflectance
                     toa_img = rad2toa(fname, cur_grid_xmls[idx])
+                    # Check if toa image exists (DNE if coefficients DNE)
                     if toa_img is None:
                         logfile=open("logfile_errors.txt","a+")
                         logfile.write("TOA img is none, passed: " + fname + "\n")
                         logfile.close()
                         pass
                     else:
-                        #data_array[:, :toa_img.shape[1], :toa_img.shape[2], idx] = toa_img
+                        # Desired behavior given no errors. Append data and dates to lists.
                         data_array.append(np.expand_dims(toa_img, axis=3))
-                        #print('toa shape: ', toa_img.shape)
                         tmp = fname.split('/')[-1].split('_')[2]
                         tmp = '-'.join([tmp[:4], tmp[4:6], tmp[6:]])
                         dates.append(tmp)
 
+        # Get fname for output files
         tmp = fname.split('/')
         tmp[-2] = tmp[-2] + '_npy'
         tmp[-1] = '_'.join([args.source, args.country, tmp[-1].split('_')[0] + '_toa'])
@@ -150,11 +149,10 @@ def main(args):
             json.dump(meta, fp)
 
         # save image stack as .npy
-        print('unique npix: ', np.unique(npix))
+        # Check that all images in list have the same height / width
         if len(np.unique(npix)) == 1:
             data_array = np.concatenate(data_array, axis=3) 
             np.save(output_fname + '.npy', data_array)
-            #print('data array shape: ', data_array.shape) 
         else:
             cur_npix = np.max(np.unique(npix))
             data_tmp = np.zeros((args.bands, cur_npix, cur_npix, len(data_array)))
