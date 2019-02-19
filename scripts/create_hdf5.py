@@ -32,9 +32,14 @@ def create_hdf5(data_dir, output_dir):
         data_dir - (string) path to directory containing data which has three subdirectories: s1, s2, masks
         output_dir - (string) path to output directory
     """
+    if country in ['germany']:
+        groups = ['s2', 'labels', 's2_dates']
+    else:
+        groups = ['s1', 's2', 'labels', 'cloudmasks', 's1_dates', 's2_dates']
+
     hdf5_file = h5py.File(os.path.join(output_dir, 'data.hdf5'), 'a')
     # subdivide the hdf5 directory into grids and masks
-    for group_name in ['s1', 's2', 'labels', 'cloudmasks', 's1_dates', 's2_dates']:
+    for group_name in groups:
         if group_name not in hdf5_file:
             hdf5_file.create_group(f'/{group_name}')
 
@@ -73,10 +78,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,
                         help='Path to directory containing data.',
-                        default='/home/data/southsudan/')
+                        default='/home/data/germany/')
     parser.add_argument('--output_dir', type=str,
                         help='Path to directory to output the hdf5 file.',
-                        default='/home/data/southsudan/')
+                        default='/home/data/germany/')
+    parser.add_argument('--country', type=str,
+                        help='Country to output the hdf5 file for.',
+                        default='germany')
 
     args = parser.parse_args()
     create_hdf5(args.data_dir, args.output_dir)
