@@ -59,10 +59,12 @@ class FCN_CRNN(nn.Module):
 
     def forward(self, input_tensor):
         batch, timestamps, bands, rows, cols = input_tensor.size()
+        print('batch: {}, times: {}, bands: {}, rows: {}, cols: {}'.format(batch, timestamps, bands, rows, cols))
         fcn_input = input_tensor.view(batch * timestamps, bands, rows, cols)
         fcn_output = self.fcn(fcn_input)
- 
+        print('fcn out: ', fcn_output.shape) 
         crnn_input = fcn_output.view(batch, timestamps, -1, rows, cols)
+        print('crnn input: ', crnn_input.shape) 
         preds = self.crnn(crnn_input)
         return preds
 
@@ -227,7 +229,7 @@ def get_model(model_name, **kwargs):
 
         # TODO: change the timestamps passed in to be more flexible (i.e allow specify variable length / fixed / truncuate / pad)
         # TODO: don't hardcode values
-        model = make_bidir_clstm_model(input_size=(num_timesteps, num_bands, GRID_SIZE, GRID_SIZE), 
+        model = make_bidir_clstm_model(input_size=(num_timesteps, num_bands, kwargs.get('grid_size'), kwargs.get('grid_size')), 
 
                                        hidden_dims=kwargs.get('hidden_dims'), 
                                        lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
@@ -250,9 +252,9 @@ def get_model(model_name, **kwargs):
     elif model_name == 'fcn_crnn':
         num_bands = get_num_bands(kwargs) 
         num_timesteps = kwargs.get('num_timesteps')
-        model = make_fcn_clstm_model(fcn_input_size=(num_timesteps, num_bands, GRID_SIZE, GRID_SIZE), 
+        model = make_fcn_clstm_model(fcn_input_size=(num_timesteps, num_bands, kwargs.get('grid_size'), kwargs.get('grid_size')), 
                                      fcn_model_name=kwargs.get('fcn_model_name'),
-                                     crnn_input_size=(num_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE, GRID_SIZE),
+                                     crnn_input_size=(num_timesteps, kwargs.get('fcn_out_feats'), kwargs.get('grid_size'), kwargs.get('grid_size')),
                                      crnn_model_name=kwargs.get('crnn_model_name'),
                                      hidden_dims=kwargs.get('hidden_dims'), 
                                      lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
@@ -267,8 +269,8 @@ def get_model(model_name, **kwargs):
         model = make_UNet3D_model(n_class = kwargs.get('num_classes'), n_channel = num_bands, timesteps=kwargs.get('num_timesteps'))
     elif model_name == 'mi_clstm':
         num_s1_bands, num_s2_bands = get_num_s1_bands(kwargs), get_num_s2_bands(kwargs)
-        model = make_MI_CLSTM_model(s1_input_size=(num_timesteps, num_s1_bands, GRID_SIZE, GRID_SIZE),
-                                    s2_input_size=(num_timesteps, num_s2_bands, GRID_SIZE, GRID_SIZE),
+        model = make_MI_CLSTM_model(s1_input_size=(num_timesteps, num_s1_bands, kwargs.get('grid_size'), kwargs.get('grid_size')),
+                                    s2_input_size=(num_timesteps, num_s2_bands, kwargs.get('grid_size'), kwargs.get('grid_size')),
                                     unet_out_channels=kwargs.get('fcn_out_feats'),
                                     hidden_dims=kwargs.get('hidden_dims'), 
                                     lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
