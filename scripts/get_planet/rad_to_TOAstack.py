@@ -180,7 +180,7 @@ if __name__ =='__main__':
                         default='/home/data')
     parser.add_argument('--country', type=str,
                         help='Country of interest: "ghana", "southsudan", "tanzania"',
-                        default='southsudan')
+                        default='ghana')
     parser.add_argument('--source', type=str,
                         help='Satellite source.',
                         default='planet')
