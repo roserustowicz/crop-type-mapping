@@ -321,10 +321,10 @@ def get_train_parser():
                         default=True)
     parser.add_argument('--s1_agg', type=str2bool,
                         help="aggregate s1 data across time?",
-                        default=True)
+                        default=False)
     parser.add_argument('--s2_agg', type=str2bool,
                         help="aggregate s2 data across time?",
-                        default=True)
+                        default=False)
     parser.add_argument('--agg_days', type=int,
                         help="Number of days to aggregate in each time bin",
                         default=15)

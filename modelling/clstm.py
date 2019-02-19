@@ -57,7 +57,7 @@ class CLSTM(nn.Module):
 
         layer_output_list = []
         last_state_list = []
-
+        
         seq_len = input_tensor.size(1)
         assert seq_len == self.num_timesteps
         cur_layer_input = input_tensor
