@@ -363,13 +363,16 @@ def concat_s1_s2_planet(s1, s2, planet):
         (npy array) [bands x rows x cols x min(num s1 timestamps, num s2 timestamps, num planet timestamps) 
          Concatenation of s1, s2, and planet data
     """
-    inputs = [s1, s2, planet]
-    ntimes = [s1.shape[-1], s2.shape[-1], planet.shape[-1]]
+    ins = [s1, s2, planet]
 
     # Get indices that are not none and index inputs and ntimes
-    not_none = [i for i in range(len(inputs)) if inputs[i] != None]
-    inputs = inputs[not_none]
-    ntimes = ntimes[not_none]
+    not_none = []
+    for i in range(len(inputs)):
+        if ins[i] is not None:
+            not_none.append(i)
+
+    ins = ins[not_none]
+    ntimes = [f.shape[-1] for f in inputs]
 
     if len(np.unique(ntimes)) == 1:
         return np.concatenate(inputs, axis=0)
@@ -384,7 +387,7 @@ def concat_s1_s2_planet(s1, s2, planet):
             else:
                 cur_sat, _, _ = sample_timeseries(sat, min_ntimes)
                 sampled.append(cur_sat)
-         return np.concatenate(sampled, axis=0)
+        return np.concatenate(sampled, axis=0)
 
 
 def remap_cloud_stack(cloud_stack):

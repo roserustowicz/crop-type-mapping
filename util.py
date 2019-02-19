@@ -425,4 +425,11 @@ def get_train_parser():
     parser.add_argument('--num_repeat', type=int, default=1)
     parser.add_argument('--grid_size', type=int, default=64,   
                         help="Width and height of input grids")
+    parser.add_argument('--use_planet', type=str2bool, default=True,   
+                        help="use planet data?")
+    parser.add_argument('--resize_planet', type=str2bool, default=True,   
+                        help="Whether to resize planet to grid_size to correspond with other inputs")
+    parser.add_argument('--planet_agg', type=str2bool,
+                        help="aggregate planet data across time?",
+                        default=True)
     return parser
