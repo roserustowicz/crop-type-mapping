@@ -11,6 +11,8 @@ import h5py
 import numpy as np
 import os
 
+from skimage.transform import resize as imresize
+
 import preprocess
 from constants import *
 from random import shuffle
@@ -133,12 +135,19 @@ class CropTypeDS(Dataset):
 
         self.country = args.country
         self.num_grids = len(self.grid_list)
-        self.use_s1 = args.use_s1
-        self.use_s2 = args.use_s2
-        self.use_planet = args.use_planet
-        self.s1_agg = args.s1_agg
-        self.s2_agg = args.s2_agg
+        self.grid_size = args.grid_size
         self.agg_days = args.agg_days
+        # s1 args
+        self.use_s1 = args.use_s1
+        self.s1_agg = args.s1_agg
+        # s2 args 
+        self.use_s2 = args.use_s2
+        self.s2_agg = args.s2_agg
+        # planet args
+        self.resize_planet = args.resize_planet
+        self.use_planet = args.use_planet
+        self.planet_agg = args.planet_agg
+        #
         self.num_classes = args.num_classes
         self.split = split
         self.apply_transforms = args.apply_transforms
@@ -226,21 +235,29 @@ class CropTypeDS(Dataset):
 
             if self.use_planet:
                 planet = data['planet'][self.grid_list[idx]]
+                
+                if self.resize_planet:
+                    planet = imresize(planet, (planet.shape[0], self.grid_size, self.grid_size, planet.shape[3]))
+                
                 if self.include_doy:
                     planet_doy = data['planet_dates'][self.grid_list[idx]][()]
+                
                 if self.planet_agg:
                     planet, planet_doy = split_and_aggregate(planet, planet_doy, self.agg_days, reduction='median')
+                
                 if self.normalize:
                     planet = preprocess.normalization(planet, 'planet', self.country)
+                
                 if not self.planet_agg:
                     planet, planet_doy, _ = preprocess.sample_timeseries(planet, MIN_TIMESTAMPS, planet_doy, cloud_stack=None, seed=self.seed)
+                
                 if planet_doy is not None and self.include_doy:
                     doy_stack = preprocess.doy2stack(planet_doy, planet.shape)
                     planet = np.concatenate((planet, doy_stack), 0)
    
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
-            grid = preprocess.concat_s1_s2(s1, s2)
+            grid = preprocess.concat_s1_s2_planet(s1, s2, planet)
             grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 

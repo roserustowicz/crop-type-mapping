@@ -348,29 +348,43 @@ def padToVariableLength(batch):
     return [batch_X, lengths, batch_y]
 
 
-def concat_s1_s2(s1, s2):
-    """ Returns a concatenation of s1 and s2 data.
+def concat_s1_s2_planet(s1, s2, planet):
+    """ Returns a concatenation of s1, s2, and planet data.
 
-    Specifically, returns s1 if s2 is None, s2 if s1 is None, and otherwise downsamples the larger series to size of the smaller one and returns the concatenation on the time axis.
+    Downsamples the larger series to size of the smaller one and returns the concatenation on the time axis.
+    If None, the source is excluded.
 
     Args:
         s1 - (npy array) [bands x rows x cols x timestamps] Sentinel-1 data
         s2 - (npy array) [bands x rows x cols x timestamps] Sentinel-2 data
+        planet - (npy array) [bands x rows x cols x timestamps] Planet data
 
     Returns:
-        (npy array) [bands x rows x cols x min(num s1 timestamps, num s2 timestamps) Concatenation of s1 and s2 data
+        (npy array) [bands x rows x cols x min(num s1 timestamps, num s2 timestamps, num planet timestamps) 
+         Concatenation of s1, s2, and planet data
     """
-    if s1 is None:
-        return s2
-    if s2 is None:
-        return s1
-    if s1.shape[-1] > s2.shape[-1]:
-        s1, _, _ = sample_timeseries(s1, s2.shape[-1])
-    elif s2.shape[-1] > s1.shape[-1]:
-        s2, _, _ = sample_timeseries(s2, s1.shape[-1])
+    inputs = [s1, s2, planet]
+    ntimes = [s1.shape[-1], s2.shape[-1], planet.shape[-1]]
+
+    # Get indices that are not none and index inputs and ntimes
+    not_none = [i for i in range(len(inputs)) if inputs[i] != None]
+    inputs = inputs[not_none]
+    ntimes = ntimes[not_none]
+
+    if len(np.unique(ntimes)) == 1:
+        return np.concatenate(inputs, axis=0)
+    else:
+        min_ntimes = np.min(ntimes)
+        min_ntimes_idx = np.argmin(ntimes)
     
-    concat_s1_s2 = np.concatenate((s1, s2), axis=0)
-    return concat_s1_s2
+        sampled = []
+        for idx, sat in enumerate(inputs):
+            if idx == min_ntimes_idx:
+                sampled.append(sat)
+            else:
+                cur_sat, _, _ = sample_timeseries(sat, min_ntimes)
+                sampled.append(cur_sat)
+         return np.concatenate(sampled, axis=0)
 
 
 def remap_cloud_stack(cloud_stack):
