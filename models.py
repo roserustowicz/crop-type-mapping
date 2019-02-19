@@ -59,12 +59,9 @@ class FCN_CRNN(nn.Module):
 
     def forward(self, input_tensor):
         batch, timestamps, bands, rows, cols = input_tensor.size()
-        print('batch: {}, times: {}, bands: {}, rows: {}, cols: {}'.format(batch, timestamps, bands, rows, cols))
         fcn_input = input_tensor.view(batch * timestamps, bands, rows, cols)
         fcn_output = self.fcn(fcn_input)
-        print('fcn out: ', fcn_output.shape) 
         crnn_input = fcn_output.view(batch, timestamps, -1, rows, cols)
-        print('crnn input: ', crnn_input.shape) 
         preds = self.crnn(crnn_input)
         return preds
 

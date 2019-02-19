@@ -386,7 +386,7 @@ def get_train_parser():
                          help="Whether to use least cloudy samples (True) or sample from cloudiness (False)")
     parser.add_argument('--include_doy', type=str2bool, default=True,
                          help="Include day of year as input feature")
-    parser.add_argument('--num_timesteps', type=int, default=24,
+    parser.add_argument('--num_timesteps', type=int, default=25,
                         help="Number of timesteps to include")
     # Args for CLSTM model
     parser.add_argument('--hidden_dims', type=int, 

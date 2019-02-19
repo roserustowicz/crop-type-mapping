@@ -149,8 +149,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 dl = dataloaders[split]
                 batch_num = 0
                 for inputs, targets, cloudmasks in tqdm(dl):
-                    print('inputs: ', inputs.shape)
-                    print('targets: ', targets.shape)
                     with torch.set_grad_enabled(True):
                         inputs.to(args.device)
                         targets.to(args.device)

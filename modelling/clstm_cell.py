@@ -65,11 +65,11 @@ class ConvLSTMCell(nn.Module):
         initialize_weights(self)
 
     def forward(self, input_tensor, cur_state, timestep):
+        
         h_cur, c_cur = cur_state
         # BN over the outputs of these convs
         
         combined_conv = self.h_norm(self.h_conv(h_cur), timestep) + self.input_norm(self.input_conv(input_tensor.cuda()), timestep)
-        combined_conv = self.h_conv(h_cur) + self.input_conv(input_tensor.cuda())       
  
         cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1) 
         i = torch.sigmoid(cc_i)
