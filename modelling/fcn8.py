@@ -10,53 +10,53 @@ class FCN8(nn.Module):
         super(FCN8s_croptype, self).__init__()
         # conv1
         self.conv1_1_croptype = nn.Conv2d(n_channel, 64, 3, padding=100)
-        self.relu1_1 = nn.ReLU(inplace=True)
+        self.relu1_1 = nn.LeakyReLU(inplace=True)
         self.conv1_2 = nn.Conv2d(64, 64, 3, padding=1)
-        self.relu1_2 = nn.ReLU(inplace=True)
+        self.relu1_2 = nn.LeakyReLU(inplace=True)
         self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/2
 
         # conv2
         self.conv2_1 = nn.Conv2d(64, 128, 3, padding=1)
-        self.relu2_1 = nn.ReLU(inplace=True)
+        self.relu2_1 = nn.LeakyReLU(inplace=True)
         self.conv2_2 = nn.Conv2d(128, 128, 3, padding=1)
-        self.relu2_2 = nn.ReLU(inplace=True)
+        self.relu2_2 = nn.LeakyReLU(inplace=True)
         self.pool2 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/4
 
         # conv3
         self.conv3_1 = nn.Conv2d(128, 256, 3, padding=1)
-        self.relu3_1 = nn.ReLU(inplace=True)
+        self.relu3_1 = nn.LeakyReLU(inplace=True)
         self.conv3_2 = nn.Conv2d(256, 256, 3, padding=1)
-        self.relu3_2 = nn.ReLU(inplace=True)
+        self.relu3_2 = nn.LeakyReLU(inplace=True)
         self.conv3_3 = nn.Conv2d(256, 256, 3, padding=1)
-        self.relu3_3 = nn.ReLU(inplace=True)
+        self.relu3_3 = nn.LeakyReLU(inplace=True)
         self.pool3 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/8
 
         # conv4
         self.conv4_1 = nn.Conv2d(256, 512, 3, padding=1)
-        self.relu4_1 = nn.ReLU(inplace=True)
+        self.relu4_1 = nn.LeakyReLU(inplace=True)
         self.conv4_2 = nn.Conv2d(512, 512, 3, padding=1)
-        self.relu4_2 = nn.ReLU(inplace=True)
+        self.relu4_2 = nn.LeakyReLU(inplace=True)
         self.conv4_3 = nn.Conv2d(512, 512, 3, padding=1)
-        self.relu4_3 = nn.ReLU(inplace=True)
+        self.relu4_3 = nn.LeakyReLU(inplace=True)
         self.pool4 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/16
 
         # conv5
         self.conv5_1 = nn.Conv2d(512, 512, 3, padding=1)
-        self.relu5_1 = nn.ReLU(inplace=True)
+        self.relu5_1 = nn.LeakyReLU(inplace=True)
         self.conv5_2 = nn.Conv2d(512, 512, 3, padding=1)
-        self.relu5_2 = nn.ReLU(inplace=True)
+        self.relu5_2 = nn.LeakyReLU(inplace=True)
         self.conv5_3 = nn.Conv2d(512, 512, 3, padding=1)
-        self.relu5_3 = nn.ReLU(inplace=True)
+        self.relu5_3 = nn.LeakyReLU(inplace=True)
         self.pool5 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/32
 
         # fc6
         self.fc6 = nn.Conv2d(512, 4096, 7)
-        self.relu6 = nn.ReLU(inplace=True)
+        self.relu6 = nn.LeakyReLU(inplace=True)
         self.drop6 = nn.Dropout2d()
 
         # fc7
         self.fc7 = nn.Conv2d(4096, 4096, 1)
-        self.relu7 = nn.ReLU(inplace=True)
+        self.relu7 = nn.LeakyReLU(inplace=True)
         self.drop7 = nn.Dropout2d()
 
         self.score_fr_croptype = nn.Conv2d(4096, n_class, 1)
