@@ -13,10 +13,10 @@ class _EncoderBlock(nn.Module):
         layers = [
             nn.Conv2d(in_channels, out_channels, kernel_size=3),
             nn.GroupNorm(out_channels // 16, out_channels),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
             nn.Conv2d(out_channels, out_channels, kernel_size=3),
             nn.GroupNorm(out_channels // 16, out_channels),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         ]
         if dropout:
             layers.append(nn.Dropout())
@@ -35,10 +35,10 @@ class _DecoderBlock(nn.Module):
         self.decode = nn.Sequential(
             nn.Conv2d(in_channels, middle_channels, kernel_size=3),
             nn.BatchNorm2d(middle_channels),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
             nn.Conv2d(middle_channels, middle_channels, kernel_size=3),
             nn.BatchNorm2d(middle_channels),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
             nn.ConvTranspose2d(middle_channels, out_channels, kernel_size=2, stride=2),
         )
 
@@ -64,10 +64,10 @@ class UNet(nn.Module):
         self.dec1 = nn.Sequential(
             nn.Conv2d(128, 64, kernel_size=3),
             nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
             nn.Conv2d(64, 64, kernel_size=3),
             nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         )
         self.final = nn.Conv2d(64, num_classes, kernel_size=1)
         self.softmax = nn.Softmax2d()
