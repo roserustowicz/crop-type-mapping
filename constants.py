@@ -49,14 +49,23 @@ S1_DIR = "s1_npy"
 S2_DIR = "s2_npy"
 NROW = 8
 
-INT_POWER_EXP = ["hidden_dims"]
+# INT_POWER_EXP = ["hidden_dims"]
+# REAL_POWER_EXP = ["weight_decay", "lr"]
+# INT_HP = ['batch_size', 'crnn_num_layers']
+# FLOAT_HP = ['weight_scale', 'percent_of_dataset']
+# STRING_HP = ['crnn_model_name']
+# BOOL_HP = ['use_s1', 'use_s2', 'include_clouds', 'bidirectional', 'least_cloudy',
+#            'avg_hidden_states']
+# INT_CHOICE_HP = ['num_timesteps', 's2_num_bands']
+
+
+INT_POWER_EXP = []
 REAL_POWER_EXP = ["weight_decay", "lr"]
-INT_HP = ['batch_size', 'crnn_num_layers']
-FLOAT_HP = ['weight_scale', 'percent_of_dataset']
-STRING_HP = ['crnn_model_name']
-BOOL_HP = ['use_s1', 'use_s2', 'include_clouds', 'bidirectional', 'least_cloudy',
-           'avg_hidden_states']
-INT_CHOICE_HP = ['num_timesteps', 's2_num_bands']
+INT_HP = ['batch_size']
+FLOAT_HP = ['weight_scale', 'dropout']
+STRING_HP = []
+BOOL_HP = ['use_s1', 'use_s2', 'include_clouds']
+INT_CHOICE_HP = ['s2_num_bands', 'num_timesteps']
 
 HPS = [INT_POWER_EXP, REAL_POWER_EXP, INT_HP, FLOAT_HP, STRING_HP, BOOL_HP, INT_CHOICE_HP]
 

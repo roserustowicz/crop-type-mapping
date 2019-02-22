@@ -378,7 +378,7 @@ def get_train_parser():
                          help="Environment name for visdom visualization")
     parser.add_argument('--seed', type=int, default=None,
                          help="Random seed to use for reproducability")
-    parser.add_argument('--sample_w_clouds', type=str2bool, default=True,
+    parser.add_argument('--sample_w_clouds', type=str2bool, default=False,
                          help="Use clouds for sampling Sentinel-2 dates")
     parser.add_argument('--include_clouds', type=str2bool, default=True,
                          help="Include clouds as input feature")
@@ -418,6 +418,8 @@ def get_train_parser():
                          help="Model to use for crnn part of fcn + crnn")
     parser.add_argument('--pretrained', type=str2bool, default=True,
                         help="Pretrained unet model for fcn-crnn")
+    parser.add_argument('--dropout', type=int, default=.5,
+                        help="Dropout probability to be used")
     parser.add_argument('--model_path', type=str)
     parser.add_argument('--eval_on_test', type=str2bool, default=False)
     parser.add_argument('--percent_of_dataset', type=float, default=1)

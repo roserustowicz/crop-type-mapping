@@ -184,7 +184,7 @@ def make_fcn_clstm_model(fcn_input_size, fcn_model_name,
 
     return model
 
-def make_UNet3D_model(n_class, n_channel, timesteps):
+def make_UNet3D_model(n_class, n_channel, timesteps, dropout):
     """ Defined a 3d U-Net model
     Args: 
       n_class - (int) number of classes to predict
@@ -194,7 +194,7 @@ def make_UNet3D_model(n_class, n_channel, timesteps):
       returns the model!
     """
 
-    model = UNet3D(n_channel, n_class, timesteps)
+    model = UNet3D(n_channel, n_class, timesteps, dropout)
     model = model.cuda()
     return model
 
@@ -264,7 +264,7 @@ def get_model(model_name, **kwargs):
                                      pretrained = kwargs.get('pretrained'))
     elif model_name == 'unet3d':
         num_bands = get_num_bands(kwargs)
-        model = make_UNet3D_model(n_class = kwargs.get('num_classes'), n_channel = num_bands, timesteps=kwargs.get('num_timesteps'))
+        model = make_UNet3D_model(n_class = kwargs.get('num_classes'), n_channel = num_bands, timesteps=kwargs.get('num_timesteps'), dropout=kwargs.get('dropout'))
     elif model_name == 'mi_clstm':
         num_s1_bands, num_s2_bands = get_num_s1_bands(kwargs), get_num_s2_bands(kwargs)
         model = make_MI_CLSTM_model(s1_input_size=(num_timesteps, num_s1_bands, GRID_SIZE, GRID_SIZE),

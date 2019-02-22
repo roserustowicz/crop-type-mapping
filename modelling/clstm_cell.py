@@ -74,7 +74,6 @@ class ConvLSTMCell(nn.Module):
         f = torch.sigmoid(cc_f)
         o = torch.sigmoid(cc_o)
         g = torch.tanh(cc_g)
-
         c_next = f * c_cur + i * g
         # BN over the tanh
         h_next = o * self.cell_norm(torch.tanh(c_next), timestep)
