@@ -27,17 +27,26 @@ def get_grid_num(filename, ext, group_name):
         grid_num = None
     return grid_num
 
-def create_hdf5(data_dir, output_dir):
+def create_hdf5(args):
     """ Creates a hdf5 representation of the data.
 
     Args:
         data_dir - (string) path to directory containing data which has three subdirectories: s1, s2, masks
         output_dir - (string) path to output directory
     """
+
+    data_dir = args.data_dir
+    output_dir = args.output_dir
+    country = args.country
+    use_planet = args.use_planet
+
     if country in ['germany']:
         groups = ['s2', 'labels', 's2_dates']
     else:
         groups = ['s1', 's2', 'labels', 'cloudmasks', 's1_dates', 's2_dates']
+
+    if use_planet:
+        groups += ['planet', 'planet_dates']
 
     hdf5_file = h5py.File(os.path.join(output_dir, 'data.hdf5'), 'a')
     # subdivide the hdf5 directory into grids and masks
@@ -89,7 +98,8 @@ if __name__ == '__main__':
     parser.add_argument('--country', type=str,
                         help='Country to output the hdf5 file for.',
                         default='germany')
-
+    parser.add_argument('--use_planet', type=util.str2bool, default=True,
+                        help='Include Planet in hdf5 file')
     args = parser.parse_args()
-    create_hdf5(args.data_dir, args.output_dir)
+    create_hdf5(args)
 
