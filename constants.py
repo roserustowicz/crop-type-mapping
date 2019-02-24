@@ -39,7 +39,9 @@ LOSS_WEIGHT = { 'ghana': GHANA_LOSS_WEIGHT,
 SPLITS = ['train', 'val', 'test']
 NON_DL_MODELS = ['logreg', 'random_forest']
 DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm', 'unet3d']
+
 S1_NUM_BANDS = 3
+PLANET_NUM_BANDS = 4
 
 LABEL_DIR = "raster_npy"
 S1_DIR = "s1_npy"
@@ -75,13 +77,13 @@ S2_BAND_STDS = { 'ghana': np.array([2171.62, 2085.69, 2174.37, 2084.56, 2058.97,
                  'tanzania': np.array([2290.97, 2204.75, 2282.90, 2214.60, 2182.51, 2226.10, 2116.62, 2210.47, 1428.33, 1135.21]),
                  'germany': np.array([1943.62, 1755.82, 1841.09, 5703.38, 5104.90, 5136.54, 1663.27, 5125.05, 3682.57, 3273.71])}
 
-PLANET_BAND_MEANS = { 'ghana': np.array([]),
-                      'southsudan': np.array([]),
-                      'tanzania': np.array([])}
+PLANET_BAND_MEANS = { 'ghana': np.array([1264.81, 1255.25, 1271.10, 2033.22]),
+                      'southsudan': np.array([1091.30, 1092.23, 1029.28, 2137.77]),
+                      'tanzania': np.array([1014.16, 1023.31, 1114.17, 1813.49])}
 
-PLANET_BAND_STDS = { 'ghana': np.array([]),
-                     'southsudan': np.array([]),
-                     'tanzania': np.array([])}
+PLANET_BAND_STDS = { 'ghana': np.array([602.51, 598.66, 637.06, 966.27]),
+                     'southsudan': np.array([526.06, 517.05, 543.74, 1022.14]),
+                     'tanzania': np.array([492.33, 492.71, 558.90, 833.65])}
 
 S2_BAND_MEANS_cldfltr = { 'ghana': np.array([1362.68, 1317.62, 1410.74, 1580.05, 2066.06, 2373.60, 2254.70, 2629.11, 2597.50, 1818.43]),
                   'southsudan': np.array([1137.58, 1127.62, 1173.28, 1341.70, 1877.70, 2180.27, 2072.11, 2427.68, 2308.98, 1544.26]),
