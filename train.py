@@ -136,7 +136,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)
         best_val_f1 = 0
 
-        for i in range(args.epochs):
+        for i in tqdm(range(args.epochs)):
             print('Epoch: {}'.format(i))
             all_metrics = {}
             for split in splits:
@@ -148,7 +148,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             for split in ['train', 'val'] if not args.eval_on_test else ['test']:
                 dl = dataloaders[split]
                 batch_num = 0
-                for inputs, targets, cloudmasks in tqdm(dl):
+                for inputs, targets, cloudmasks in dl:
                     with torch.set_grad_enabled(True):
                         inputs.to(args.device)
                         targets.to(args.device)
