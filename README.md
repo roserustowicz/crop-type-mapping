@@ -28,7 +28,7 @@ Replace “localhost” with the static IP address provided on google cloud
 To start training models, use the train.py script in the root directory of the code. 
 
 Ex: 
-python train.py --batch_size=5 --model_name=fcn_crnn --dataset=full --epochs=10 --lr=.0001 --num_classes=4 --env_name=pretrained_true --least_cloudy=True --hidden_dims=32 --weight_decay=0 --patience=4 --weight_scale=.9 --pretrained=True
+`python train.py --batch_size=5 --model_name=fcn_crnn --dataset=full --epochs=10 --lr=.0001 --num_classes=4 --env_name=pretrained_true --least_cloudy=True --hidden_dims=32 --weight_decay=0 --patience=4 --weight_scale=.9 --pretrained=True`
 (is the actual training command we used)
 
 Other models can be set using different model names (--model_name=bidir_clstm, for example), and additional hyperparameter tuning settings can be set by invoking the appropriate flags. 
