@@ -26,7 +26,7 @@ GCP_DATA_DIR = BASE_DIR + '/croptype_data/data'
 LOCAL_DATA_DIR = BASE_DIR + '/croptype_data_local/data'
 #LOCAL_DATA_DIR = 'data'
 
-HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/data.hdf5',
+HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/data_wplanet_validsubset.hdf5',
               'southsudan': LOCAL_DATA_DIR + '/southsudan/data.hdf5',
               'tanzania': LOCAL_DATA_DIR + '/tanzania/data.hdf5' }
 
@@ -70,9 +70,6 @@ LOSS_WEIGHT = { 'ghana': GHANA_LOSS_WEIGHT,
                 'germany': GERMANY_LOSS_WEIGHT }
 
 # BAND STATS
-nested_dict = { 'dictA': {'key_1': 'value_1'},
-...                 'dictB': {'key_2': 'value_2'}}
-
 MEANS = { 's1': { 'ghana': np.array([-10.50, -17.24, 1.17]), 
                   'southsudan': np.array([-9.02, -15.26, 1.15]), 
                   'tanzania': np.array([-9.80, -17.05, 1.30])},
@@ -100,40 +97,6 @@ STDS = { 's1': { 'ghana': np.array([3.57, 4.86, 5.60]),
          's2_cldfltr': { 'ghana': np.array([511.19, 495.87, 591.44, 590.27, 745.81, 882.05, 811.14, 959.09, 964.64, 809.53]),
                  'southsudan': np.array([548.64, 547.45, 660.28, 677.55, 896.28, 1066.91, 1006.01, 1173.19, 1167.74, 865.42]),
                  'tanzania': np.array([462.40, 449.22, 565.88, 571.42, 686.04, 789.04, 758.31, 854.39, 1071.74, 912.79])} }
-
-#S1_BAND_MEANS = { 'ghana': np.array([-10.50, -17.24, 1.17]), 
-#                  'southsudan': np.array([-9.02, -15.26, 1.15]), 
-#                  'tanzania': np.array([-9.80, -17.05, 1.30])}
-
-#S1_BAND_STDS = { 'ghana': np.array([3.57, 4.86, 5.60]),
-#                 'southsudan': np.array([4.49, 6.68, 21.75]),
-#                 'tanzania': np.array([3.53, 4.78, 16.61])} 
-
-#S2_BAND_MEANS = { 'ghana': np.array([2620.00, 2519.89, 2630.31, 2739.81, 3225.22, 3562.64, 3356.57, 3788.05, 2915.40, 2102.65]),
-#                  'southsudan': np.array([2119.15, 2061.95, 2127.71, 2277.60, 2784.21, 3088.40, 2939.33, 3308.03, 2597.14, 1834.81]),
-#                  'tanzania': np.array([2551.54, 2471.35, 2675.69, 2799.99, 3191.33, 3453.16, 3335.64, 3660.05, 3182.23, 2383.79]),
-#                  'germany': np.array([1991.37, 2026.92, 2136.22, 6844.82, 9951.98, 11638.58, 3664.66, 12375.27, 7351.99, 5027.96])}
-
-#S2_BAND_STDS = { 'ghana': np.array([2171.62, 2085.69, 2174.37, 2084.56, 2058.97, 2117.31, 1988.70, 2099.78, 1209.48, 918.19]),
-#                 'southsudan': np.array([2113.41, 2026.64, 2126.10, 2093.35, 2066.81, 2114.85, 2049.70, 2111.51, 1320.97, 1029.58]), 
-#                 'tanzania': np.array([2290.97, 2204.75, 2282.90, 2214.60, 2182.51, 2226.10, 2116.62, 2210.47, 1428.33, 1135.21]),
-#                 'germany': np.array([1943.62, 1755.82, 1841.09, 5703.38, 5104.90, 5136.54, 1663.27, 5125.05, 3682.57, 3273.71])}
-
-#PLANET_BAND_MEANS = { 'ghana': np.array([1264.81, 1255.25, 1271.10, 2033.22]),
-#                      'southsudan': np.array([1091.30, 1092.23, 1029.28, 2137.77]),
-#                      'tanzania': np.array([1014.16, 1023.31, 1114.17, 1813.49])}
-
-#PLANET_BAND_STDS = { 'ghana': np.array([602.51, 598.66, 637.06, 966.27]),
-#                     'southsudan': np.array([526.06, 517.05, 543.74, 1022.14]),
-#                     'tanzania': np.array([492.33, 492.71, 558.90, 833.65])}
-
-#S2_BAND_MEANS_cldfltr = { 'ghana': np.array([1362.68, 1317.62, 1410.74, 1580.05, 2066.06, 2373.60, 2254.70, 2629.11, 2597.50, 1818.43]),
-#                  'southsudan': np.array([1137.58, 1127.62, 1173.28, 1341.70, 1877.70, 2180.27, 2072.11, 2427.68, 2308.98, 1544.26]),
-#                  'tanzania': np.array([1148.76, 1138.87, 1341.54, 1517.01, 1937.15, 2191.31, 2148.05, 2434.61, 2774.64, 2072.09])}
-
-#S2_BAND_STDS_cldfltr = { 'ghana': np.array([511.19, 495.87, 591.44, 590.27, 745.81, 882.05, 811.14, 959.09, 964.64, 809.53]),
-#                 'southsudan': np.array([548.64, 547.45, 660.28, 677.55, 896.28, 1066.91, 1006.01, 1173.19, 1167.74, 865.42]), 
-#                 'tanzania': np.array([462.40, 449.22, 565.88, 571.42, 686.04, 789.04, 758.31, 854.39, 1071.74, 912.79])}
 
 # OTHER PER COUNTRY CONSTANTS
 NUM_CLASSES = { 'ghana': 4,
