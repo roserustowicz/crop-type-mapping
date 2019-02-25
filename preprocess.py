@@ -36,6 +36,13 @@ def normalization(grid, satellite, country):
         s2_band_means = S2_BAND_MEANS[country]
         s2_band_stds = S2_BAND_STDS[country]
         grid = (grid-s2_band_means[:num_bands].reshape(num_bands, 1, 1, 1))/s2_band_stds[:num_bands].reshape(num_bands, 1, 1, 1)
+    elif satellite == 'planet':
+        num_bands = grid.shape[0]
+        planet_band_means = PLANET_BAND_MEANS[country]
+        planet_band_stds = PLANET_BAND_STDS[country]
+        grid = (grid-planet_band_means[:num_bands].reshape(num_bands, 1, 1, 1))/planet_band_stds[:num_bands].reshape(num_bands, 1, 1, 1)
+    else:
+        raise ValueError("Incorrect normalization parameters")
     return grid
         
 def reshapeForLoss(y):
