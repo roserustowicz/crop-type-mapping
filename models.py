@@ -60,9 +60,13 @@ class FCN_CRNN(nn.Module):
     def forward(self, input_tensor):
         batch, timestamps, bands, rows, cols = input_tensor.size()
         fcn_input = input_tensor.view(batch * timestamps, bands, rows, cols)
+        print('fcn input: ', fcn_input.shape)
         fcn_output = self.fcn(fcn_input)
-        crnn_input = fcn_output.view(batch, timestamps, -1, rows, cols)
+        print('fcn output: ', fcn_output.shape)
+        crnn_input = fcn_output.view(batch, timestamps, -1, fcn_output.shape[-2], fcn_output.shape[-1])
+        print('crnn input: ', crnn_input.shape)
         preds = self.crnn(crnn_input)
+        print('preds: ', preds.shape)
         return preds
 
 def make_MI_CLSTM_model(s1_input_size, s2_input_size, 
@@ -140,14 +144,16 @@ def make_UNet_model(n_class, n_channel, for_fcn=False, pretrained=True):
         # TODO: Why are pretrained weights from vgg13? 
         pre_trained = models.vgg13(pretrained=True)
         pre_trained_features = list(pre_trained.features)
-        model.enc1.encode[3] = pre_trained_features[2]
-        model.enc1.encode[6] = pre_trained_features[4]
-        model.enc2.encode[0] = pre_trained_features[5]
-        model.enc2.encode[3] = pre_trained_features[7]
-        model.enc2.encode[6] = pre_trained_features[9]
-        #model.enc2.encode[6] = pre_trained_features[9]
-        model.center.decode[0] = pre_trained_features[10]
-        model.center.decode[3] = pre_trained_features[12]
+        for idx in range(len(pre_trained_features)):
+            print(idx, ': ', pre_trained_features[idx])
+
+        model.enc1.encode[3] = pre_trained_features[2] # 64 in, 64 out
+        #model.enc1.encode[6] = pre_trained_features[4] --> max pool no params
+        model.enc2.encode[0] = pre_trained_features[5] # 64 in, 128 out
+        model.enc2.encode[3] = pre_trained_features[7] # 128 in, 128 out
+        #model.enc2.encode[6] = pre_trained_features[9] --> max pool no params
+        model.center.encode[0] = pre_trained_features[10] # 128 in, 256 out
+        model.center.encode[3] = pre_trained_features[12] # 256 in, 256 out
         
     model = model.cuda()
         
