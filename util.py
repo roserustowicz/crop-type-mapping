@@ -431,5 +431,5 @@ def get_train_parser():
                         help="Whether to resize planet to grid_size to correspond with other inputs")
     parser.add_argument('--planet_agg', type=str2bool,
                         help="aggregate planet data across time?",
-                        default=True)
+                        default=False)
     return parser

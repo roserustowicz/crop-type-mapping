@@ -27,7 +27,7 @@ def get_grid_num(filename, ext, group_name):
         grid_num = None
     return grid_num
 
-def create_hdf5(args):
+def create_hdf5(args, groups=None):
     """ Creates a hdf5 representation of the data.
 
     Args:
@@ -39,16 +39,17 @@ def create_hdf5(args):
     output_dir = args.output_dir
     country = args.country
     use_planet = args.use_planet
+    out_fname = args.out_fname
 
-    if country in ['germany']:
-        groups = ['s2', 'labels', 's2_dates']
-    else:
-        groups = ['s1', 's2', 'labels', 'cloudmasks', 's1_dates', 's2_dates']
+    if groups is None:
+        if country in ['germany']:
+            groups = ['s2', 'labels', 's2_dates']
+        else:
+            groups = ['s1', 's2', 'labels', 'cloudmasks', 's1_dates', 's2_dates']
+        if use_planet:
+            groups += ['planet', 'planet_dates']
 
-    if use_planet:
-        groups += ['planet', 'planet_dates']
-
-    hdf5_file = h5py.File(os.path.join(output_dir, 'data.hdf5'), 'a')
+    hdf5_file = h5py.File(os.path.join(output_dir, out_fname), 'a')
     # subdivide the hdf5 directory into grids and masks
     for group_name in groups:
         if group_name not in hdf5_file:
@@ -91,15 +92,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,
                         help='Path to directory containing data.',
-                        default='/home/data/germany/')
+                        default='/home/roserustowicz/croptype_data_local/data/tanzania/')
     parser.add_argument('--output_dir', type=str,
                         help='Path to directory to output the hdf5 file.',
-                        default='/home/data/germany/')
+                        default='/home/roserustowicz/croptype_data_local/data/tanzania/')
     parser.add_argument('--country', type=str,
                         help='Country to output the hdf5 file for.',
-                        default='germany')
+                        default='tanzania')
     parser.add_argument('--use_planet', type=util.str2bool, default=True,
                         help='Include Planet in hdf5 file')
+    parser.add_argument('--out_fname', type=str, default='data.hdf5')
     args = parser.parse_args()
-    create_hdf5(args)
+
+    groups = None #['planet', 'planet_dates', 'labels']
+
+    create_hdf5(args, groups)
 

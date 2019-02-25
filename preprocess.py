@@ -366,22 +366,18 @@ def concat_s1_s2_planet(s1, s2, planet):
     ins = [s1, s2, planet]
 
     # Get indices that are not none and index inputs and ntimes
-    not_none = []
-    for i in range(len(inputs)):
-        if ins[i] is not None:
-            not_none.append(i)
-
-    ins = ins[not_none]
-    ntimes = [f.shape[-1] for f in inputs]
+    not_none = [i for i in range(len(ins)) if ins[i] is not None]
+    ins = [ins[i] for i in not_none]
+    ntimes = [i.shape[-1] for i in ins]
 
     if len(np.unique(ntimes)) == 1:
-        return np.concatenate(inputs, axis=0)
+        return np.concatenate(ins, axis=0)
     else:
         min_ntimes = np.min(ntimes)
         min_ntimes_idx = np.argmin(ntimes)
     
         sampled = []
-        for idx, sat in enumerate(inputs):
+        for idx, sat in enumerate(ins):
             if idx == min_ntimes_idx:
                 sampled.append(sat)
             else:

@@ -31,8 +31,11 @@ def get_num_bands(kwargs):
         num_bands = S1_NUM_BANDS + added_doy + added_clouds
     elif kwargs.get('use_s2'):
         num_bands = kwargs.get('s2_num_bands') + added_doy + added_clouds
-    else:
-        raise ValueError("S1 / S2 usage not specified in args!")
+    #else:
+    if kwargs.get('use_planet'):
+        num_bands = PLANET_NUM_BANDS + added_doy
+    if num_bands == -1:
+        raise ValueError("S1 / S2 / planet usage not specified in args!")
     return num_bands
 
 def get_num_s1_bands(kwargs):
