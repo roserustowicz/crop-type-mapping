@@ -123,7 +123,7 @@ class CropTypeDS(Dataset):
     def __init__(self, args, grid_path, split):
         self.model_name = args.model_name
         # open hdf5 file
-        self.hdf5_filepath = args.hdf5_filepath
+        self.hdf5_filepath = HDF5_PATH[args.country]
 
         with open(grid_path, "rb") as f:
             self.grid_list = list(pickle.load(f))
@@ -135,7 +135,7 @@ class CropTypeDS(Dataset):
 
         self.country = args.country
         self.num_grids = len(self.grid_list)
-        self.grid_size = args.grid_size
+        self.grid_size = GRID_SIZE[args.country]
         self.agg_days = args.agg_days
         # s1 args
         self.use_s1 = args.use_s1
@@ -148,7 +148,7 @@ class CropTypeDS(Dataset):
         self.use_planet = args.use_planet
         self.planet_agg = args.planet_agg
         #
-        self.num_classes = args.num_classes
+        self.num_classes = NUM_CLASSES[args.country]
         self.split = split
         self.apply_transforms = args.apply_transforms
         self.normalize = args.normalize
@@ -323,10 +323,10 @@ class GridDataLoader(DataLoader):
                                              num_workers=args.num_workers,
                                              pin_memory=True)
 
-def get_dataloaders(grid_dir, country, dataset, args):
+def get_dataloaders(country, dataset, args):
     dataloaders = {}
     for split in SPLITS:
-        grid_path = os.path.join(grid_dir, f"{country}_{dataset}_{split}")
+        grid_path = os.path.join(GRID_DIR[country], f"{country}_{dataset}_{split}")
         dataloaders[split] = GridDataLoader(args, grid_path, split)
 
     return dataloaders

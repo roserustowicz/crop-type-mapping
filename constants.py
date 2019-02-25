@@ -6,17 +6,50 @@ import os
 """
 Constants for file paths
 """
+
+SPLITS = ['train', 'val', 'test']
+NON_DL_MODELS = ['logreg', 'random_forest']
+DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm', 'unet3d']
+
+S1_NUM_BANDS = 3
+PLANET_NUM_BANDS = 4
+
+LABEL_DIR = "raster_npy"
+S1_DIR = "s1_npy"
+S2_DIR = "s2_npy"
+NROW = 8
+
+# FILE PATHS: 
 BASE_DIR = os.getenv("HOME")
 
 GCP_DATA_DIR = BASE_DIR + '/croptype_data/data'
-#LOCAL_DATA_DIR = 'data'
 LOCAL_DATA_DIR = BASE_DIR + '/croptype_data_local/data'
+#LOCAL_DATA_DIR = 'data'
+
+HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/data.hdf5',
+              'southsudan': LOCAL_DATA_DIR + '/southsudan/data.hdf5',
+              'tanzania': LOCAL_DATA_DIR + '/tanzania/data.hdf5' }
+
+GRID_DIR = { 'ghana': LOCAL_DATA_DIR + "/ghana", 
+             'southsudan': LOCAL_DATA_DIR + "/southsudan", 
+             'tanzania': LOCAL_DATA_DIR + "/tanzania"}
 
 GHANA_RASTER_DIR = GCP_DATA_DIR + '/ghana/raster/'
 GHANA_RASTER_NPY_DIR = GCP_DATA_DIR + '/ghana/raster_npy/'
 GHANA_S1_DIR = GCP_DATA_DIR + '/ghana/s1_npy'
 GHANA_S2_DIR = GCP_DATA_DIR + '/ghana/s2_npy'
-GHANA_HDF5_PATH = LOCAL_DATA_DIR + '/ghana/data.hdf5'
+
+# HYPERPARAMETER SEARCH
+INT_POWER_EXP = ["hidden_dims"]
+REAL_POWER_EXP = ["weight_decay", "lr"]
+INT_HP = ['batch_size', 'crnn_num_layers']
+FLOAT_HP = ['weight_scale', 'percent_of_dataset']
+STRING_HP = ['crnn_model_name']
+BOOL_HP = ['use_s1', 'use_s2', 'include_clouds', 'bidirectional', 'least_cloudy',
+           'avg_hidden_states']
+INT_CHOICE_HP = ['num_timesteps', 's2_num_bands']
+
+HPS = [INT_POWER_EXP, REAL_POWER_EXP, INT_HP, FLOAT_HP, STRING_HP, BOOL_HP, INT_CHOICE_HP]
 
 # LOSS WEIGHTS
 GHANA_LOSS_WEIGHT = 1 - np.array([.17, .56, .16, .11])
@@ -36,29 +69,7 @@ LOSS_WEIGHT = { 'ghana': GHANA_LOSS_WEIGHT,
                 'tanzania': TANZ_LOSS_WEIGHT,
                 'germany': GERMANY_LOSS_WEIGHT }
 
-SPLITS = ['train', 'val', 'test']
-NON_DL_MODELS = ['logreg', 'random_forest']
-DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm', 'unet3d']
-
-S1_NUM_BANDS = 3
-PLANET_NUM_BANDS = 4
-
-LABEL_DIR = "raster_npy"
-S1_DIR = "s1_npy"
-S2_DIR = "s2_npy"
-NROW = 8
-
-INT_POWER_EXP = ["hidden_dims"]
-REAL_POWER_EXP = ["weight_decay", "lr"]
-INT_HP = ['batch_size', 'crnn_num_layers']
-FLOAT_HP = ['weight_scale', 'percent_of_dataset']
-STRING_HP = ['crnn_model_name']
-BOOL_HP = ['use_s1', 'use_s2', 'include_clouds', 'bidirectional', 'least_cloudy',
-           'avg_hidden_states']
-INT_CHOICE_HP = ['num_timesteps', 's2_num_bands']
-
-HPS = [INT_POWER_EXP, REAL_POWER_EXP, INT_HP, FLOAT_HP, STRING_HP, BOOL_HP, INT_CHOICE_HP]
-
+# BAND STATS
 S1_BAND_MEANS = { 'ghana': np.array([-10.50, -17.24, 1.17]), 
                   'southsudan': np.array([-9.02, -15.26, 1.15]), 
                   'tanzania': np.array([-9.80, -17.05, 1.30])}
@@ -92,6 +103,17 @@ S2_BAND_MEANS_cldfltr = { 'ghana': np.array([1362.68, 1317.62, 1410.74, 1580.05,
 S2_BAND_STDS_cldfltr = { 'ghana': np.array([511.19, 495.87, 591.44, 590.27, 745.81, 882.05, 811.14, 959.09, 964.64, 809.53]),
                  'southsudan': np.array([548.64, 547.45, 660.28, 677.55, 896.28, 1066.91, 1006.01, 1173.19, 1167.74, 865.42]), 
                  'tanzania': np.array([462.40, 449.22, 565.88, 571.42, 686.04, 789.04, 758.31, 854.39, 1071.74, 912.79])}
+
+# OTHER PER COUNTRY CONSTANTS
+NUM_CLASSES = { 'ghana': 4,
+                'southsudan': 4,
+                'tanzania': 5,
+                'germany': 17 }
+
+GRID_SIZE = { 'ghana': 64, 
+              'southsudan': 64, 
+              'tanzania': 64, 
+              'germany': 48 }
 
 CM_LABELS = { 'ghana': [0, 1, 2, 3], 
               'southsudan': [0, 1, 2, 3], 

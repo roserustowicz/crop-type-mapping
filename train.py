@@ -143,7 +143,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 all_metrics[f'{split}_loss'] = 0
                 all_metrics[f'{split}_correct'] = 0
                 all_metrics[f'{split}_pix'] = 0
-                all_metrics[f'{split}_cm'] = np.zeros((args.num_classes, args.num_classes)).astype(int)
+                all_metrics[f'{split}_cm'] = np.zeros((NUM_CLASSES[args.country], NUM_CLASSES[args.country])).astype(int)
 
             for split in ['train', 'val'] if not args.eval_on_test else ['test']:
                 dl = dataloaders[split]
@@ -175,7 +175,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             all_metrics[f'{split}_correct'] += total_correct
                             all_metrics[f'{split}_pix'] += num_pixels
         
-                    visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, args.num_classes, split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
+                    visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, NUM_CLASSES[args.country], split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
 
                     batch_num += 1
 
@@ -193,7 +193,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         if args.save_best: 
                             # TODO: Ideally, this would save any batch except the last one so that the saved images
                             #  are not only the remainder from the last batch 
-                            visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, args.num_classes, 
+                            visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, NUM_CLASSES[args.country], 
                                                    split, vis_data, vis, args.include_doy, args.use_s1, 
                                                    args.use_s2, model_name, args.time_slice, save=True, 
                                                    save_dir=os.path.join(args.save_dir, args.name + "_best"))
@@ -216,7 +216,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     # load in data generator
-    dataloaders = datasets.get_dataloaders(args.grid_dir, args.country, args.dataset, args)
+    dataloaders = datasets.get_dataloaders(args.country, args.dataset, args)
     
     # load in model
     model = models.get_model(**vars(args))
