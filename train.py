@@ -3,6 +3,8 @@
 Script for training and evaluating a model
 
 """
+import pdb
+
 import os
 import loss_fns
 import models
@@ -217,7 +219,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # load in data generator
     dataloaders = datasets.get_dataloaders(args.country, args.dataset, args)
-    
     # load in model
     model = models.get_model(**vars(args))
     
