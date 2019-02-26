@@ -57,10 +57,10 @@ class _DecoderBlock(nn.Module):
 class UNet(nn.Module):
     """Bring the encoder and decoder together into full UNet model
     """
-    def __init__(self, num_classes, num_channels, use_planet=False, resize_planet=False):
+    def __init__(self, num_classes, num_channels, late_feats_for_fcn=False, use_planet=False, resize_planet=False):
         super(UNet, self).__init__()
         self.unet_encode = UNet_Encode(num_channels, use_planet, resize_planet)
-        self.unet_decode = UNet_Decode(num_classes) 
+        self.unet_decode = UNet_Decode(num_classes, late_feats_for_fcn) 
 
     def forward(self, x):
         center1, enc4, enc3 = self.unet_encode(x)
@@ -73,10 +73,10 @@ class UNet_Encode(nn.Module):
     def __init__(self, num_channels, use_planet=False, resize_planet=False):
         super(UNet_Encode, self).__init__()
 
-        self.use_planet = True
-        self.resize_planet = False
         self.downsample = _DownSample() 
-        
+        self.use_planet = use_planet
+        self.resize_planet = resize_planet      
+  
         feats = 32
         if self.use_planet and self.resize_planet:
             enc3_infeats = num_channels
@@ -126,8 +126,8 @@ class UNet_Encode(nn.Module):
             enc2 = self.enc2(down1)
             down2 = self.downsample(enc2)
             enc3 = self.enc3(down2)
-            print('enc2; ', enc2.shape)
             print('enc1; ', enc1.shape)
+            print('enc2; ', enc2.shape)
 
         down3 = self.downsample(enc3)
         enc4 = self.enc4(down3)
@@ -158,11 +158,12 @@ class UNet_Encode(nn.Module):
 class UNet_Decode(nn.Module):
     """ U-Net architecture definition for decoding (second half of the "U")
     """
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, late_feats_for_fcn):
         super(UNet_Decode, self).__init__()
 
         self.downsample = _DownSample() 
-        
+        self.late_feats_for_fcn = late_feats_for_fcn
+
         feats = 32
         #if self.use_planet and self.resize_planet:
         #    enc3_infeats = num_channels
@@ -203,9 +204,11 @@ class UNet_Decode(nn.Module):
     def forward(self, center1, enc4, enc3):
 
         center1 = center1.cuda()
-        enc4 = enc4.cuda()
-        enc3 = enc3.cuda()
         print('center1; ', center1.shape)
+        enc4 = enc4.cuda()
+        print('enc4; ', enc4.shape)
+        enc3 = enc3.cuda()
+        print('enc3; ', enc3.shape)
 
         #if self.use_planet and self.resize_planet:
         #    enc3 = self.enc3(x)
@@ -225,23 +228,19 @@ class UNet_Decode(nn.Module):
         
         # DECODE
         center2 = self.center_decode(center1)
+        print('center2; ', center2.shape)
         dec4 = self.dec4(torch.cat([center2, enc4], 1)) 
+        print('dec4; ', dec4.shape)
         final = self.final(torch.cat([dec4, enc3], 1)) 
         #final = self.final(dec3)
-        
-        print('enc3; ', enc3.shape)
-        print('enc4; ', enc4.shape)
-        print('center1; ', center1.shape)
-        print('center2; ', center2.shape)
-        print('dec4; ', dec4.shape)
         print('final: ', final.shape)
 
-        #if self.for_fcn:
-        #    return final
-        #else:
-        #    final = self.softmax(final)
-        #    final = torch.log(final)
-        #    return final
-        final = self.softmax(final)
-        final = torch.log(final)
-        return final
+        if self.late_feats_for_fcn:
+            return final
+        else:
+            final = self.softmax(final)
+            final = torch.log(final)
+            return final
+        #final = self.softmax(final)
+        #final = torch.log(final)
+        #return final

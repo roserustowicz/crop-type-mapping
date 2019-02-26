@@ -16,7 +16,8 @@ class ConvLSTMCell(nn.Module):
 
         Implementation based on stefanopini's at https://github.com/ndrplz/ConvLSTM_pytorch/blob/master/convlstm.py
     """
-    def __init__(self, input_size, input_dim, hidden_dim, num_timesteps, kernel_size, bias):
+    #def __init__(self, input_size, input_dim, hidden_dim, num_timesteps, kernel_size, bias):
+    def __init__(self, input_dim, hidden_dim, num_timesteps, kernel_size, bias):
         """
         Initialize ConvLSTM cell.
         
@@ -36,7 +37,7 @@ class ConvLSTMCell(nn.Module):
 
         super(ConvLSTMCell, self).__init__()
 
-        self.height, self.width = input_size
+        #self.height, self.width = input_size
         self.input_dim  = input_dim
         self.hidden_dim = hidden_dim
         self.num_timesteps = num_timesteps
@@ -68,7 +69,6 @@ class ConvLSTMCell(nn.Module):
         
         h_cur, c_cur = cur_state
         # BN over the outputs of these convs
-        
         combined_conv = self.h_norm(self.h_conv(h_cur), timestep) + self.input_norm(self.input_conv(input_tensor.cuda()), timestep)
  
         cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1) 
