@@ -259,18 +259,18 @@ def classification_report(all_metrics, split, epoch_num, country, save_dir):
 
     fname = os.path.join(save_dir, split + '_classification_report.txt')
     with open(fname, 'a') as f:
-        f.write('Country: ' + country + '\n\n')
-        f.write('Epoch number: ' + epoch_num + '\n\n')
-        f.write('Split: ' + split + '\n\n')
-        f.write('Epoch Loss: ' + loss_epoch + '\n\n')
-        f.write('Epoch Accuracy: ' + acc_epoch + '\n\n')
-        f.write('Observed Accuracy: ' + observed_accuracy + '\n\n')
-        f.write('Epoch f1: ' + metrics.get_f1score(all_metrics[f'{split}_cm'], avg=True) + '\n\n') 
-        f.write('Kappa coefficient: ' + kappa + '\n\n')
-        f.write('Per class accuracies: ' + all_metrics[f'{split}_cm'].diagonal()/all_metrics[f'{split}_cm'].sum(axis=1) + '\n\n')
-        f.write('Per class f1 scores: ' + metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False) + '\n\n')
-        f.write('Crop Class Names: ' + class_names + '\n\n')
-        f.write('Confusion Matrix: ' + all_metrics[f'{split}_cm'] + '\n\n')
+        f.write('Country:\n ' + country + '\n\n')
+        f.write('Epoch number:\n ' + str(epoch_num) + '\n\n')
+        f.write('Split:\n ' + split + '\n\n')
+        f.write('Epoch Loss:\n ' + str(loss_epoch) + '\n\n')
+        f.write('Epoch Accuracy:\n ' + str(acc_epoch) + '\n\n')
+        f.write('Observed Accuracy:\n ' + str(observed_accuracy) + '\n\n')
+        f.write('Epoch f1:\n ' + str(metrics.get_f1score(all_metrics[f'{split}_cm'], avg=True)) + '\n\n') 
+        f.write('Kappa coefficient:\n ' + str(kappa) + '\n\n')
+        f.write('Per class accuracies:\n ' + str(all_metrics[f'{split}_cm'].diagonal()/all_metrics[f'{split}_cm'].sum(axis=1)) + '\n\n')
+        f.write('Per class f1 scores:\n ' + str(metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False)) + '\n\n')
+        f.write('Crop Class Names:\n ' + str(class_names) + '\n\n')
+        f.write('Confusion Matrix:\n ' + str(all_metrics[f'{split}_cm']) + '\n\n')
 
 def visualize_rgb(argmax_array, num_classes, class_colors=None): 
     mask = []
