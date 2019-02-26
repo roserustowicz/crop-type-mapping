@@ -203,8 +203,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             
                             visualize.record_epoch(all_metrics, 'train', vis_data, vis, i, args.country, save=True, 
                                                   save_dir=os.path.join(args.save_dir, args.name + "_best"))               
-                            
-                           
     else:
         raise ValueError(f"Unsupported model name: {model_name}")
 
