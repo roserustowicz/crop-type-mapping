@@ -239,7 +239,7 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=Fal
                                      cmap=plt.cm.Blues)
 
     vis.matplot(fig, win=f'{split} CM')
-    if save: 
+    if save or split in ['test']: 
         visdom_save_many_metrics('classf1', split, f'{split}_per_class_f1', 'Epoch', 'per class f1-score', class_names, vis_data, save_dir)               
         fig.savefig(os.path.join(save_dir, f'{split}_cm.png')) 
         classification_report(all_metrics, split, epoch_num, country, save_dir)
