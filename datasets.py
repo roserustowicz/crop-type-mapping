@@ -147,11 +147,16 @@ class CropTypeDS(Dataset):
         self.include_doy = args.include_doy
         self.num_timesteps = args.num_timesteps
         self.all_samples = args.all_samples
+        
         ## Timeslice for FCN
         self.timeslice = args.time_slice
         self.seed = args.seed
         self.least_cloudy = args.least_cloudy
         self.s2_num_bands = args.s2_num_bands
+        
+        with h5py.File(self.hdf5_filepath, 'r') as data:
+            self.s1_lengths = data['s1_lengths']
+            self.s2_lengths = data['s2_lengths']
 
     def __len__(self):
         return self.num_grids
@@ -241,7 +246,6 @@ class CropTypeDS(Dataset):
 
 #             if cloudmasks is not None:
 #                 cloudmasks = cloudmasks[:, x_start:x_start+32, y_start:y_start+32, :]
-
         return grid, label, cloudmasks
 
 class CropTypeBatchSampler(Sampler):
@@ -253,6 +257,21 @@ class CropTypeBatchSampler(Sampler):
         batches = []
         count = 1
         cur_list = []
+        
+        buckets = defaultdict(list)
+        
+        grid_lengths = dataset.grid_lengths
+        
+        # shuffle dataset
+        
+        # create buckets for grid lengths (maybe %10) 
+        
+        # for each grid, add it to the a0ppropriate bucket 
+        
+        # if a bucket is too large, trim to max_batch_size length
+        
+        # later need to pad to the same length
+        
         for i in range(len(dataset)):
             if count % batch_size != 0:
                 cur_list.append(i)
@@ -288,7 +307,7 @@ class GridDataLoader(DataLoader):
 def get_dataloaders(grid_dir, country, dataset, args):
     dataloaders = {}
     for split in SPLITS:
-        grid_path = os.path.join(grid_dir, f"{country}_{dataset}_{split}")
+        grid_path = os.path.join(grid_dir, f"{country}_{dataset}_old_{split}")
         dataloaders[split] = GridDataLoader(args, grid_path, split)
 
     return dataloaders
