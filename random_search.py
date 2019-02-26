@@ -75,7 +75,7 @@ def str2tuple(arg):
     """
     return literal_eval(arg)
 
-def recordMetadata(args, experiment_name, hps, train_loss, train_f1, val_loss, val_f1):
+def recordMetadata(args, experiment_name, hps, train_loss, train_f1, train_acc, val_loss, val_f1, val_acc):
     with open(os.path.join(args.save_dir, experiment_name + ".log"), 'w') as f:
         f.write('HYPERPARAMETERS:\n')
         for hp in hps:
@@ -83,8 +83,8 @@ def recordMetadata(args, experiment_name, hps, train_loss, train_f1, val_loss, v
             if type(hp_val) == float:
                 hp_val = '%.3f'%hp_val 
             f.write(f'{hp}:{hp_val}\n')
-        f.write(f"Best Performance (val): \n\t loss: {val_loss} \n\t f1: {val_f1}\n")
-        f.write(f"Corresponding Train Performance: \n\t loss: {train_loss} \n\t f1: {train_f1}\n")
+        f.write(f"Best Performance (val): \n\t loss: {val_loss} \n\t f1: {val_f1}\n\t acc:{val_acc}\n")
+        f.write(f"Corresponding Train Performance: \n\t loss: {train_loss} \n\t f1: {train_f1}\n\t acc:{train_acc}\n")
 
 def generate_hps(train_args, search_range):
     for arg in vars(search_range):
@@ -185,16 +185,16 @@ if __name__ ==  "__main__":
             for state_dict_name in os.listdir(train_args.save_dir):
                 if (experiment_name + "_best") in state_dict_name:
                     model.load_state_dict(torch.load(os.path.join(train_args.save_dir, state_dict_name)))
-                    train_loss, train_f1 = train.evaluate_split(model, train_args.model_name, dataloaders['train'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, train_args.num_classes, train_args.country)
-                    val_loss, val_f1 = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, train_args.num_classes, train_args.country)
+                    train_loss, train_f1, train_acc = train.evaluate_split(model, train_args.model_name, dataloaders['train'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, train_args.num_classes, train_args.country)
+                    val_loss, val_f1, val_acc = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, train_args.num_classes, train_args.country)
                     print(f"Best Performance (val): \n\t loss: {val_loss} \n\t f1: {val_f1}\n")
                     print(f"Corresponding Train Performance: \n\t loss: {train_loss} \n\t f1: {train_f1}\n")
 
-                    recordMetadata(train_args, experiment_name, hps, train_loss, train_f1, val_loss, val_f1)
+                    recordMetadata(train_args, experiment_name, hps, train_loss, train_f1, train_acc, val_loss, val_f1, val_acc)
 
                     experiments[experiment_name] = [train_loss, train_f1, val_loss, val_f1]
                     for hp in hps:
-                        hps[hp].append([train_args.__dict__[hp], train_loss, train_f1, val_loss, val_f1])
+                        hps[hp].append([train_args.__dict__[hp], train_loss, train_f1, train_acc, val_loss, val_f1, val_acc])
                     break
 
 

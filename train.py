@@ -34,7 +34,8 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
             total_cm += batch_cm
 
     f1_avg = metrics.get_f1score(total_cm, avg=True)
-    return total_loss / total_pixels, f1_avg 
+    acc_avg = sum([total_cm[i][i] for i in range(num_classes)]) / np.sum(total_cm) 
+    return total_loss / total_pixels, f1_avg, acc_avg 
 
 def evaluate(model_name, preds, labels, country, loss_fn=None, reduction=None, loss_weight=None, weight_scale=None, gamma=None):
     """ Evalautes loss and metrics for predictions vs labels.
@@ -136,7 +137,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay, patience=args.patience)
         best_val_f1 = 0
 
-        for i in tqdm(range(args.epochs)):
+        for i in range(args.epochs):
             print('Epoch: {}'.format(i))
             all_metrics = {}
             for split in splits:
@@ -148,7 +149,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             for split in ['train', 'val'] if not args.eval_on_test else ['test']:
                 dl = dataloaders[split]
                 batch_num = 0
-                for inputs, targets, cloudmasks in dl:
+                for inputs, targets, cloudmasks in tqdm(dl):
                     with torch.set_grad_enabled(True):
                         inputs.to(args.device)
                         targets.to(args.device)
