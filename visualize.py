@@ -242,6 +242,35 @@ def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=Fal
     if save: 
         visdom_save_many_metrics('classf1', split, f'{split}_per_class_f1', 'Epoch', 'per class f1-score', class_names, vis_data, save_dir)               
         fig.savefig(os.path.join(save_dir, f'{split}_cm.png')) 
+        classification_report(all_metrics, split, epoch_num, country, save_dir)
+
+def classification_report(all_metrics, split, epoch_num, country, save_dir):
+    if country in ['ghana', 'southsudan', 'tanzania', 'germany']:
+        class_names = CROPS[country]
+    else:
+        raise ValueError(f"Country {country} not supported in visualize.py, record_epoch")
+    
+    if all_metrics[f'{split}_loss'] is not None: loss_epoch = all_metrics[f'{split}_loss'] / all_metrics[f'{split}_pix']
+    if all_metrics[f'{split}_correct'] is not None: acc_epoch = all_metrics[f'{split}_correct'] / all_metrics[f'{split}_pix']
+
+    observed_accuracy = np.sum(all_metrics[f'{split}_cm'].diagonal()) / np.sum(all_metrics[f'{split}_cm'])
+    expected_accuracy = np.sum(np.sum(all_metrics[f'{split}_cm'], axis=0) * np.sum(all_metrics[f'{split}_cm'], axis=1) / np.sum(all_metrics[f'{split}_cm'])) / np.sum(all_metrics[f'{split}_cm'])
+    kappa =  (observed_accuracy - expected_accuracy)/(1 - expected_accuracy)
+
+    fname = os.path.join(save_dir, split + '_classification_report.txt')
+    with open(fname, 'a') as f:
+        f.write('Country: ' + country + '\n\n')
+        f.write('Epoch number: ' + epoch_num + '\n\n')
+        f.write('Split: ' + split + '\n\n')
+        f.write('Epoch Loss: ' + loss_epoch + '\n\n')
+        f.write('Epoch Accuracy: ' + acc_epoch + '\n\n')
+        f.write('Observed Accuracy: ' + observed_accuracy + '\n\n')
+        f.write('Epoch f1: ' + metrics.get_f1score(all_metrics[f'{split}_cm'], avg=True) + '\n\n') 
+        f.write('Kappa coefficient: ' + kappa + '\n\n')
+        f.write('Per class accuracies: ' + all_metrics[f'{split}_cm'].diagonal()/all_metrics[f'{split}_cm'].sum(axis=1) + '\n\n')
+        f.write('Per class f1 scores: ' + metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False) + '\n\n')
+        f.write('Crop Class Names: ' + class_names + '\n\n')
+        f.write('Confusion Matrix: ' + all_metrics[f'{split}_cm'] + '\n\n')
 
 def visualize_rgb(argmax_array, num_classes, class_colors=None): 
     mask = []
