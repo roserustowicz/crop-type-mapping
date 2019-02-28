@@ -113,7 +113,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
             print('\n------------------------\nOverall Results:\n')
             print('{} accuracy: {} +/- {}'.format(split, np.mean(results[f'{split}_acc']), np.std(results[f'{split}_acc'])))
             print('{} f1-score: {} +/- {}'.format(split, np.mean(results[f'{split}_f1']), np.std(results[f'{split}_f1'])))
-
+            # TODO: include other metrics? Per class f1 / acc?
 
     elif model_name in DL_MODELS:
         if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
