@@ -403,7 +403,7 @@ def get_train_parser():
     # Args for FCN CRNN model
     parser.add_argument('--early_feats', type=str2bool, default=True,
                          help="Use early features in the CLSTM from center after encoder")
-    parser.add_argument('--fcn_out_feats', type=int, default=512,
+    parser.add_argument('--fcn_out_feats', type=int, default=256,
                          help="Number of output features from fcn to be fed into CLSTM")
     parser.add_argument('--fcn_model_name', type=str, default='unet', 
                          help="Model to use for fcn part of fcn + crnn")

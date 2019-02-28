@@ -77,7 +77,7 @@ class UNet_Encode(nn.Module):
         self.use_planet = use_planet
         self.resize_planet = resize_planet      
   
-        feats = 32
+        feats = 16
         if self.use_planet and self.resize_planet:
             enc3_infeats = num_channels
         else:
@@ -164,7 +164,7 @@ class UNet_Decode(nn.Module):
         self.downsample = _DownSample() 
         self.late_feats_for_fcn = late_feats_for_fcn
 
-        feats = 32
+        feats = 16
         #if self.use_planet and self.resize_planet:
         #    enc3_infeats = num_channels
         #else:
