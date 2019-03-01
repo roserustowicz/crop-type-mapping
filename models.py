@@ -77,37 +77,23 @@ class FCN_CRNN(nn.Module):
         
         if self.early_feats:
             center1_feats, enc4_feats, enc3_feats = self.fcn_enc(fcn_input)
-            print('center feats: ', center1_feats.shape)
-            print('enc4 feats: ', enc4_feats.shape)
-            print('enc3 feats: ', enc3_feats.shape)
 
             # Reshape tensors to separate batch and timestamps
             crnn_input = center1_feats.view(batch, timestamps, -1, center1_feats.shape[-2], center1_feats.shape[-1])
-            print('crnn in: ', crnn_input.shape)
             enc4_feats = enc4_feats.view(batch, timestamps, -1, enc4_feats.shape[-2], enc4_feats.shape[-1])
             enc3_feats = enc3_feats.view(batch, timestamps, -1, enc3_feats.shape[-2], enc3_feats.shape[-1])
-            print('enc4 feats: ', enc4_feats.shape)
-            print('enc3 feats: ', enc3_feats.shape)
 
             enc3_feats = torch.mean(enc3_feats, dim=1, keepdim=False)
             enc4_feats = torch.mean(enc4_feats, dim=1, keepdim=False)
-            print('enc4 feats mean: ', enc4_feats.shape)
-            print('enc3 feats mean: ', enc3_feats.shape)
 
             pred_enc = self.crnn(crnn_input)
-            print('pred_enc: ', pred_enc.shape)
             preds = self.fcn_dec(pred_enc, enc4_feats, enc3_feats)
-            print('preds: ', preds.shape)
 
         else:
             fcn_output = self.fcn(fcn_input)
             crnn_input = fcn_output.view(batch, timestamps, -1, fcn_output.shape[-2], fcn_output.shape[-1])
             preds = self.crnn(crnn_input)
-            print('fcn output: ', fcn_output.shape)
         
-        print('fcn input: ', fcn_input.shape)
-        print('crnn input: ', crnn_input.shape)
-        print('preds: ', preds.shape)
         return preds
 
 def make_MI_CLSTM_model(s1_input_size, s2_input_size, 
