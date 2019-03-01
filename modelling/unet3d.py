@@ -6,10 +6,10 @@ def conv_block(in_dim, middle_dim, out_dim):
     model = nn.Sequential(
         nn.Conv3d(in_dim,middle_dim, kernel_size=3, stride=1, padding=1),
         nn.BatchNorm3d(middle_dim),
-        nn.ReLU(inplace=True),
+        nn.LeakyReLU(inplace=True),
         nn.Conv3d(middle_dim, out_dim, kernel_size=3, stride=1, padding=1),
         nn.BatchNorm3d(out_dim),
-        nn.ReLU(inplace=True),
+        nn.LeakyReLU(inplace=True),
     )
     return model
 
@@ -18,7 +18,7 @@ def up_conv_block(in_dim, out_dim):
     model = nn.Sequential(
         nn.ConvTranspose3d(in_dim,out_dim, kernel_size=3, stride=2, padding=1,output_padding=1),
         nn.BatchNorm3d(out_dim),
-        nn.ReLU(inplace=True),
+        nn.LeakyReLU(inplace=True),
     )
     return model
 

@@ -11,6 +11,8 @@ import h5py
 import numpy as np
 import os
 
+from skimage.transform import resize as imresize
+
 import preprocess
 from constants import *
 from random import shuffle
@@ -95,7 +97,7 @@ def split_and_aggregate(arr, doys, ndays, reduction='avg'):
         
     # split the array according to the indices of the time bins
     split_arr = np.split(arr, split_idxs, axis=3)
-    
+ 
     # For each bin, create a composite according to a "reduction"
     #  and append for concatenation into a new reduced array
     composites = []
@@ -113,7 +115,7 @@ def split_and_aggregate(arr, doys, ndays, reduction='avg'):
         composites.append(np.expand_dims(cur_agg, axis=3))
 
     new_arr = np.concatenate(composites, axis=3)
-    new_doys = np.asarray(list(range(0, total_days-ndays, ndays)))
+    new_doys = np.asarray(list(range(0, total_days-ndays+1, ndays)))
     return new_arr, new_doys
 
 class CropTypeDS(Dataset):
@@ -121,7 +123,7 @@ class CropTypeDS(Dataset):
     def __init__(self, args, grid_path, split):
         self.model_name = args.model_name
         # open hdf5 file
-        self.hdf5_filepath = args.hdf5_filepath
+        self.hdf5_filepath = HDF5_PATH[args.country]
 
         with open(grid_path, "rb") as f:
             self.grid_list = list(pickle.load(f))
@@ -133,12 +135,20 @@ class CropTypeDS(Dataset):
 
         self.country = args.country
         self.num_grids = len(self.grid_list)
-        self.use_s1 = args.use_s1
-        self.use_s2 = args.use_s2
-        self.s1_agg = args.s1_agg
-        self.s2_agg = args.s2_agg
+        self.grid_size = GRID_SIZE[args.country]
         self.agg_days = args.agg_days
-        self.num_classes = args.num_classes
+        # s1 args
+        self.use_s1 = args.use_s1
+        self.s1_agg = args.s1_agg
+        # s2 args 
+        self.use_s2 = args.use_s2
+        self.s2_agg = args.s2_agg
+        # planet args
+        self.resize_planet = args.resize_planet
+        self.use_planet = args.use_planet
+        self.planet_agg = args.planet_agg
+        #
+        self.num_classes = NUM_CLASSES[args.country]
         self.split = split
         self.apply_transforms = args.apply_transforms
         self.normalize = args.normalize
@@ -158,78 +168,30 @@ class CropTypeDS(Dataset):
 
     def __getitem__(self, idx):
         with h5py.File(self.hdf5_filepath, 'r') as data:
-            s1 = None
-            s2 = None
-            cloudmasks = None
-            s1_doy = None
-            s2_doy = None
-            if self.use_s1:
-                s1 = data['s1'][self.grid_list[idx]]
-
-                if self.include_doy:
-                    s1_doy = data['s1_dates'][self.grid_list[idx]][()]
-
-                if self.s1_agg:
-                    s1, s1_doy = split_and_aggregate(s1, s1_doy, self.agg_days, reduction='avg')
- 
-                #TODO: compute VH / VV from aggregated VV, VH
-                #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
-                if self.normalize:
-                    s1 = preprocess.normalization(s1, 's1', self.country)
-                
-                if not self.s1_agg:
-                    s1, s1_doy, _ = preprocess.sample_timeseries(s1, self.num_timesteps, s1_doy, seed=self.seed, all_samples=self.all_samples)
-
-                # Concatenate DOY bands
-                if s1_doy is not None and self.include_doy:
-                    doy_stack = preprocess.doy2stack(s1_doy, s1.shape)
-                    s1 = np.concatenate((s1, doy_stack), 0)
-
-            if self.use_s2:
-                s2 = data['s2'][self.grid_list[idx]]
-                if self.s2_num_bands == 4:
-                    s2 = s2[[0, 1, 2, 6], :, :, :] #B, G, R, NIR
-                elif self.s2_num_bands == 10:
-                    s2 = s2[:10, :, :, :]
-                elif self.s2_num_bands != 10:
-                    print('s2_num_bands must be 4 or 10')
-
-                if self.include_doy:
-                    s2_doy = data['s2_dates'][self.grid_list[idx]][()]
-
-                if self.s2_agg:
-                    s2, s2_doy = split_and_aggregate(s2, s2_doy, self.agg_days, reduction='min')
-
-                if self.normalize:
-                    s2 = preprocess.normalization(s2, 's2', self.country)
- 
-                #TODO: include NDVI and GCVI
-                
-                if self.include_clouds:
-                    cloudmasks = data['cloudmasks'][self.grid_list[idx]][()]
-                
-                if not self.s2_agg:
-                    s2, s2_doy, cloudmasks = preprocess.sample_timeseries(s2, self.num_timesteps, s2_doy, cloud_stack=cloudmasks, seed=self.seed, least_cloudy=self.least_cloudy, sample_w_clouds=self.sample_w_clouds, all_samples=self.all_samples)
-
-                # Concatenate cloud mask bands
-                if cloudmasks is not None and self.include_clouds:
-                    cloudmasks = preprocess.preprocess_clouds(cloudmasks, self.model_name, self.timeslice)
-                    s2 = np.concatenate((s2, cloudmasks), 0)
-
-                # Concatenate DOY bands
-                if s2_doy is not None and self.include_doy:
-                    doy_stack = preprocess.doy2stack(s2_doy, s2.shape)
-                    s2 = np.concatenate((s2, doy_stack), 0)
+            sat_properties = { 's1': {'data': None, 'doy': None, 'use': self.use_s1, 'agg': self.s1_agg,
+                                      'agg_reduction': 'avg', 'cloudmasks': None },
+                               's2': {'data': None, 'doy': None, 'use': self.use_s2, 'agg': self.s2_agg,
+                                      'agg_reduction': 'min', 'cloudmasks': None, 'num_bands': self.s2_num_bands },
+                               'planet': {'data': None, 'doy': None, 'use': self.use_planet, 'agg': self.planet_agg,
+                                          'agg_reduction': 'median', 'cloudmasks': None } }
+  
+            for sat in ['s1', 's2', 'planet']:
+                sat_properties = self.setup_data(data, idx, sat, sat_properties)
 
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
-            grid = preprocess.concat_s1_s2(s1, s2)
+            grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'],
+                                                  sat_properties['s2']['data'], 
+                                                  sat_properties['planet']['data'])
             grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
         
-        if cloudmasks is None:
+        if sat_properties['s2']['cloudmasks'] is None:
             cloudmasks = False
+        else:
+            cloudmasks = sat_properties['s2']['cloudmasks']
+
 #         if self.split == 'train':
 #             x_start = np.random.randint(0, 32)
 #             y_start = np.random.randint(0, 32)
@@ -243,6 +205,69 @@ class CropTypeDS(Dataset):
 #                 cloudmasks = cloudmasks[:, x_start:x_start+32, y_start:y_start+32, :]
 
         return grid, label, cloudmasks
+    
+
+    def setup_data(self, data, idx, sat, sat_properties):
+        if sat_properties[sat]['use']:
+            sat_properties[sat]['data'] = data[sat][self.grid_list[idx]]       
+                    
+            if sat in ['planet']:
+                sat_properties[sat]['data'] = sat_properties[sat]['data'][:, :, :, :].astype(np.double)  
+                if self.resize_planet:
+                    sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'], 
+                                                           (sat_properties[sat]['data'].shape[0], self.grid_size, self.grid_size, sat_properties[sat]['data'].shape[3]), 
+                                                           anti_aliasing=True, mode='reflect')
+                else:
+                    # upsample to 256 x 256 to fit into model
+                    sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'],
+                                                           (sat_properties[sat]['data'].shape[0], 256, 256, sat_properties[sat]['data'].shape[3]),
+                                                           anti_aliasing=True, mode='reflect')
+
+            if sat in ['s2']:
+                if sat_properties[sat]['num_bands'] == 4:
+                    sat_properties[sat]['data'] = sat_properties[sat]['data'][[0, 1, 2, 6], :, :, :] #B, G, R, NIR
+                elif sat_properties[sat]['num_bands'] == 10:
+                    sat_properties[sat]['data'] = sat_properties[sat]['data'][:10, :, :, :]
+                elif sat_properties[sat]['num_bands'] != 10:
+                    raise ValueError('s2_num_bands must be 4 or 10')
+
+                if self.include_clouds:
+                    sat_properties[sat]['cloudmasks'] = data['cloudmasks'][self.grid_list[idx]][()]
+
+            if self.include_doy:
+                sat_properties[sat]['doy'] = data[f'{sat}_dates'][self.grid_list[idx]][()]
+ 
+            if sat_properties[sat]['agg']:
+                sat_properties[sat]['data'], sat_properties[sat]['doy'] = split_and_aggregate(sat_properties[sat]['data'], 
+                                                                                          sat_properties[sat]['doy'],
+                                                                                          self.agg_days, 
+                                                                                          reduction=sat_properties[sat]['agg_reduction'])
+            #TODO: compute VH / VV from aggregated VV, VH for s1
+            #TODO: include NDVI and GCVI for s2
+            #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
+                
+            if self.normalize:
+                sat_properties[sat]['data'] = preprocess.normalization(sat_properties[sat]['data'], sat, self.country)
+
+            if not sat_properties[sat]['agg']:
+                sat_properties[sat]['data'], sat_properties[sat]['doy'], sat_properties[sat]['cloudmasks'] = preprocess.sample_timeseries(sat_properties[sat]['data'],
+                                                                                                               self.num_timesteps, sat_properties[sat]['doy'],
+                                                                                                               cloud_stack = sat_properties[sat]['cloudmasks'],
+                                                                                                               seed=self.seed, least_cloudy=self.least_cloudy,
+                                                                                                               sample_w_clouds=self.sample_w_clouds, 
+                                                                                                               all_samples=self.all_samples)
+            # Concatenate cloud mask bands
+            if sat_properties[sat]['cloudmasks'] is not None and self.include_clouds:
+                sat_properties[sat]['cloudmasks'] = preprocess.preprocess_clouds(sat_properties[sat]['cloudmasks'], self.model_name, self.timeslice)
+                sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], sat_properties[sat]['cloudmasks']), 0)
+
+            # Concatenate doy bands
+            if sat_properties[sat]['doy'] is not None and self.include_doy:
+                doy_stack = preprocess.doy2stack(sat_properties[sat]['doy'], sat_properties[sat]['data'].shape)
+                sat_properties[sat]['data'] = np.concatenate((sat_properties[sat]['data'], doy_stack), 0)
+        return sat_properties
+
+    
 
 class CropTypeBatchSampler(Sampler):
     """
@@ -285,10 +310,10 @@ class GridDataLoader(DataLoader):
                                              num_workers=args.num_workers,
                                              pin_memory=True)
 
-def get_dataloaders(grid_dir, country, dataset, args):
+def get_dataloaders(country, dataset, args):
     dataloaders = {}
     for split in SPLITS:
-        grid_path = os.path.join(grid_dir, f"{country}_{dataset}_{split}")
+        grid_path = os.path.join(GRID_DIR[country], f"{country}_{dataset}_{split}")
         dataloaders[split] = GridDataLoader(args, grid_path, split)
 
     return dataloaders

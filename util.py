@@ -281,20 +281,14 @@ def get_train_parser():
     parser.add_argument('--model_name', type=str,
                         help="model's name",
                         required=True)
-    parser.add_argument('--hdf5_filepath', type=str,
-                        help="full path to hdf5 data file",
-                        default=GHANA_HDF5_PATH)
     parser.add_argument('--dataset', type=str,
                         help="Full or small?",
                         choices=('full', 'small'),
-                        required=True)
+                        default='full')
     parser.add_argument('--country', type=str,
                         help="country to predict over",
                         default="ghana")
-    parser.add_argument('--grid_dir', type=str,
-                        help="full path to directory containing grid splits",
-                        default=LOCAL_DATA_DIR + "/ghana")
-    parser.add_argument('--epochs', type=int,
+    parser.add_argument('--epochs', type=int, default=40,
                         help="# of times to train over the dataset")
     parser.add_argument('--batch_size', type=int,
                         help="batch size to use")
@@ -302,7 +296,7 @@ def get_train_parser():
                         help="Optimizer to use for training",
                         default="adam",
                         choices=('sgd', 'adam'))
-    parser.add_argument('--lr', type=float,
+    parser.add_argument('--lr', type=float, default=0.001,
                         help="Initial learning rate to use")
     parser.add_argument('--momentum', type=float,
                         help="Momentum to use when training",
@@ -328,9 +322,6 @@ def get_train_parser():
     parser.add_argument('--agg_days', type=int,
                         help="Number of days to aggregate in each time bin",
                         default=15)
-    parser.add_argument('--num_classes', type=int,
-                        help="Number of crops to predict over",
-                        default=4)
     parser.add_argument('--num_workers', type=int,
                         help="Number of workers to use for pulling data",
                         default=8)
@@ -391,7 +382,7 @@ def get_train_parser():
     # Args for CLSTM model
     parser.add_argument('--hidden_dims', type=int, 
                         help="Number of channels in hidden state used in convolutional RNN",
-                        default=4)
+                        default=32)
     parser.add_argument('--crnn_kernel_sizes', type=int,
                         help="Convolutional kernel size used within a recurrent cell",
                         default=3)
@@ -404,13 +395,15 @@ def get_train_parser():
     parser.add_argument('--bidirectional', type=str2bool,
                         help='Use bidirectional?',
                         default=False)
-    parser.add_argument('--avg_hidden_states', type=bool,
+    parser.add_argument('--avg_hidden_states', type=str2bool, default=True,
                         help="average hidden states for each timestep?")
     # Arguments for number of bands to use
     parser.add_argument('--s2_num_bands', type=int, default=10,
                          help="Number of bands to use from Sentinel-2")
     # Args for FCN CRNN model
-    parser.add_argument('--fcn_out_feats', type=int, default=64,
+    parser.add_argument('--early_feats', type=str2bool, default=True,
+                         help="Use early features in the CLSTM from center after encoder")
+    parser.add_argument('--fcn_out_feats', type=int, default=256,
                          help="Number of output features from fcn to be fed into CLSTM")
     parser.add_argument('--fcn_model_name', type=str, default='unet', 
                          help="Model to use for fcn part of fcn + crnn")
@@ -427,4 +420,11 @@ def get_train_parser():
     parser.add_argument('--num_repeat', type=int, default=1)
     parser.add_argument('--grid_size', type=int, default=64,   
                         help="Width and height of input grids")
+    parser.add_argument('--use_planet', type=str2bool, default=True,   
+                        help="use planet data?")
+    parser.add_argument('--resize_planet', type=str2bool, default=True,   
+                        help="Whether to resize planet to grid_size to correspond with other inputs")
+    parser.add_argument('--planet_agg', type=str2bool,
+                        help="aggregate planet data across time?",
+                        default=False)
     return parser
