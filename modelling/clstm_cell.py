@@ -16,15 +16,12 @@ class ConvLSTMCell(nn.Module):
 
         Implementation based on stefanopini's at https://github.com/ndrplz/ConvLSTM_pytorch/blob/master/convlstm.py
     """
-    #def __init__(self, input_size, input_dim, hidden_dim, num_timesteps, kernel_size, bias):
     def __init__(self, input_dim, hidden_dim, num_timesteps, kernel_size, bias):
         """
         Initialize ConvLSTM cell.
         
         Parameters
         ----------
-        input_size: (int, int)
-            Height and width of input tensor as (height, width).
         input_dim: int
             Number of channels of input tensor.
         hidden_dim: int
@@ -37,7 +34,6 @@ class ConvLSTMCell(nn.Module):
 
         super(ConvLSTMCell, self).__init__()
 
-        #self.height, self.width = input_size
         self.input_dim  = input_dim
         self.hidden_dim = hidden_dim
         self.num_timesteps = num_timesteps

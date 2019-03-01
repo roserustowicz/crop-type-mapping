@@ -42,7 +42,6 @@ class CLSTM(nn.Module):
         cell_list = []
         for i in range(self.lstm_num_layers):
             cur_input_dim = self.start_num_channels if i == 0 else self.hidden_dims[i-1]
-            #cell_list.append(ConvLSTMCell(input_size=(self.height, self.width),
             cell_list.append(ConvLSTMCell(input_dim = cur_input_dim,
                                           hidden_dim = self.hidden_dims[i],
                                           num_timesteps = self.num_timesteps,

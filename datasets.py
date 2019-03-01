@@ -165,7 +165,6 @@ class CropTypeDS(Dataset):
 
     def __len__(self):
         return self.num_grids
-    
 
     def __getitem__(self, idx):
         with h5py.File(self.hdf5_filepath, 'r') as data:
