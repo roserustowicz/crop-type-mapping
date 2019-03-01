@@ -61,10 +61,6 @@ SSUDAN_LOSS_WEIGHT = torch.tensor(SSUDAN_LOSS_WEIGHT, dtype=torch.float32).cuda(
 TANZ_LOSS_WEIGHT = 1 - np.array([.64, .14, .12, .05, .05])
 TANZ_LOSS_WEIGHT = torch.tensor(TANZ_LOSS_WEIGHT, dtype=torch.float32).cuda()
           
-'germany': ['sugar beet', 'summer oat', 'meadow', 'rapeseed', 'hop', 'winter spelt', 
-                      'winter triticale', 'beans', 'peas', 'potato', 'soybeans', 'asparagus', 
-                      'winter wheat', 'winter barley', 'winter rye', 'summer barley', 'maize']}
-
 GERMANY_LOSS_WEIGHT = 1 - np.array([.02, .01, .07, .05, .03, .01, .02, .01, .01, .04, .01, .01, .27, .10, .01, .03, .32])
 GERMANY_LOSS_WEIGHT = torch.tensor(GERMANY_LOSS_WEIGHT, dtype=torch.float32).cuda()
 
