@@ -26,16 +26,13 @@ def normalization(grid, satellite, country):
     Returns:
       grid - (tensor) a normalized version of the input grid
     """
-    if satellite == 's1':
-        num_bands = grid.shape[0]
-        s1_band_means = S1_BAND_MEANS[country]
-        s1_band_stds = S1_BAND_STDS[country]
-        grid = (grid-s1_band_means[:num_bands].reshape(num_bands, 1, 1, 1))/s1_band_stds[:num_bands].reshape(num_bands, 1, 1, 1)
-    elif satellite == 's2':
-        num_bands = grid.shape[0]
-        s2_band_means = S2_BAND_MEANS[country]
-        s2_band_stds = S2_BAND_STDS[country]
-        grid = (grid-s2_band_means[:num_bands].reshape(num_bands, 1, 1, 1))/s2_band_stds[:num_bands].reshape(num_bands, 1, 1, 1)
+    num_bands = grid.shape[0]
+    means = MEANS[satellite][country]
+    stds = STDS[satellite][country]
+    grid = (grid-means[:num_bands].reshape(num_bands, 1, 1, 1))/stds[:num_bands].reshape(num_bands, 1, 1, 1)
+    
+    if satellite not in ['s1', 's2', 'planet']:
+        raise ValueError("Incorrect normalization parameters")
     return grid
         
 def reshapeForLoss(y):
@@ -348,29 +345,42 @@ def padToVariableLength(batch):
     return [batch_X, lengths, batch_y]
 
 
-def concat_s1_s2(s1, s2):
-    """ Returns a concatenation of s1 and s2 data.
+def concat_s1_s2_planet(s1, s2, planet):
+    """ Returns a concatenation of s1, s2, and planet data.
 
-    Specifically, returns s1 if s2 is None, s2 if s1 is None, and otherwise downsamples the larger series to size of the smaller one and returns the concatenation on the time axis.
+    Downsamples the larger series to size of the smaller one and returns the concatenation on the time axis.
+    If None, the source is excluded.
 
     Args:
         s1 - (npy array) [bands x rows x cols x timestamps] Sentinel-1 data
         s2 - (npy array) [bands x rows x cols x timestamps] Sentinel-2 data
+        planet - (npy array) [bands x rows x cols x timestamps] Planet data
 
     Returns:
-        (npy array) [bands x rows x cols x min(num s1 timestamps, num s2 timestamps) Concatenation of s1 and s2 data
+        (npy array) [bands x rows x cols x min(num s1 timestamps, num s2 timestamps, num planet timestamps) 
+         Concatenation of s1, s2, and planet data
     """
-    if s1 is None:
-        return s2
-    if s2 is None:
-        return s1
-    if s1.shape[-1] > s2.shape[-1]:
-        s1, _, _ = sample_timeseries(s1, s2.shape[-1])
-    elif s2.shape[-1] > s1.shape[-1]:
-        s2, _, _ = sample_timeseries(s2, s1.shape[-1])
+    ins = [s1, s2, planet]
+
+    # Get indices that are not none and index inputs and ntimes
+    not_none = [i for i in range(len(ins)) if ins[i] is not None]
+    ins = [ins[i] for i in not_none]
+    ntimes = [i.shape[-1] for i in ins]
+
+    if len(np.unique(ntimes)) == 1:
+        return np.concatenate(ins, axis=0)
+    else:
+        min_ntimes = np.min(ntimes)
+        min_ntimes_idx = np.argmin(ntimes)
     
-    concat_s1_s2 = np.concatenate((s1, s2), axis=0)
-    return concat_s1_s2
+        sampled = []
+        for idx, sat in enumerate(ins):
+            if idx == min_ntimes_idx:
+                sampled.append(sat)
+            else:
+                cur_sat, _, _ = sample_timeseries(sat, min_ntimes)
+                sampled.append(cur_sat)
+        return np.concatenate(sampled, axis=0)
 
 
 def remap_cloud_stack(cloud_stack):

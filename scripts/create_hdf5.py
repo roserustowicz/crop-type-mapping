@@ -17,27 +17,39 @@ import util
 def get_grid_num(filename, ext, group_name):
     if ext == 'json' and group_name in ['s1_dates', 's2_dates']:
         grid_num = filename.split('_')[-1]
-    elif ext == 'npy' and group_name in ['s1', 's2', 'labels'] and 'mask' not in filename:
-        grid_num = filename.split('_')[-1] if group_name not in ['labels'] else filename.split('_')[-2]
+    elif ext == 'json' and group_name in ['planet_dates']:
+        grid_num = filename.split('_')[-2]
+    elif ext == 'npy' and group_name in ['s1', 's2', 'labels', 'planet'] and 'mask' not in filename:
+        grid_num = filename.split('_')[-1] if group_name not in ['labels', 'planet'] else filename.split('_')[-2]
     elif ext == 'npy' and group_name == 'cloudmasks' and 'mask' in filename:
         grid_num = filename.split('_')[-2]
     else:
         grid_num = None
     return grid_num
 
-def create_hdf5(data_dir, output_dir):
+def create_hdf5(args, groups=None):
     """ Creates a hdf5 representation of the data.
 
     Args:
         data_dir - (string) path to directory containing data which has three subdirectories: s1, s2, masks
         output_dir - (string) path to output directory
     """
-    if country in ['germany']:
-        groups = ['s2', 'labels', 's2_dates']
-    else:
-        groups = ['s1', 's2', 'labels', 'cloudmasks', 's1_dates', 's2_dates']
 
-    hdf5_file = h5py.File(os.path.join(output_dir, 'data.hdf5'), 'a')
+    data_dir = args.data_dir
+    output_dir = args.output_dir
+    country = args.country
+    use_planet = args.use_planet
+    out_fname = args.out_fname
+
+    if groups is None:
+        if country in ['germany']:
+            groups = ['s2', 'labels', 's2_dates']
+        else:
+            groups = ['s1', 's2', 'labels', 'cloudmasks', 's1_dates', 's2_dates']
+        if use_planet:
+            groups += ['planet', 'planet_dates']
+
+    hdf5_file = h5py.File(os.path.join(output_dir, out_fname), 'a')
     # subdivide the hdf5 directory into grids and masks
     for group_name in groups:
         if group_name not in hdf5_file:
@@ -46,8 +58,10 @@ def create_hdf5(data_dir, output_dir):
         actual_dir_name = None
         if group_name in ['s1', 's1_dates']:
             actual_dir_name = "s1_npy"
-        elif group_name in ['s2', 'cloudmasks', 's2_dates']:
+        elif group_name in ['s2', 's2_dates', 'cloudmasks']:
             actual_dir_name = "s2_npy"
+        elif group_name in ['planet', 'planet_dates']:
+            actual_dir_name = "planet_npy"
         elif group_name == 'labels':
             actual_dir_name = "raster_npy"
 
@@ -78,14 +92,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,
                         help='Path to directory containing data.',
-                        default='/home/data/germany/')
+                        default='/home/roserustowicz/croptype_data_local/data/tanzania/')
     parser.add_argument('--output_dir', type=str,
                         help='Path to directory to output the hdf5 file.',
-                        default='/home/data/germany/')
+                        default='/home/roserustowicz/croptype_data_local/data/tanzania/')
     parser.add_argument('--country', type=str,
                         help='Country to output the hdf5 file for.',
-                        default='germany')
-
+                        default='tanzania')
+    parser.add_argument('--use_planet', type=util.str2bool, default=True,
+                        help='Include Planet in hdf5 file')
+    parser.add_argument('--out_fname', type=str, default='data.hdf5')
     args = parser.parse_args()
-    create_hdf5(args.data_dir, args.output_dir)
+
+    groups = None #['planet', 'planet_dates', 'labels']
+
+    create_hdf5(args, groups)
 

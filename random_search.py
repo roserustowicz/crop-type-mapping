@@ -128,14 +128,8 @@ if __name__ ==  "__main__":
                         default="hp_results.pkl")
     search_parser.add_argument('--env_name', type=str,
                         default=None)
-    search_parser.add_argument('--num_classes', type=int,
-                        default=4)
-    search_parser.add_argument('--hdf5_filepath', type=str,
-                        default=GHANA_HDF5_PATH)
     search_parser.add_argument('--country', type=str,
                         default="ghana")
-    search_parser.add_argument('--grid_dir', type=str,
-                        default=LOCAL_DATA_DIR + "/ghana")
     for hp_type in HPS:
         for hp in hp_type:
             search_parser.add_argument('--' + hp + "_range", type=str2tuple)
@@ -162,13 +156,10 @@ if __name__ ==  "__main__":
         train_args = train_parser.parse_args(['--model_name', search_range.model_name, 
                                               '--dataset', search_range.dataset, 
                                               '--env_name', search_range.env_name,
-                                              '--num_classes', str(search_range.num_classes),
-                                              '--country', search_range.country,
-                                              '--grid_dir', search_range.grid_dir,
-                                              '--hdf5_filepath', search_range.hdf5_filepath])
+                                              '--country', search_range.country])
         generate_hps(train_args, search_range) 
         train_args.epochs = search_range.epochs
-        dataloaders = datasets.get_dataloaders(train_args.grid_dir, train_args.country, train_args.dataset, train_args)
+        dataloaders = datasets.get_dataloaders(train_args.country, train_args.dataset, train_args)
         
         model = models.get_model(**vars(train_args))
         model.to(train_args.device)
@@ -185,8 +176,8 @@ if __name__ ==  "__main__":
             for state_dict_name in os.listdir(train_args.save_dir):
                 if (experiment_name + "_best") in state_dict_name:
                     model.load_state_dict(torch.load(os.path.join(train_args.save_dir, state_dict_name)))
-                    train_loss, train_f1 = train.evaluate_split(model, train_args.model_name, dataloaders['train'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, train_args.num_classes, train_args.country)
-                    val_loss, val_f1 = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, train_args.num_classes, train_args.country)
+                    train_loss, train_f1 = train.evaluate_split(model, train_args.model_name, dataloaders['train'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, NUM_CLASSES[train_args.country], train_args.country)
+                    val_loss, val_f1 = train.evaluate_split(model, train_args.model_name, dataloaders['val'], train_args.device, train_args.loss_weight, train_args.weight_scale, train_args.gamma, NUM_CLASSES[train_args.country], train_args.country)
                     print(f"Best Performance (val): \n\t loss: {val_loss} \n\t f1: {val_f1}\n")
                     print(f"Corresponding Train Performance: \n\t loss: {train_loss} \n\t f1: {train_f1}\n")
 
