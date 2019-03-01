@@ -189,6 +189,9 @@ class CropTypeDS(Dataset):
         
         if sat_properties['s2']['cloudmasks'] is None:
             cloudmasks = False
+        else:
+            cloudmasks = sat_properties['s2']['cloudmasks']
+
 #         if self.split == 'train':
 #             x_start = np.random.randint(0, 32)
 #             y_start = np.random.randint(0, 32)
