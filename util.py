@@ -290,7 +290,7 @@ def get_train_parser():
                         default="ghana")
     parser.add_argument('--epochs', type=int, default=40,
                         help="# of times to train over the dataset")
-    parser.add_argument('--batch_size', type=int,
+    parser.add_argument('--batch_size', type=int, default=5,
                         help="batch size to use")
     parser.add_argument('--optimizer', type=str,
                         help="Optimizer to use for training",
@@ -416,11 +416,9 @@ def get_train_parser():
     parser.add_argument('--percent_of_dataset', type=float, default=1)
     parser.add_argument('--all_samples', type=str2bool, default=False)
     parser.add_argument('--num_repeat', type=int, default=1)
-    parser.add_argument('--grid_size', type=int, default=64,   
-                        help="Width and height of input grids")
-    parser.add_argument('--use_planet', type=str2bool, default=True,   
+    parser.add_argument('--use_planet', type=str2bool, default=False,   
                         help="use planet data?")
-    parser.add_argument('--resize_planet', type=str2bool, default=True,   
+    parser.add_argument('--resize_planet', type=str2bool, default=False,   
                         help="Whether to resize planet to grid_size to correspond with other inputs")
     parser.add_argument('--planet_agg', type=str2bool,
                         help="aggregate planet data across time?",
