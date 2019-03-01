@@ -99,7 +99,6 @@ class UNet_Encode(nn.Module):
 
         # ENCODE
         x = x.cuda()
-        print('x; ', x.shape)
 
         if self.use_planet and self.resize_planet:
             enc3 = self.enc3(x)
@@ -111,17 +110,12 @@ class UNet_Encode(nn.Module):
             enc2 = self.enc2(down1)
             down2 = self.downsample(enc2)
             enc3 = self.enc3(down2)
-            print('enc1; ', enc1.shape)
-            print('enc2; ', enc2.shape)
 
         down3 = self.downsample(enc3)
         enc4 = self.enc4(down3)
         down4 = self.downsample(enc4)
         center1 = self.center(down4)
         
-        print('enc3; ', enc3.shape)
-        print('enc4; ', enc4.shape)
-        print('center1; ', center1.shape)
         return center1, enc4, enc3
 
 class UNet_Decode(nn.Module):
@@ -156,19 +150,13 @@ class UNet_Decode(nn.Module):
     def forward(self, center1, enc4, enc3):
 
         center1 = center1.cuda()
-        print('center1; ', center1.shape)
         enc4 = enc4.cuda()
-        print('enc4; ', enc4.shape)
         enc3 = enc3.cuda()
-        print('enc3; ', enc3.shape)
         
         # DECODE
         center2 = self.center_decode(center1)
-        print('center2; ', center2.shape)
         dec4 = self.dec4(torch.cat([center2, enc4], 1)) 
-        print('dec4; ', dec4.shape)
         final = self.final(torch.cat([dec4, enc3], 1)) 
-        print('final: ', final.shape)
 
         if self.late_feats_for_fcn:
             return final
