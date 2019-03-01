@@ -51,12 +51,9 @@ class FCN_CRNN(nn.Module):
             self.fcn = make_fcn_model(crnn_input_size[1], fcn_input_size[1], freeze=False)
         elif fcn_model_name == 'unet':
             if not self.early_feats:
-                print('NO early feats!!')
                 self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], late_feats_for_fcn=True, pretrained=pretrained)
             else:
-                print('YES early feats!!')
                 self.fcn_enc = make_UNetEncoder_model(fcn_input_size[1], use_planet=use_planet, resize_planet=resize_planet, pretrained=pretrained)
-                #self.fcn_dec = make_UNetDecoder_model(crnn_input_size[1], late_feats_for_fcn=False) 
                 self.fcn_dec = make_UNetDecoder_model(num_classes, late_feats_for_fcn=False) 
         
         if crnn_model_name == "gru":
@@ -186,6 +183,7 @@ def make_UNet_model(n_class, n_channel, late_feats_for_fcn=False, pretrained=Tru
     
     if pretrained:
         # TODO: Why are pretrained weights from vgg13? 
+        # TODO: Adjust these again based on # features we decide to use
         pre_trained = models.vgg13(pretrained=True)
         pre_trained_features = list(pre_trained.features)
 

@@ -3,8 +3,6 @@
 Script for training and evaluating a model
 
 """
-import pdb
-
 import os
 import loss_fns
 import models
