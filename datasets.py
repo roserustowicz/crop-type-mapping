@@ -97,7 +97,7 @@ def split_and_aggregate(arr, doys, ndays, reduction='avg'):
         
     # split the array according to the indices of the time bins
     split_arr = np.split(arr, split_idxs, axis=3)
-    
+ 
     # For each bin, create a composite according to a "reduction"
     #  and append for concatenation into a new reduced array
     composites = []
@@ -115,7 +115,7 @@ def split_and_aggregate(arr, doys, ndays, reduction='avg'):
         composites.append(np.expand_dims(cur_agg, axis=3))
 
     new_arr = np.concatenate(composites, axis=3)
-    new_doys = np.asarray(list(range(0, total_days-ndays, ndays)))
+    new_doys = np.asarray(list(range(0, total_days-ndays+1, ndays)))
     return new_arr, new_doys
 
 class CropTypeDS(Dataset):
@@ -234,7 +234,7 @@ class CropTypeDS(Dataset):
 
             if self.include_doy:
                 sat_properties[sat]['doy'] = data[f'{sat}_dates'][self.grid_list[idx]][()]
-                
+ 
             if sat_properties[sat]['agg']:
                 sat_properties[sat]['data'], sat_properties[sat]['doy'] = split_and_aggregate(sat_properties[sat]['data'], 
                                                                                           sat_properties[sat]['doy'],

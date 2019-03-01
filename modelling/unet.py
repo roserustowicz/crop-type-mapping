@@ -80,11 +80,12 @@ class UNet_Encode(nn.Module):
         feats = 16
         if self.use_planet and self.resize_planet:
             enc3_infeats = num_channels
+        elif not self.use_planet:
+            enc3_infeats = num_channels
         else:
             enc3_infeats = feats*2
-
-        self.enc1 = _EncoderBlock(num_channels, feats)
-        self.enc2 = _EncoderBlock(feats, feats*2)
+            self.enc1 = _EncoderBlock(num_channels, feats)
+            self.enc2 = _EncoderBlock(feats, feats*2)
         
         self.enc3 = _EncoderBlock(enc3_infeats, feats*4)
         self.enc4 = _EncoderBlock(feats*4, feats*8)
@@ -119,6 +120,8 @@ class UNet_Encode(nn.Module):
         print('x; ', x.shape)
 
         if self.use_planet and self.resize_planet:
+            enc3 = self.enc3(x)
+        elif not self.use_planet:
             enc3 = self.enc3(x)
         else:
             enc1 = self.enc1(x)
