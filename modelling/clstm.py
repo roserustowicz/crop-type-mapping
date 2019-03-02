@@ -81,10 +81,10 @@ class CLSTM(nn.Module):
 
         # TODO: Rework this so that we concatenate all the internal outputs as features for classification
         # Just take last output for prediction
-        layer_output_list = layer_output_list[-1:]
-        last_state_list = last_state_list[-1:]
-
-        return layer_output_list, last_state_list
+        layer_outputs = layer_output_list[-1]
+        last_states = last_state_list[-1:]
+        
+        return layer_outputs, last_states
 
     def _init_hidden(self):
         init_states = []

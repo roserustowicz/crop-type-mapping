@@ -244,7 +244,7 @@ def make_fcn_clstm_model(country, fcn_input_size, fcn_model_name,
 
     return model
 
-def make_UNet3D_model(n_class, n_channel, timesteps):
+def make_UNet3D_model(n_class, n_channel, timesteps, dropout):
     """ Defined a 3d U-Net model
     Args: 
       n_class - (int) number of classes to predict
@@ -254,7 +254,7 @@ def make_UNet3D_model(n_class, n_channel, timesteps):
       returns the model!
     """
 
-    model = UNet3D(n_channel, n_class, timesteps)
+    model = UNet3D(n_channel, n_class, timesteps, dropout)
     model = model.cuda()
     return model
 
