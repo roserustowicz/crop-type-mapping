@@ -233,7 +233,7 @@ def make_fcn_clstm_model(country, fcn_input_size, fcn_model_name,
       returns the model!
     """
     if early_feats:
-        crnn_input_size += (16, 16)
+        crnn_input_size += (GRID_SIZE[country] // 4, GRID_SIZE[country] // 4)
     else:
         crnn_input_size += (GRID_SIZE[country], GRID_SIZE[country]) 
 
