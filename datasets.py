@@ -248,7 +248,17 @@ class CropTypeDS(Dataset):
                                                                                           self.agg_days, 
                                                                                           reduction=sat_properties[sat]['agg_reduction'])
             #TODO: compute VH / VV from aggregated VV, VH for s1
-            #TODO: include NDVI and GCVI for s2
+            if sat in ['s1']:
+                print('s1 shape: ', sat_properties[sat]['data'].shape)                
+                #new_ratio_band = 
+
+            #TODO: include NDVI and GCVI for s2 and planet
+            if sat in ['s2']:
+                print('s2 shape: ', sat_properties[sat]['data'].shape)
+
+            if sat in ['planet']:
+                print('s2 shape: ', sat_properties[sat]['data'].shape)
+
             #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
                 
             if self.normalize:
