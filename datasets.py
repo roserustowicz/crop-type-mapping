@@ -155,7 +155,7 @@ class CropTypeDS(Dataset):
         self.sample_w_clouds = args.sample_w_clouds
         self.include_clouds = args.include_clouds
         self.include_doy = args.include_doy
-        self.include_indices = args.include_indices
+        #self.include_indices = args.include_indices
         self.num_timesteps = args.num_timesteps
         self.all_samples = args.all_samples
         ## Timeslice for FCN
