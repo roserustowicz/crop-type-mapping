@@ -247,17 +247,24 @@ class CropTypeDS(Dataset):
                                                                                           sat_properties[sat]['doy'],
                                                                                           self.agg_days, 
                                                                                           reduction=sat_properties[sat]['agg_reduction'])
-            #TODO: compute VH / VV from aggregated VV, VH for s1
-            if sat in ['s1']:
-                print('s1 shape: ', sat_properties[sat]['data'].shape)                
-                #new_ratio_band = 
+                
+                # replace the VH/VV band with a cleaner band after aggregation??
+                if sat in ['s1']:
+                    sat_properties[sat]['data'][2,:,:,:] = sat_properties[sat]['data'][1,:,:,:] / sat_properties[sat]['data'][0,:,:,:]
 
             #TODO: include NDVI and GCVI for s2 and planet
-            if sat in ['s2']:
+            if sat in ['s2'] and self.include_indices:
+                if sat_properties[sat]['num_bands'] == 4:
+                    ndvi = (sat_properties[sat]['data'][3, :, :, :] - sat_properties[sat]['data'][2, :, :, :]) / (sat_properties[sat]['data'][3, :, :, :] + sat_properties[sat]['data'][2, :, :, :])
+                    gcvi = 
+                elif sat_properties[sat]['num_bands'] == 10:
+                    ndvi = (sat_properties[sat]['data'][6, :, :, :] - sat_properties[sat]['data'][2, :, :, :]) / (sat_properties[sat]['data'][6, :, :, :] + sat_properties[sat]['data'][2, :, :, :])
+                    gcvi = 
+
                 print('s2 shape: ', sat_properties[sat]['data'].shape)
 
             if sat in ['planet']:
-                print('s2 shape: ', sat_properties[sat]['data'].shape)
+                print('planet shape: ', sat_properties[sat]['data'].shape)
 
             #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
                 
