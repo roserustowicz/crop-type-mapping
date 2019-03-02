@@ -173,14 +173,10 @@ def make_UNet_model(n_class, n_channel, late_feats_for_fcn=False, pretrained=Tru
         pre_trained = models.vgg13(pretrained=True)
         pre_trained_features = list(pre_trained.features)
 
-        if not resize_planet:
-            model.unet_encode.enc2.encode[3] = pre_trained_features[2] # 64 in, 64 out
-            model.unet_encode.enc3.encode[0] = pre_trained_features[5] # 64 in, 128 out
-
-        model.unet_encode.enc3.encode[3] = pre_trained_features[7] # 128 in, 128 out
-        model.unet_encode.enc4.encode[0] = pre_trained_features[10] # 128 in, 256 out
-        model.unet_encode.enc4.encode[3] = pre_trained_features[12] # 256 in, 256 out
-        model.unet_encode.center[0] = pre_trained_features[15] # 256 in, 512 out
+        model.unet_encode.enc3.encode[3] = pre_trained_features[2] #  64 in,  64 out
+        model.unet_encode.enc4.encode[0] = pre_trained_features[5] #  64 in, 128 out
+        model.unet_encode.enc4.encode[3] = pre_trained_features[7] # 128 in, 128 out
+        model.unet_encode.center[0] = pre_trained_features[10]     # 128 in, 256 out
         
     model = model.cuda()
     return model
@@ -193,14 +189,10 @@ def make_UNetEncoder_model(n_channel, use_planet=True, resize_planet=False, pret
         pre_trained = models.vgg13(pretrained=True)
         pre_trained_features = list(pre_trained.features)
 
-        if not resize_planet:
-            model.unet_encode.enc2.encode[3] = pre_trained_features[2] # 64 in, 64 out
-            model.unet_encode.enc3.encode[0] = pre_trained_features[5] # 64 in, 128 out
-
-        model.unet_encode.enc3.encode[3] = pre_trained_features[7] # 128 in, 128 out
-        model.unet_encode.enc4.encode[0] = pre_trained_features[10] # 128 in, 256 out
-        model.unet_encode.enc4.encode[3] = pre_trained_features[12] # 256 in, 256 out
-        model.unet_encode.center[0] = pre_trained_features[15] # 256 in, 512 out
+        model.enc3.encode[3] = pre_trained_features[2] #  64 in,  64 out
+        model.enc4.encode[0] = pre_trained_features[5] #  64 in, 128 out
+        model.enc4.encode[3] = pre_trained_features[7] # 128 in, 128 out
+        model.center[0] = pre_trained_features[10]     # 128 in, 256 out
 
     model = model.cuda()
     return model
