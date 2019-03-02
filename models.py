@@ -282,7 +282,7 @@ def get_model(model_name, **kwargs):
                               class_weight=class_weight)
 
     elif model_name == 'bidir_clstm':
-        num_bands = get_num_bands(kwargs)
+        num_bands = get_num_bands(kwargs)['all']
         num_timesteps = kwargs.get('num_timesteps')
 
         # TODO: change the timestamps passed in to be more flexible (i.e allow specify variable length / fixed / truncuate / pad)
@@ -296,11 +296,11 @@ def get_model(model_name, **kwargs):
                                        num_classes=NUM_CLASSES[kwargs.get('country')],
                                        bidirectional=kwargs.get('bidirectional'))
     elif model_name == 'fcn':
-        num_bands = get_num_bands(kwargs)
+        num_bands = get_num_bands(kwargs)['all']
         model = make_fcn_model(n_class=NUM_CLASSES[kwargs.get('country')], n_channel = num_bands, freeze=True)
     
     elif model_name == 'unet':
-        num_bands = get_num_bands(kwargs)
+        num_bands = get_num_bands(kwargs)['all']
         num_timesteps = kwargs.get('num_timesteps')
         
         if kwargs.get('time_slice') is None:
@@ -309,7 +309,7 @@ def get_model(model_name, **kwargs):
             model = make_UNet_model(n_class=NUM_CLASSES[kwargs.get('country')], n_channel = num_bands)
     
     elif model_name == 'fcn_crnn':
-        num_bands = get_num_bands(kwargs) 
+        num_bands = get_num_bands(kwargs)['all'] 
         num_timesteps = kwargs.get('num_timesteps')
         model = make_fcn_clstm_model(country=kwargs.get('country'),
                                      fcn_input_size=(num_timesteps, num_bands, GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]), 
@@ -329,7 +329,7 @@ def get_model(model_name, **kwargs):
                                      use_planet = kwargs.get('use_planet'),
                                      resize_planet = kwargs.get('resize_planet'))
     elif model_name == 'unet3d':
-        num_bands = get_num_bands(kwargs)
+        num_bands = get_num_bands(kwargs)['all']
         model = make_UNet3D_model(n_class = NUM_CLASSES[kwargs.get('country')], n_channel = num_bands, timesteps=kwargs.get('num_timesteps'))
     elif model_name == 'mi_clstm':
         num_s1_bands, num_s2_bands = get_num_s1_bands(kwargs), get_num_s2_bands(kwargs)
