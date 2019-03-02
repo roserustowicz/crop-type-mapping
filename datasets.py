@@ -147,7 +147,7 @@ class CropTypeDS(Dataset):
         self.resize_planet = args.resize_planet
         self.use_planet = args.use_planet
         self.planet_agg = args.planet_agg
-        #
+        
         self.num_classes = NUM_CLASSES[args.country]
         self.split = split
         self.apply_transforms = args.apply_transforms
@@ -253,8 +253,8 @@ class CropTypeDS(Dataset):
                     sat_properties[sat]['data'][2,:,:,:] = sat_properties[sat]['data'][1,:,:,:] / sat_properties[sat]['data'][0,:,:,:]
 
             #TODO: include NDVI and GCVI for s2 and planet, calculate before normalization
-            if sat in ['s2'] and self.include_indices:
-                if sat_properties[sat]['num_bands'] == 4:
+            if sat in ['s2', 'planet'] and self.include_indices:
+                if (sat in ['s2'] and sat_properties[sat]['num_bands'] == 4) or (sat in ['planet']):
                     with np.errstate(divide='ignore', invalid='ignore'):
                         ndvi = (sat_properties[sat]['data'][3, :, :, :] - sat_properties[sat]['data'][2, :, :, :]) / (sat_properties[sat]['data'][3, :, :, :] + sat_properties[sat]['data'][2, :, :, :])
                         gcvi = (sat_properties[sat]['data'][3, :, :, :] / sat_properties[sat]['data'][1, :, :, :]) - 1 
@@ -269,14 +269,6 @@ class CropTypeDS(Dataset):
 
                     ndvi[(sat_properties[sat]['data'][6, :, :, :] + sat_properties[sat]['data'][2, :, :, :]) == 0] = 0
                     gcvi[sat_properties[sat]['data'][1, :, :, :] == 0] = 0
-
-            if sat in ['planet'] and self.include_indices:
-                with np.errstate(divide='ignore', invalid='ignore'):
-                    ndvi = (sat_properties[sat]['data'][3, :, :, :] - sat_properties[sat]['data'][2, :, :, :]) / (sat_properties[sat]['data'][3, :, :, :] + sat_properties[sat]['data'][2, :, :, :])
-                    gcvi = (sat_properties[sat]['data'][3, :, :, :] / sat_properties[sat]['data'][1, :, :, :]) - 1 
-
-                ndvi[(sat_properties[sat]['data'][3, :, :, :] + sat_properties[sat]['data'][2, :, :, :]) == 0] = 0
-                gcvi[sat_properties[sat]['data'][1, :, :, :] == 0] = 0
 
             #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
                 
