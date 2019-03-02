@@ -248,13 +248,13 @@ class CropTypeDS(Dataset):
                                                                                           self.agg_days, 
                                                                                           reduction=sat_properties[sat]['agg_reduction'])
                 
-                # replace the VH/VV band with a cleaner band after aggregation??
+                # Replace the VH/VV band with a cleaner band after aggregation??
                 if sat in ['s1']:
                     with np.errstate(divide='ignore', invalid='ignore'):
                         sat_properties[sat]['data'][2,:,:,:] = sat_properties[sat]['data'][1,:,:,:] / sat_properties[sat]['data'][0,:,:,:]
                         sat_properties[sat]['data'][2,:,:,:][sat_properties[sat]['data'][0,:,:,:] == 0] = 0
 
-            #TODO: include NDVI and GCVI for s2 and planet, calculate before normalization
+            # Include NDVI and GCVI for s2 and planet, calculate before normalization
             if sat in ['s2', 'planet'] and self.include_indices:
                 if (sat in ['s2'] and sat_properties[sat]['num_bands'] == 4) or (sat in ['planet']):
                     with np.errstate(divide='ignore', invalid='ignore'):
