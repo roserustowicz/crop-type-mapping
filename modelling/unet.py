@@ -149,10 +149,6 @@ class UNet_Decode(nn.Module):
 
     def forward(self, center1, enc4, enc3):
 
-        center1 = center1.cuda()
-        enc4 = enc4.cuda()
-        enc3 = enc3.cuda()
-        
         # DECODE
         center2 = self.center_decode(center1)
         dec4 = self.dec4(torch.cat([center2, enc4], 1)) 
