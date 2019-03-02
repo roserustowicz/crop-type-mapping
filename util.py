@@ -377,8 +377,6 @@ def get_train_parser():
                          help="Whether to use least cloudy samples (True) or sample from cloudiness (False)")
     parser.add_argument('--include_doy', type=str2bool, default=True,
                          help="Include day of year as input feature")
-    #parser.add_argument('--include_indices', type=str2bool, default=True,
-    #                     help="Include ndvi and gcvi as input features")
     parser.add_argument('--num_timesteps', type=int, default=25,
                         help="Number of timesteps to include")
     # Args for CLSTM model
@@ -427,4 +425,6 @@ def get_train_parser():
     parser.add_argument('--planet_agg', type=str2bool,
                         help="aggregate planet data across time?",
                         default=False)
+    parser.add_argument('--include_indices', type=str2bool, default=False,
+                         help="Include ndvi and gcvi as input features")
     return parser

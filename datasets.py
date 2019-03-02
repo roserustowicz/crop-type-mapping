@@ -155,7 +155,7 @@ class CropTypeDS(Dataset):
         self.sample_w_clouds = args.sample_w_clouds
         self.include_clouds = args.include_clouds
         self.include_doy = args.include_doy
-        #self.include_indices = args.include_indices
+        self.include_indices = args.include_indices
         self.num_timesteps = args.num_timesteps
         self.all_samples = args.all_samples
         
@@ -252,24 +252,43 @@ class CropTypeDS(Dataset):
                 if sat in ['s1']:
                     sat_properties[sat]['data'][2,:,:,:] = sat_properties[sat]['data'][1,:,:,:] / sat_properties[sat]['data'][0,:,:,:]
 
-            #TODO: include NDVI and GCVI for s2 and planet
+            #TODO: include NDVI and GCVI for s2 and planet, calculate before normalization
             if sat in ['s2'] and self.include_indices:
                 if sat_properties[sat]['num_bands'] == 4:
-                    ndvi = (sat_properties[sat]['data'][3, :, :, :] - sat_properties[sat]['data'][2, :, :, :]) / (sat_properties[sat]['data'][3, :, :, :] + sat_properties[sat]['data'][2, :, :, :])
-                    gcvi = 
+                    with np.errstate(divide='ignore', invalid='ignore'):
+                        ndvi = (sat_properties[sat]['data'][3, :, :, :] - sat_properties[sat]['data'][2, :, :, :]) / (sat_properties[sat]['data'][3, :, :, :] + sat_properties[sat]['data'][2, :, :, :])
+                        gcvi = (sat_properties[sat]['data'][3, :, :, :] / sat_properties[sat]['data'][1, :, :, :]) - 1 
+
+                    ndvi[(sat_properties[sat]['data'][3, :, :, :] + sat_properties[sat]['data'][2, :, :, :]) == 0] = 0
+                    gcvi[sat_properties[sat]['data'][1, :, :, :] == 0] = 0
+
                 elif sat_properties[sat]['num_bands'] == 10:
-                    ndvi = (sat_properties[sat]['data'][6, :, :, :] - sat_properties[sat]['data'][2, :, :, :]) / (sat_properties[sat]['data'][6, :, :, :] + sat_properties[sat]['data'][2, :, :, :])
-                    gcvi = 
+                    with np.errstate(divide='ignore', invalid='ignore'):
+                        ndvi = (sat_properties[sat]['data'][6, :, :, :] - sat_properties[sat]['data'][2, :, :, :]) / (sat_properties[sat]['data'][6, :, :, :] + sat_properties[sat]['data'][2, :, :, :])
+                        gcvi = (sat_properties[sat]['data'][6, :, :, :] / sat_properties[sat]['data'][1, :, :, :]) - 1
 
-                print('s2 shape: ', sat_properties[sat]['data'].shape)
+                    ndvi[(sat_properties[sat]['data'][6, :, :, :] + sat_properties[sat]['data'][2, :, :, :]) == 0] = 0
+                    gcvi[sat_properties[sat]['data'][1, :, :, :] == 0] = 0
 
-            if sat in ['planet']:
-                print('planet shape: ', sat_properties[sat]['data'].shape)
+            if sat in ['planet'] and self.include_indices:
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    ndvi = (sat_properties[sat]['data'][3, :, :, :] - sat_properties[sat]['data'][2, :, :, :]) / (sat_properties[sat]['data'][3, :, :, :] + sat_properties[sat]['data'][2, :, :, :])
+                    gcvi = (sat_properties[sat]['data'][3, :, :, :] / sat_properties[sat]['data'][1, :, :, :]) - 1 
+
+                ndvi[(sat_properties[sat]['data'][3, :, :, :] + sat_properties[sat]['data'][2, :, :, :]) == 0] = 0
+                gcvi[sat_properties[sat]['data'][1, :, :, :] == 0] = 0
 
             #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
                 
             if self.normalize:
                 sat_properties[sat]['data'] = preprocess.normalization(sat_properties[sat]['data'], sat, self.country)
+            
+            # Concatenate vegetation indices after normalization, before temporal sample
+            if sat in ['planet', 's2'] and self.include_indices:
+                #print('data: ' , sat_properties[sat]['data'].shape)
+                #print('ndvi: ', np.expand_dims(ndvi, axis=0).shape)
+                sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(ndvi, axis=0)), 0)
+                sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(gcvi, axis=0)), 0)
 
             if not sat_properties[sat]['agg']:
                 sat_properties[sat]['data'], sat_properties[sat]['doy'], sat_properties[sat]['cloudmasks'] = preprocess.sample_timeseries(sat_properties[sat]['data'],
@@ -278,6 +297,7 @@ class CropTypeDS(Dataset):
                                                                                                                seed=self.seed, least_cloudy=self.least_cloudy,
                                                                                                                sample_w_clouds=self.sample_w_clouds, 
                                                                                                                all_samples=self.all_samples)
+
             # Concatenate cloud mask bands
             if sat_properties[sat]['cloudmasks'] is not None and self.include_clouds:
                 sat_properties[sat]['cloudmasks'] = preprocess.preprocess_clouds(sat_properties[sat]['cloudmasks'], self.model_name, self.timeslice)
