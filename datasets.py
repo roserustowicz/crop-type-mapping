@@ -250,7 +250,9 @@ class CropTypeDS(Dataset):
                 
                 # replace the VH/VV band with a cleaner band after aggregation??
                 if sat in ['s1']:
-                    sat_properties[sat]['data'][2,:,:,:] = sat_properties[sat]['data'][1,:,:,:] / sat_properties[sat]['data'][0,:,:,:]
+                    with np.errstate(divide='ignore', invalid='ignore'):
+                        sat_properties[sat]['data'][2,:,:,:] = sat_properties[sat]['data'][1,:,:,:] / sat_properties[sat]['data'][0,:,:,:]
+                        sat_properties[sat]['data'][2,:,:,:][sat_properties[sat]['data'][0,:,:,:] == 0] = 0
 
             #TODO: include NDVI and GCVI for s2 and planet, calculate before normalization
             if sat in ['s2', 'planet'] and self.include_indices:
@@ -277,8 +279,6 @@ class CropTypeDS(Dataset):
             
             # Concatenate vegetation indices after normalization, before temporal sample
             if sat in ['planet', 's2'] and self.include_indices:
-                #print('data: ' , sat_properties[sat]['data'].shape)
-                #print('ndvi: ', np.expand_dims(ndvi, axis=0).shape)
                 sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(ndvi, axis=0)), 0)
                 sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(gcvi, axis=0)), 0)
 
