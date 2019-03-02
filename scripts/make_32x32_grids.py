@@ -1,3 +1,11 @@
+"""
+Run 
+
+`python scripts/make_32x32_grids.py --country=X` 
+
+to update hdf5, then set grid size to 32 in constants. Assumes info in constants is correct!!
+
+"""
 import h5py
 import pickle
 import argparse
