@@ -28,11 +28,13 @@ LOCAL_DATA_DIR = BASE_DIR + '/croptype_data_local/data'
 
 HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/data_wplanet_validsubset.hdf5',
               'southsudan': LOCAL_DATA_DIR + '/southsudan/data_wplanet_validsubset.hdf5',
-              'tanzania': LOCAL_DATA_DIR + '/tanzania/data.hdf5' }
+              'tanzania': LOCAL_DATA_DIR + '/tanzania/data.hdf5',
+              'germany': LOCAL_DATA_DIR + '/germany/data.hdf5'}
 
 GRID_DIR = { 'ghana': LOCAL_DATA_DIR + "/ghana", 
              'southsudan': LOCAL_DATA_DIR + "/southsudan", 
-             'tanzania': LOCAL_DATA_DIR + "/tanzania"}
+             'tanzania': LOCAL_DATA_DIR + "/tanzania",
+             'germany': LOCAL_DATA_DIR + "/germany"}
 
 GHANA_RASTER_DIR = GCP_DATA_DIR + '/ghana/raster/'
 GHANA_RASTER_NPY_DIR = GCP_DATA_DIR + '/ghana/raster_npy/'
