@@ -15,6 +15,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from constants import *
 from skimage.transform import resize as imresize
+from tqdm import tqdm
 
 def load_splits(country):
     with open(os.path.join(GRID_DIR[country], f'{country}_full_train'), 'rb') as f:
@@ -53,7 +54,7 @@ def split_grids(country, num_pixels=32):
     NUM_PLANET_PIXELS = 128
     with h5py.File(HDF5_PATH[country], 'a') as f:
         for split_name, split in old_splits.items():
-            for grid in split:
+            for grid in tqdm(split):
                 print("grid: {}".format(grid))
             
                 if grid not in f['s2']: continue # hacky fix for tanzania
@@ -66,10 +67,13 @@ def split_grids(country, num_pixels=32):
                 label = f['labels'][grid]
                 
                 planet = None
+                planet_dates_grid = None
                 if 'planet' in f.keys():
-                    planet = f['planet'][grid]
-                    planet = imresize(planet, (planet.shape[0], 256, 256, planet.shape[3]), anti_aliasing=True, mode='reflect')
-                
+                    planet_grid = f['planet'][grid]
+                    planet_grid = imresize(planet_grid, (planet_grid.shape[0], 256, 256, planet_grid.shape[3]), anti_aliasing=True, mode='reflect')
+                    planet_dates_grid = f['planet_dates'][grid]
+
+                    
                 s2_sub_grids = []
                 s1_sub_grids = []
                 cloudmasks_sub_grids = []
@@ -94,7 +98,7 @@ def split_grids(country, num_pixels=32):
 
                         cloudmasks_sub_grids.append(cloudmasks_grid[i*num_pixels:(i+1)*num_pixels, j*num_pixels: (j+1)*num_pixels, :])
                         
-                        planet_sub_grids.append(planet[:, i*NUM_PLANET_PIXELS:(i+1) * NUM_PLANET_PIXELS, j*NUM_PLANET_PIXELS: (j+1) * NUM_PLANET_PIXELS, :])
+                        planet_sub_grids.append(planet_grid[:, i*NUM_PLANET_PIXELS:(i+1) * NUM_PLANET_PIXELS, j*NUM_PLANET_PIXELS: (j+1) * NUM_PLANET_PIXELS, :])
                         
                 
                 for i in range(len(label_sub_grids)):
@@ -108,8 +112,11 @@ def split_grids(country, num_pixels=32):
                     f.create_dataset("s2_dates/{}".format(sub_grid_name), data=s2_dates_grid, dtype='i2')
                     f.create_dataset("s1/{}".format(sub_grid_name), data=s1_sub_grids[i], dtype='i2', chunks=True)
                     f.create_dataset("s2/{}".format(sub_grid_name), data=s2_sub_grids[i], dtype='i2', chunks=True)
-                    f.create_dataset("planet/{}".format(sub_grid_name), data=planet_sub_grids[i], dtype='i2', chunks=True)
-                    
+                    if 'planet' in f.keys():
+                        f.create_dataset("planet/{}".format(sub_grid_name), data=planet_sub_grids[i], dtype='i2', chunks=True)
+                        f.create_dataset("planet_dates/{}".format(sub_grid_name), data=planet_dates_grid, dtype='i2')
+                        f.create_dataset("planet_lengths/{}".format(sub_grid_name), data=planet_grid.shape[-1], dtype='i2')
+                        
     save_splits(country, new_splits, old_splits)
     
 if __name__=="__main__":
