@@ -199,13 +199,13 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                             visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, NUM_CLASSES[args.country], 
                                                    split, vis_data, vis, args.include_doy, args.use_s1, 
                                                    args.use_s2, model_name, args.time_slice, save=True, 
-                                                   save_dir=os.path.join(args.save_dir, args.name + "_best"))
+                                                   save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
 
                             visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country, save=True, 
-                                                  save_dir=os.path.join(args.save_dir, args.name + "_best"))               
+                                                  save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               
                             
                             visualize.record_epoch(all_metrics, 'train', vis_data, vis, i, args.country, save=True, 
-                                                  save_dir=os.path.join(args.save_dir, args.name + "_best"))               
+                                                  save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               
     
 
     else:
