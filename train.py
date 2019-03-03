@@ -69,6 +69,8 @@ def evaluate(model_name, preds, labels, country, loss_fn=None, reduction=None, l
             loss, confidence, _ = loss_fn(labels, preds, reduction, country, loss_weight, weight_scale) 
             total_correct, num_pixels = metrics.get_accuracy(model_name, preds, labels, reduction=reduction)
             return loss, cm, total_correct, num_pixels, confidence
+        else:
+            raise ValueError(f"reduction: `{reduction}` not supported")
 
 def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     """ Trains the model on the inputs
@@ -172,7 +174,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                         if cm_cur is not None:
                             # If there are valid pixels, update metrics
                             all_metrics[f'{split}_cm'] += cm_cur
-                            all_metrics[f'{split}_loss'] += loss.data
+                            all_metrics[f'{split}_loss'] += loss.item()
                             all_metrics[f'{split}_correct'] += total_correct
                             all_metrics[f'{split}_pix'] += num_pixels
         
