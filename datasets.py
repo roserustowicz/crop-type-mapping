@@ -228,7 +228,9 @@ class CropTypeDS(Dataset):
                                                            (sat_properties[sat]['data'].shape[0], 256, 256, sat_properties[sat]['data'].shape[3]),
                                                            anti_aliasing=True, mode='reflect')
 
+            
             if sat in ['s2']:
+
                 if sat_properties[sat]['num_bands'] == 4:
                     sat_properties[sat]['data'] = sat_properties[sat]['data'][[0, 1, 2, 6], :, :, :] #B, G, R, NIR
                 elif sat_properties[sat]['num_bands'] == 10:
@@ -251,26 +253,19 @@ class CropTypeDS(Dataset):
                 # Replace the VH/VV band with a cleaner band after aggregation??
                 if sat in ['s1']:
                     with np.errstate(divide='ignore', invalid='ignore'):
-                        sat_properties[sat]['data'][2,:,:,:] = sat_properties[sat]['data'][1,:,:,:] / sat_properties[sat]['data'][0,:,:,:]
-                        sat_properties[sat]['data'][2,:,:,:][sat_properties[sat]['data'][0,:,:,:] == 0] = 0
+                        sat_properties[sat]['data'][BANDS[sat]['RATIO'],:,:,:] = sat_properties[sat]['data'][BANDS[sat]['VH'],:,:,:] / sat_properties[sat]['data'][BANDS[sat]['VV'],:,:,:]
+                        sat_properties[sat]['data'][BANDS[sat]['RATIO'],:,:,:][sat_properties[sat]['data'][BANDS[sat]['VV'],:,:,:] == 0] = 0
+            
+            # Include NDVI and GCVI for s2 and planet, calculate before normalization and numband selection but AFTER AGGREGATION
+            if self.use_indices and sat in ['planet', 's2']:
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    numbands = str(sat_properties[sat]['num_bands'])
+                    ndvi = (sat_properties[sat]['data'][BANDS[sat][numbands]['NIR'], :, :, :] - sat_properties[sat]['data'][BANDS[sat][numbands]['RED'], :, :, :]) / (sat_properties[sat]['data'][BANDS[sat][numbands]['NIR'], :, :, :] + sat_properties[sat]['data'][BANDS[sat][numbands]['RED'], :, :, :])
+                    gcvi = (sat_properties[sat]['data'][BANDS[sat][numbands]['NIR'], :, :, :] / sat_properties[sat]['data'][BANDS[sat][numbands]['GREEN'], :, :, :]) - 1 
 
-            # Include NDVI and GCVI for s2 and planet, calculate before normalization
-            if sat in ['s2', 'planet'] and self.include_indices:
-                if (sat in ['s2'] and sat_properties[sat]['num_bands'] == 4) or (sat in ['planet']):
-                    with np.errstate(divide='ignore', invalid='ignore'):
-                        ndvi = (sat_properties[sat]['data'][3, :, :, :] - sat_properties[sat]['data'][2, :, :, :]) / (sat_properties[sat]['data'][3, :, :, :] + sat_properties[sat]['data'][2, :, :, :])
-                        gcvi = (sat_properties[sat]['data'][3, :, :, :] / sat_properties[sat]['data'][1, :, :, :]) - 1 
+                ndvi[(sat_properties[sat]['data'][BANDS[sat][numbands]['NIR'], :, :, :] + sat_properties[sat]['data'][BANDS[sat][numbands]['RED'], :, :, :]) == 0] = 0
+                gcvi[sat_properties[sat]['data'][BANDS[sat][numbands]['GREEN'], :, :, :] == 0] = 0
 
-                    ndvi[(sat_properties[sat]['data'][3, :, :, :] + sat_properties[sat]['data'][2, :, :, :]) == 0] = 0
-                    gcvi[sat_properties[sat]['data'][1, :, :, :] == 0] = 0
-
-                elif sat_properties[sat]['num_bands'] == 10:
-                    with np.errstate(divide='ignore', invalid='ignore'):
-                        ndvi = (sat_properties[sat]['data'][6, :, :, :] - sat_properties[sat]['data'][2, :, :, :]) / (sat_properties[sat]['data'][6, :, :, :] + sat_properties[sat]['data'][2, :, :, :])
-                        gcvi = (sat_properties[sat]['data'][6, :, :, :] / sat_properties[sat]['data'][1, :, :, :]) - 1
-
-                    ndvi[(sat_properties[sat]['data'][6, :, :, :] + sat_properties[sat]['data'][2, :, :, :]) == 0] = 0
-                    gcvi[sat_properties[sat]['data'][1, :, :, :] == 0] = 0
 
             #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
                 

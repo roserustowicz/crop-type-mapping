@@ -81,6 +81,12 @@ LOSS_WEIGHT = { 'ghana': GHANA_LOSS_WEIGHT,
                 'germany': GERMANY_LOSS_WEIGHT }
 
 # BAND STATS
+
+BANDS = { 's1': { 'VV': 0, 'VH': 1, 'RATIO': 2},
+          's2': { '10': {'BLUE': 0, 'GREEN': 1, 'RED': 2, 'RDED1': 3, 'RDED2': 4, 'RDED3': 5, 'NIR': 6, 'RDED4': 7, 'SWIR1': 8, 'SWIR2': 9},
+                   '4': {'BLUE': 0, 'GREEN': 1, 'RED': 2, 'NIR': 3}}, 
+          'planet': { '4': {'BLUE': 0, 'GREEN': 1, 'RED': 2, 'NIR': 3}}}
+
 MEANS = { 's1': { 'ghana': np.array([-10.50, -17.24, 1.17]), 
                   'southsudan': np.array([-9.02, -15.26, 1.15]), 
                   'tanzania': np.array([-9.80, -17.05, 1.30])},
