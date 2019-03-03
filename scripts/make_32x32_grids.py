@@ -14,6 +14,7 @@ import sys
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from constants import *
+from skimage.transform import resize as imresize
 
 def load_splits(country):
     with open(os.path.join(GRID_DIR[country], f'{country}_full_train'), 'rb') as f:
