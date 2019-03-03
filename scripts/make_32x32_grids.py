@@ -73,7 +73,6 @@ def split_grids(country, num_pixels=32):
                     planet_grid = imresize(planet_grid, (planet_grid.shape[0], 256, 256, planet_grid.shape[3]), anti_aliasing=True, mode='reflect')
                     planet_dates_grid = f['planet_dates'][grid]
 
-                    
                 s2_sub_grids = []
                 s1_sub_grids = []
                 cloudmasks_sub_grids = []
@@ -97,9 +96,7 @@ def split_grids(country, num_pixels=32):
                         s2_sub_grids.append(s2_sub_grid)
 
                         cloudmasks_sub_grids.append(cloudmasks_grid[i*num_pixels:(i+1)*num_pixels, j*num_pixels: (j+1)*num_pixels, :])
-                        
                         planet_sub_grids.append(planet_grid[:, i*NUM_PLANET_PIXELS:(i+1) * NUM_PLANET_PIXELS, j*NUM_PLANET_PIXELS: (j+1) * NUM_PLANET_PIXELS, :])
-                        
                 
                 for i in range(len(label_sub_grids)):
                     sub_grid_name = grid + "_{}".format(i)
