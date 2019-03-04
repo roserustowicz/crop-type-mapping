@@ -18,7 +18,7 @@ from constants import *
 from random import shuffle
 
 
-def get_Xy(dl):
+def get_Xy(dl, country):
     """ 
     Constructs data (X) and labels (y) for pixel-based methods. 
     Args: 
@@ -31,7 +31,7 @@ def get_Xy(dl):
     X = []
     y = []
     for inputs, targets, cloudmasks in dl:
-        X, y = get_Xy_batch(inputs, targets, X, y)
+        X, y = get_Xy_batch(inputs, targets, X, y, country)
     X = np.vstack(X)
     y = np.squeeze(np.vstack(y))
 
@@ -42,7 +42,7 @@ def get_Xy(dl):
     y = np.squeeze(y[indices])
     return X, y
 
-def get_Xy_batch(inputs, targets, X, y):
+def get_Xy_batch(inputs, targets, X, y, country):
     """ 
     Constructs necessary pixel array for pixel based methods. The 
     function takes one case of inputs, targets each time it is called
@@ -51,8 +51,8 @@ def get_Xy_batch(inputs, targets, X, y):
     # For each input example and corresponding target,
     for ex_idx in range(inputs.shape[0]):
         for crop_idx in range(targets.shape[1]):
-            cur_inputs = np.transpose(np.reshape(inputs[ex_idx, :, :, :, :], (-1, 64*64)), (1, 0))
-            cur_targets = np.squeeze(np.reshape(targets[ex_idx, crop_idx, :, :], (-1, 64*64)))
+            cur_inputs = np.transpose(np.reshape(inputs[ex_idx, :, :, :, :], (-1, GRID_SIZE[country]*GRID_SIZE[country])), (1, 0))
+            cur_targets = np.squeeze(np.reshape(targets[ex_idx, crop_idx, :, :], (-1, GRID_SIZE[country]*GRID_SIZE[country])))
             # Index pixels of desired crop
             valid_inputs = cur_inputs[cur_targets == 1, :]
             if valid_inputs.shape[0] == 0:
@@ -165,9 +165,9 @@ class CropTypeDS(Dataset):
         self.least_cloudy = args.least_cloudy
         self.s2_num_bands = args.s2_num_bands
         
-        with h5py.File(self.hdf5_filepath, 'r') as data:
-            self.s1_lengths = data['s1_lengths']
-            self.s2_lengths = data['s2_lengths']
+        #with h5py.File(self.hdf5_filepath, 'r') as data:
+        #    self.s1_lengths = data['s1_lengths']
+        #    self.s2_lengths = data['s2_lengths']
 
     def __len__(self):
         return self.num_grids
