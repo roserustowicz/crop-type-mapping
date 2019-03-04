@@ -69,7 +69,7 @@ def split_grids(country, num_pixels=32):
                 planet = None
                 planet_dates_grid = None
                 if 'planet' in f.keys():
-                    planet_grid = f['planet'][grid]
+                    planet_grid = f['planet'][grid][:, :, :, :].astype(np.double)
                     planet_grid = imresize(planet_grid, (planet_grid.shape[0], 256, 256, planet_grid.shape[3]), anti_aliasing=True, mode='reflect')
                     planet_dates_grid = f['planet_dates'][grid]
 
