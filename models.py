@@ -27,7 +27,7 @@ from modelling.clstm_cell import ConvLSTMCell
 from modelling.clstm import CLSTM
 from modelling.cgru_segmenter import CGRUSegmenter
 from modelling.clstm_segmenter import CLSTMSegmenter
-from modelling.util import initialize_weights, get_num_bands, get_upsampling_weight, get_num_s1_bands, get_num_s2_bands
+from modelling.util import initialize_weights, get_num_bands, get_upsampling_weight
 from modelling.fcn8 import FCN8
 from modelling.unet import UNet, UNet_Encode, UNet_Decode
 from modelling.unet3d import UNet3D
@@ -324,7 +324,7 @@ def get_model(model_name, **kwargs):
         num_bands = get_num_bands(kwargs)['all']
         model = make_UNet3D_model(n_class = NUM_CLASSES[kwargs.get('country')], n_channel = num_bands, timesteps=kwargs.get('num_timesteps'))
     elif model_name == 'mi_clstm':
-        num_s1_bands, num_s2_bands = get_num_s1_bands(kwargs), get_num_s2_bands(kwargs)
+        num_s1_bands, num_s2_bands = get_num_bands(kwargs)['s1'], get_num_bands(kwargs)['s2']
         model = make_MI_CLSTM_model(s1_input_size=(num_timesteps, num_s1_bands, GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]),
                                     s2_input_size=(num_timesteps, num_s2_bands, GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]),
                                     unet_out_channels=kwargs.get('fcn_out_feats'),

@@ -147,7 +147,7 @@ class CropTypeDS(Dataset):
         self.resize_planet = args.resize_planet
         self.use_planet = args.use_planet
         self.planet_agg = args.planet_agg
-        #
+        
         self.num_classes = NUM_CLASSES[args.country]
         self.split = split
         self.apply_transforms = args.apply_transforms
@@ -155,7 +155,7 @@ class CropTypeDS(Dataset):
         self.sample_w_clouds = args.sample_w_clouds
         self.include_clouds = args.include_clouds
         self.include_doy = args.include_doy
-        #self.include_indices = args.include_indices
+        self.include_indices = args.include_indices
         self.num_timesteps = args.num_timesteps
         self.all_samples = args.all_samples
         
@@ -227,10 +227,13 @@ class CropTypeDS(Dataset):
                     sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'],
                                                            (sat_properties[sat]['data'].shape[0], 256, 256, sat_properties[sat]['data'].shape[3]),
                                                            anti_aliasing=True, mode='reflect')
-
             if sat in ['s2']:
                 if sat_properties[sat]['num_bands'] == 4:
-                    sat_properties[sat]['data'] = sat_properties[sat]['data'][[0, 1, 2, 6], :, :, :] #B, G, R, NIR
+                    sat_properties[sat]['data'] = sat_properties[sat]['data'][[BANDS[sat]['10']['BLUE'], 
+                                                                               BANDS[sat]['10']['GREEN'], 
+                                                                               BANDS[sat]['10']['RED'],
+                                                                               BANDS[sat]['10']['NIR']], 
+                                                                               :, :, :] #B, G, R, NIR
                 elif sat_properties[sat]['num_bands'] == 10:
                     sat_properties[sat]['data'] = sat_properties[sat]['data'][:10, :, :, :]
                 elif sat_properties[sat]['num_bands'] != 10:
@@ -247,12 +250,33 @@ class CropTypeDS(Dataset):
                                                                                           sat_properties[sat]['doy'],
                                                                                           self.agg_days, 
                                                                                           reduction=sat_properties[sat]['agg_reduction'])
-            #TODO: compute VH / VV from aggregated VV, VH for s1
-            #TODO: include NDVI and GCVI for s2
+                
+                # Replace the VH/VV band with a cleaner band after aggregation??
+                if sat in ['s1']:
+                    with np.errstate(divide='ignore', invalid='ignore'):
+                        sat_properties[sat]['data'][BANDS[sat]['RATIO'],:,:,:] = sat_properties[sat]['data'][BANDS[sat]['VH'],:,:,:] / sat_properties[sat]['data'][BANDS[sat]['VV'],:,:,:]
+                        sat_properties[sat]['data'][BANDS[sat]['RATIO'],:,:,:][sat_properties[sat]['data'][BANDS[sat]['VV'],:,:,:] == 0] = 0
+            
+            # Include NDVI and GCVI for s2 and planet, calculate before normalization and numband selection but AFTER AGGREGATION
+            if self.include_indices and sat in ['planet', 's2']:
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    numbands = str(sat_properties[sat]['num_bands'])
+                    ndvi = (sat_properties[sat]['data'][BANDS[sat][numbands]['NIR'], :, :, :] - sat_properties[sat]['data'][BANDS[sat][numbands]['RED'], :, :, :]) / (sat_properties[sat]['data'][BANDS[sat][numbands]['NIR'], :, :, :] + sat_properties[sat]['data'][BANDS[sat][numbands]['RED'], :, :, :])
+                    gcvi = (sat_properties[sat]['data'][BANDS[sat][numbands]['NIR'], :, :, :] / sat_properties[sat]['data'][BANDS[sat][numbands]['GREEN'], :, :, :]) - 1 
+
+                ndvi[(sat_properties[sat]['data'][BANDS[sat][numbands]['NIR'], :, :, :] + sat_properties[sat]['data'][BANDS[sat][numbands]['RED'], :, :, :]) == 0] = 0
+                gcvi[sat_properties[sat]['data'][BANDS[sat][numbands]['GREEN'], :, :, :] == 0] = 0
+
+
             #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
                 
             if self.normalize:
                 sat_properties[sat]['data'] = preprocess.normalization(sat_properties[sat]['data'], sat, self.country)
+            
+            # Concatenate vegetation indices after normalization, before temporal sample
+            if sat in ['planet', 's2'] and self.include_indices:
+                sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(ndvi, axis=0)), 0)
+                sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(gcvi, axis=0)), 0)
 
             if not sat_properties[sat]['agg']:
                 sat_properties[sat]['data'], sat_properties[sat]['doy'], sat_properties[sat]['cloudmasks'] = preprocess.sample_timeseries(sat_properties[sat]['data'],
@@ -261,6 +285,7 @@ class CropTypeDS(Dataset):
                                                                                                                seed=self.seed, least_cloudy=self.least_cloudy,
                                                                                                                sample_w_clouds=self.sample_w_clouds, 
                                                                                                                all_samples=self.all_samples)
+
             # Concatenate cloud mask bands
             if sat_properties[sat]['cloudmasks'] is not None and self.include_clouds:
                 sat_properties[sat]['cloudmasks'] = preprocess.preprocess_clouds(sat_properties[sat]['cloudmasks'], self.model_name, self.timeslice)

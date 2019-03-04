@@ -25,8 +25,8 @@ def get_num_bands(kwargs):
         added_doy = 1
     if kwargs.get('include_clouds') and kwargs.get('use_s2'): 
         added_clouds = 1
-    #if kwargs.get('include_indices') and (kwargs.get('use_s2') or kwargs.get('use_planet')):
-    #    added_indices = 2
+    if kwargs.get('include_indices') and (kwargs.get('use_s2') or kwargs.get('use_planet')):
+        added_indices = 2
 
     num_bands = {'s1': 0, 's2': 0, 'planet': 0 }
 
@@ -38,33 +38,6 @@ def get_num_bands(kwargs):
         num_bands['planet'] = PLANET_NUM_BANDS + added_doy + added_indices
    
     num_bands['all'] = num_bands['s1'] + num_bands['s2'] + num_bands['planet'] 
-    return num_bands
-
-def get_num_s1_bands(kwargs):
-    num_bands = -1
-    added_doy = 0
-    added_clouds = 0
-
-    if kwargs.get('include_doy'):
-        added_doy = 1
-        
-    num_bands = S1_NUM_BANDS + added_doy
-    
-    return num_bands
-
-
-def get_num_s2_bands(kwargs):
-    num_bands = -1
-    added_doy = 0
-    added_clouds = 0
-
-    if kwargs.get('include_doy'):
-        added_doy = 1
-    if kwargs.get('include_clouds') and kwargs.get('use_s2'): 
-        added_clouds = 1
-
-    num_bands = kwargs.get('s2_num_bands') + added_doy + added_clouds
-    
     return num_bands
 
 
