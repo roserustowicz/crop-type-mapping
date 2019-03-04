@@ -42,7 +42,7 @@ def save_splits(country, new_splits, old_splits):
 
 def del_new_grids(country, splits):
     with h5py.File(HDF5_PATH[country], 'a') as f:
-        for category in ["labels", "cloudmasks", "s1_lengths", "s2_lengths", "s1_dates", "s2_dates", "s1", "s2"]:
+        for category in ["labels", "cloudmasks", "s1_lengths", "s2_lengths", "s1_dates", "s2_dates", "s1", "s2", "planet_lengths", "planet_dates", "planet"]:
             for split_name, split in splits.items():
                 for grid in split:
                     del f[category][grid]
