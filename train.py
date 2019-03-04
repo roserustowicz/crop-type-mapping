@@ -91,7 +91,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         for rep in range(args.num_repeat):
             for split in ['train', 'val'] if not args.eval_on_test else ['test']:
                 dl = dataloaders[split]
-                X, y = datasets.get_Xy(dl)            
+                X, y = datasets.get_Xy(dl, args.country)            
 
                 if split == 'train':
                     model.fit(X, y)
@@ -182,7 +182,10 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
                     batch_num += 1
 
-                visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country)
+                if split in ['test']:
+                    visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country, save=False, save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
+                else:
+                    visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country)
                 
                 if split == 'val':
                     val_loss = all_metrics['val_loss'] / all_metrics['val_pix']
