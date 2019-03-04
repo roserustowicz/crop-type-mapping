@@ -165,9 +165,11 @@ class CropTypeDS(Dataset):
         self.least_cloudy = args.least_cloudy
         self.s2_num_bands = args.s2_num_bands
         
-        #with h5py.File(self.hdf5_filepath, 'r') as data:
-        #    self.s1_lengths = data['s1_lengths']
-        #    self.s2_lengths = data['s2_lengths']
+        
+        with h5py.File(self.hdf5_filepath, 'r') as data:
+            if 's1_lengths' in data:
+                self.s1_lengths = data['s1_lengths']
+                self.s2_lengths = data['s2_lengths']
 
     def __len__(self):
         return self.num_grids
