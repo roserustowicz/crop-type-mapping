@@ -141,6 +141,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
         for i in range(args.epochs):
             print('Epoch: {}'.format(i))
+            args.seed += 1
             all_metrics = {}
             for split in splits:
                 all_metrics[f'{split}_loss'] = 0
