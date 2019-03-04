@@ -31,7 +31,7 @@ def get_num_bands(kwargs):
     num_bands = {'s1': 0, 's2': 0, 'planet': 0 }
 
     if kwargs.get('use_s1'):
-        num_bands['s1'] = S1_NUM_BANDS + added_doy + added_clouds
+        num_bands['s1'] = S1_NUM_BANDS + added_doy
     if kwargs.get('use_s2'):
         num_bands['s2'] = kwargs.get('s2_num_bands') + added_doy + added_clouds + added_indices
     if kwargs.get('use_planet'):

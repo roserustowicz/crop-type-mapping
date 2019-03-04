@@ -89,4 +89,4 @@ def get_cm(y_pred, y_true, country, model_name):
         if y_true.shape[0] == 0:
             return None
         else: 
-            return confusion_matrix(y_true, y_pred, labels=CM_LABELS[country])
+            return confusion_matrix(y_true.cpu(), y_pred.cpu(), labels=CM_LABELS[country])
