@@ -40,6 +40,9 @@ def get_Xy(dl, country):
     indices = np.random.shuffle(indices)
     X = np.squeeze(X[indices, :])
     y = np.squeeze(y[indices])
+
+    print('X shape input: ', X.shape) 
+    print('y shape input: ', y.shape)
     return X, y
 
 def get_Xy_batch(inputs, targets, X, y, country):
