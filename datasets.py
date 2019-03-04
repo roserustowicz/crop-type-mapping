@@ -227,12 +227,13 @@ class CropTypeDS(Dataset):
                     sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'],
                                                            (sat_properties[sat]['data'].shape[0], 256, 256, sat_properties[sat]['data'].shape[3]),
                                                            anti_aliasing=True, mode='reflect')
-
-            
             if sat in ['s2']:
-
                 if sat_properties[sat]['num_bands'] == 4:
-                    sat_properties[sat]['data'] = sat_properties[sat]['data'][[0, 1, 2, 6], :, :, :] #B, G, R, NIR
+                    sat_properties[sat]['data'] = sat_properties[sat]['data'][[BANDS[sat]['10']['BLUE'], 
+                                                                               BANDS[sat]['10']['GREEN'], 
+                                                                               BANDS[sat]['10']['RED'],
+                                                                               BANDS[sat]['10']['NIR']], 
+                                                                               :, :, :] #B, G, R, NIR
                 elif sat_properties[sat]['num_bands'] == 10:
                     sat_properties[sat]['data'] = sat_properties[sat]['data'][:10, :, :, :]
                 elif sat_properties[sat]['num_bands'] != 10:
@@ -257,7 +258,7 @@ class CropTypeDS(Dataset):
                         sat_properties[sat]['data'][BANDS[sat]['RATIO'],:,:,:][sat_properties[sat]['data'][BANDS[sat]['VV'],:,:,:] == 0] = 0
             
             # Include NDVI and GCVI for s2 and planet, calculate before normalization and numband selection but AFTER AGGREGATION
-            if self.use_indices and sat in ['planet', 's2']:
+            if self.include_indices and sat in ['planet', 's2']:
                 with np.errstate(divide='ignore', invalid='ignore'):
                     numbands = str(sat_properties[sat]['num_bands'])
                     ndvi = (sat_properties[sat]['data'][BANDS[sat][numbands]['NIR'], :, :, :] - sat_properties[sat]['data'][BANDS[sat][numbands]['RED'], :, :, :]) / (sat_properties[sat]['data'][BANDS[sat][numbands]['NIR'], :, :, :] + sat_properties[sat]['data'][BANDS[sat][numbands]['RED'], :, :, :])
