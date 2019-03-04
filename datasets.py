@@ -215,6 +215,8 @@ class CropTypeDS(Dataset):
     
 
     def setup_data(self, data, idx, sat, sat_properties):
+        self.seed += 1
+        print('seeed: ', self.seed)
         if sat_properties[sat]['use']:
             sat_properties[sat]['data'] = data[sat][self.grid_list[idx]]       
                     
