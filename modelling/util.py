@@ -1,7 +1,6 @@
 import torch 
 import torch.nn as nn
 
-import util
 from constants import *
 
 def initialize_weights(*models):
