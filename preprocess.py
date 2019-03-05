@@ -194,7 +194,7 @@ def preprocess_grid(grid, model_name, time_slice=None, transform=False, rot=None
         time_slice - (int) which timestamp to be used in FCN
     """
 
-    if model_name in ["bidir_clstm", "fcn_crnn", "fcn", "random_forest", "mi_clstm", "fcn_crnn_germany_pretrained"]:
+    if model_name in ["bidir_clstm", "fcn_crnn", "fcn", "random_forest", "mi_clstm"]:
         return preprocessGrid(grid, transform, rot, time_slice)
     
     elif model_name == "unet":
@@ -231,7 +231,7 @@ def preprocess_label(label, model_name, num_classes=None, transform=False, rot=N
         (npy arr) [num_classes x 64 x 64]
     """
     # TODO: make this into a constant somewhere so we don't have to keep adding models
-    if model_name in ["bidir_clstm", "fcn", "fcn_crnn", "unet", "unet3d", "random_forest", "mi_clstm", "fcn_crnn_germany_pretrained"]:
+    if model_name in ["bidir_clstm", "fcn", "fcn_crnn", "unet", "unet3d", "random_forest", "mi_clstm"]:
         assert not num_classes is None
         return preprocessLabel(label, num_classes, transform, rot)
     

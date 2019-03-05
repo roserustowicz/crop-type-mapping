@@ -121,7 +121,7 @@ def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split,
     # TODO: change these to be constants in constants.py eventually
     start_idx = 2 if use_s2 and use_s1 else 0
     end_idx = 5 if use_s2 and use_s1 else 3
-    if model_name in ['fcn_crnn', 'bidir_clstm','unet3d', 'mi_clstm', 'fcn_crnn_germany_pretrained']:
+    if model_name in ['fcn_crnn', 'bidir_clstm','unet3d', 'mi_clstm']:
         for idx, b in enumerate(best):
             boi.append(inputs[idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
         boi = torch.cat(boi, dim=0)

@@ -302,6 +302,9 @@ def get_model(model_name, **kwargs):
     elif model_name == 'fcn_crnn':
         num_bands = get_num_bands(kwargs)['all'] 
         num_timesteps = kwargs.get('num_timesteps')
+        fix_feats = kwargs.get('fix_feats')
+        pretrained_model_path = kwargs.get('pretrained_model_path')
+
         model = make_fcn_clstm_model(country=kwargs.get('country'),
                                      fcn_input_size=(num_timesteps, num_bands, GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]), 
                                      fcn_model_name=kwargs.get('fcn_model_name'),
@@ -319,44 +322,23 @@ def get_model(model_name, **kwargs):
                                      use_planet = kwargs.get('use_planet'),
                                      resize_planet = kwargs.get('resize_planet'))
 
-    elif model_name == 'fcn_crnn_germany_pretrained':
-        num_bands = get_num_bands(kwargs)['all'] 
-        num_timesteps = kwargs.get('num_timesteps')
-        fix_feats = kwargs.get('fix_feats')
-        
-        model = make_fcn_clstm_model(country=kwargs.get('country'),
-                                     fcn_input_size=(num_timesteps, num_bands, GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]),
-                                     fcn_model_name=kwargs.get('fcn_model_name'),
-                                     crnn_input_size=(num_timesteps, kwargs.get('fcn_out_feats')),
-                                     crnn_model_name=kwargs.get('crnn_model_name'),
-                                     hidden_dims=kwargs.get('hidden_dims'),
-                                     lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')),
-                                     conv_kernel_size=kwargs.get('conv_kernel_size'),
-                                     lstm_num_layers=kwargs.get('crnn_num_layers'),
-                                     avg_hidden_states=kwargs.get('avg_hidden_states'),
-                                     num_classes=NUM_CLASSES[kwargs.get('country')],
-                                     bidirectional=kwargs.get('bidirectional'),
-                                     pretrained = kwargs.get('pretrained'),
-                                     early_feats = kwargs.get('early_feats'),
-                                     use_planet = kwargs.get('use_planet'),
-                                     resize_planet = kwargs.get('resize_planet'))
-
-        pre_trained_model=torch.load(PRETRAINED_GERMANY_PATH) 
+        if (pretrained_model_path is not None) and (kwargs.get('pretrained') == True):
+            pre_trained_model=torch.load(pretrained_model_path)
        
-        # don't set weights for weights and bias before predictions 
-        #  because number of classs do not agree 
-        dont_set = ['fcn_dec.final.6.weight', 'fcn_dec.final.6.bias']
-        updated_keys = []
-        for key, value in model.state_dict().items():
-            if key in dont_set: continue
-            elif key in pre_trained_model:
-                updated_keys.append(key) 
-                weights = pre_trained_model[key]   
-                model.state_dict()[key] = weights
+            # don't set weights for weights and bias before predictions 
+            #  because number of classs do not agree 
+            dont_set = ['fcn_dec.final.6.weight', 'fcn_dec.final.6.bias']
+            updated_keys = []
+            for key, value in model.state_dict().items():
+                if key in dont_set: continue
+                elif key in pre_trained_model:
+                    updated_keys.append(key) 
+                    weights = pre_trained_model[key]   
+                    model.state_dict()[key] = weights
 
-        for name, param in model.named_parameters():
-            if name in updated_keys:
-                param.requires_grad = not fix_feats
+            for name, param in model.named_parameters():
+                if name in updated_keys:
+                    param.requires_grad = not fix_feats
 
     elif model_name == 'unet3d':
         num_bands = get_num_bands(kwargs)['all']
