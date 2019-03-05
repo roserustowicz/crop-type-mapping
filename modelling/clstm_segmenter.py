@@ -12,7 +12,7 @@ class VectorAtt(nn.Module):
         """
         super(VectorAtt, self).__init__()
         self.linear = nn.Linear(hidden_dim_size, 1, bias=False)
-#         nn.init.constant_(self.linear.weight, 1)
+        nn.init.constant_(self.linear.weight, 1)
         self.softmax = nn.Softmax(dim=1)
         
     def forward(self, hidden_states):

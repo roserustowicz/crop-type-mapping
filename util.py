@@ -440,4 +440,6 @@ def get_train_parser():
                         default=False)
     parser.add_argument('--include_indices', type=str2bool, default=False,
                          help="Include ndvi and gcvi as input features")
+    parser.add_argument('--fix_feats', type=str2bool, default=False,
+                         help="Fix pretrained features")
     return parser

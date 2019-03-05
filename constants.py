@@ -9,7 +9,7 @@ Constants for file paths
 
 SPLITS = ['train', 'val', 'test']
 NON_DL_MODELS = ['logreg', 'random_forest']
-DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm', 'unet3d']
+DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm', 'unet3d', 'fcn_crnn_germany_pretrained']
 
 S1_NUM_BANDS = 3
 PLANET_NUM_BANDS = 4
@@ -40,6 +40,9 @@ GHANA_RASTER_DIR = GCP_DATA_DIR + '/ghana/raster/'
 GHANA_RASTER_NPY_DIR = GCP_DATA_DIR + '/ghana/raster_npy/'
 GHANA_S1_DIR = GCP_DATA_DIR + '/ghana/s1_npy'
 GHANA_S2_DIR = GCP_DATA_DIR + '/ghana/s2_npy'
+
+
+PRETRAINED_GERMANY_PATH = '/home/roserustowicz/crop-type-mapping/runs/20190303_fcncrnn_germany_s2_15dayagg_weightdecay01_noclouds_yesdoy_hiddendims128_avghiddenstatesyes_s2numbands10_yesearlyfeats_yesvegindices_best'
 
 # HYPERPARAMETER SEARCH
 # INT_POWER_EXP = ["hidden_dims"]
