@@ -3,7 +3,8 @@ import torch.nn as nn
 
 from constants import *
 
-def initialize_weights(*models):
+def initialize_weights(*models, seed):
+    torch.cuda.manual_seed_all(seed)
     for model in models:
         for module in model.modules():
             if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):

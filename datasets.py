@@ -175,6 +175,7 @@ class CropTypeDS(Dataset):
         return self.num_grids
 
     def __getitem__(self, idx):
+        self.seed += 1
         with h5py.File(self.hdf5_filepath, 'r') as data:
             sat_properties = { 's1': {'data': None, 'doy': None, 'use': self.use_s1, 'agg': self.s1_agg,
                                       'agg_reduction': 'avg', 'cloudmasks': None },
@@ -188,6 +189,7 @@ class CropTypeDS(Dataset):
 
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
+            print('rot: ', rot)
             grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'],
                                                   sat_properties['s2']['data'], 
                                                   sat_properties['planet']['data'])
