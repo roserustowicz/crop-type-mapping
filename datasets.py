@@ -30,16 +30,24 @@ def get_Xy(dl, country):
     # Populate data and labels of classes we care about
     X = []
     y = []
+    num_samples = 0
     for inputs, targets, cloudmasks in dl:
         X, y = get_Xy_batch(inputs, targets, X, y, country)
+        num_samples += y[-1].shape[0]
+        if num_samples > 100000:
+            break
+
     X = np.vstack(X)
-    y = np.squeeze(np.vstack(y))
+    y = np.squeeze(np.vstack(y))    
 
     # shuffle
     indices = np.array(list(range(y.shape[0])))
     indices = np.random.shuffle(indices)
     X = np.squeeze(X[indices, :])
     y = np.squeeze(y[indices])
+
+    print('X shape input: ', X.shape) 
+    print('y shape input: ', y.shape)
     return X, y
 
 def get_Xy_batch(inputs, targets, X, y, country):
