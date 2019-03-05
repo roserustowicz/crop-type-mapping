@@ -161,7 +161,6 @@ class CropTypeDS(Dataset):
         
         ## Timeslice for FCN
         self.timeslice = args.time_slice
-        self.seed = args.seed
         self.least_cloudy = args.least_cloudy
         self.s2_num_bands = args.s2_num_bands
         
@@ -175,7 +174,6 @@ class CropTypeDS(Dataset):
         return self.num_grids
 
     def __getitem__(self, idx):
-        self.seed += 1
         with h5py.File(self.hdf5_filepath, 'r') as data:
             sat_properties = { 's1': {'data': None, 'doy': None, 'use': self.use_s1, 'agg': self.s1_agg,
                                       'agg_reduction': 'avg', 'cloudmasks': None },
@@ -183,9 +181,10 @@ class CropTypeDS(Dataset):
                                       'agg_reduction': 'min', 'cloudmasks': None, 'num_bands': self.s2_num_bands },
                                'planet': {'data': None, 'doy': None, 'use': self.use_planet, 'agg': self.planet_agg,
                                           'agg_reduction': 'median', 'cloudmasks': None } }
-  
+
             for sat in ['s1', 's2', 'planet']:
                 sat_properties = self.setup_data(data, idx, sat, sat_properties)
+            print('s2 doys: ', sat_properties['s2']['doy'])   
 
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
@@ -217,8 +216,6 @@ class CropTypeDS(Dataset):
     
 
     def setup_data(self, data, idx, sat, sat_properties):
-        self.seed += 1
-        print('seeed: ', self.seed)
         if sat_properties[sat]['use']:
             sat_properties[sat]['data'] = data[sat][self.grid_list[idx]]       
                     
@@ -288,7 +285,7 @@ class CropTypeDS(Dataset):
                 sat_properties[sat]['data'], sat_properties[sat]['doy'], sat_properties[sat]['cloudmasks'] = preprocess.sample_timeseries(sat_properties[sat]['data'],
                                                                                                                self.num_timesteps, sat_properties[sat]['doy'],
                                                                                                                cloud_stack = sat_properties[sat]['cloudmasks'],
-                                                                                                               seed=self.seed, least_cloudy=self.least_cloudy,
+                                                                                                               least_cloudy=self.least_cloudy,
                                                                                                                sample_w_clouds=self.sample_w_clouds, 
                                                                                                                all_samples=self.all_samples)
 

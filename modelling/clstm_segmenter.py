@@ -27,26 +27,25 @@ class CLSTMSegmenter(nn.Module):
 
     def __init__(self, input_size, hidden_dims, lstm_kernel_sizes, 
                  conv_kernel_size, lstm_num_layers, num_classes, bidirectional,
-                 avg_hidden_states, seed):
+                 avg_hidden_states):
 
         super(CLSTMSegmenter, self).__init__()
-        self.seed = seed
 
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims]        
 
-        self.clstm = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers, self.seed)
+        self.clstm = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers)
         
         self.bidirectional = bidirectional
         if self.bidirectional:
-            self.clstm_rev = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers, self.seed+1)
+            self.clstm_rev = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers)
             self.att_rev = VectorAtt(hidden_dims[-1])
         self.avg_hidden_states = avg_hidden_states
         
         in_channels = hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))
         self.softmax = nn.Softmax2d()
-        initialize_weights(self, self.seed)
+        initialize_weights(self)
         
         self.att1 = VectorAtt(hidden_dims[-1])        
 #         self.att2 = VectorAtt(hidden_dims[-1])

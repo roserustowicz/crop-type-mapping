@@ -8,21 +8,19 @@ class CGRUSegmenter(nn.Module):
     """
 
     def __init__(self, input_size, hidden_dims, gru_kernel_sizes, 
-                 conv_kernel_size, gru_num_layers, num_classes, bidirectional, seed):
+                 conv_kernel_size, gru_num_layers, num_classes, bidirectional):
 
         super(CGRUSegmenter, self).__init__()
 
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims]        
 
-        self.seed = seed
-
         self.cgru = CGRU(input_size, hidden_dims, gru_kernel_sizes, gru_num_layers)
         self.bidirectional = bidirectional
         in_channels = hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))
         self.softmax = nn.Softmax2d()
-        initialize_weights(self, self.seed)
+        initialize_weights(self) 
 
     def forward(self, inputs):
         layer_output_list, last_state_list = self.cgru(inputs)

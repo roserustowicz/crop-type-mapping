@@ -16,7 +16,7 @@ class ConvLSTMCell(nn.Module):
 
         Implementation based on stefanopini's at https://github.com/ndrplz/ConvLSTM_pytorch/blob/master/convlstm.py
     """
-    def __init__(self, input_dim, hidden_dim, num_timesteps, kernel_size, bias, seed):
+    def __init__(self, input_dim, hidden_dim, num_timesteps, kernel_size, bias): 
         """
         Initialize ConvLSTM cell.
         
@@ -34,7 +34,6 @@ class ConvLSTMCell(nn.Module):
 
         super(ConvLSTMCell, self).__init__()
 
-        self.seed = seed
         self.input_dim  = input_dim
         self.hidden_dim = hidden_dim
         self.num_timesteps = num_timesteps
@@ -60,7 +59,7 @@ class ConvLSTMCell(nn.Module):
         self.input_norm = RecurrentNorm2d(4 * self.hidden_dim, self.num_timesteps)
         self.cell_norm = RecurrentNorm2d(self.hidden_dim, self.num_timesteps)
         
-        initialize_weights(self, self.seed)
+        initialize_weights(self)
 
     def forward(self, input_tensor, cur_state, timestep):
         

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import util
 
 from modelling.recurrent_norm import RecurrentNorm2d
 from modelling.clstm_cell import ConvLSTMCell
@@ -7,7 +8,7 @@ from modelling.util import initialize_weights
 
 class CLSTM(nn.Module):
 
-    def __init__(self, input_size, hidden_dims, kernel_sizes, lstm_num_layers, batch_first=True, bias=True, return_all_layers=False, seed=None):
+    def __init__(self, input_size, hidden_dims, kernel_sizes, lstm_num_layers, batch_first=True, bias=True, return_all_layers=False):
         """
            Args:
                 input_size - (tuple) should be (time_steps, channels, height, width)
@@ -20,7 +21,6 @@ class CLSTM(nn.Module):
         (self.num_timesteps, self.start_num_channels, self.height, self.width) = input_size
         self.lstm_num_layers = lstm_num_layers
         self.bias = bias
-        self.seed = seed
         if isinstance(kernel_sizes, list):
             if len(kernel_sizes) != lstm_num_layers and len(kernel_sizes) == 1:
                 self.kernel_sizes = kernel_sizes * lstm_num_layers
@@ -38,7 +38,6 @@ class CLSTM(nn.Module):
             self.hidden_dims = [hidden_dims] * lstm_num_layers       
         
         self.init_hidden_state = self._init_hidden()
-        self.seed += 1
         self.init_cell_state = self._init_hidden()
         
         cell_list = []
@@ -48,11 +47,10 @@ class CLSTM(nn.Module):
                                           hidden_dim = self.hidden_dims[i],
                                           num_timesteps = self.num_timesteps,
                                           kernel_size = self.kernel_sizes[i],
-                                          bias=self.bias, 
-                                          seed=self.seed+1))
+                                          bias=self.bias)) 
 
         self.cell_list = nn.ModuleList(cell_list)
-        initialize_weights(self, self.seed)
+        initialize_weights(self) 
 
     def forward(self, input_tensor, hidden_state=None):
 
@@ -90,7 +88,6 @@ class CLSTM(nn.Module):
         return layer_outputs, last_states
 
     def _init_hidden(self):
-        torch.cuda.manual_seed_all(self.seed)
         init_states = []
         for i in range(self.lstm_num_layers):
             init_states.append(nn.Parameter(torch.zeros(1, self.hidden_dims[i], self.width, self.height)))

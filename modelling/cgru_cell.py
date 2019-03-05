@@ -13,7 +13,7 @@ class ConvGRUCell(nn.Module):
     """
         
     """
-    def __init__(self, input_size, input_dim, hidden_dim, num_timesteps, kernel_size, bias, seed):
+    def __init__(self, input_size, input_dim, hidden_dim, num_timesteps, kernel_size, bias):
         """
         Initialize ConvGRU cell.
         
@@ -32,8 +32,6 @@ class ConvGRUCell(nn.Module):
         """
 
         super(ConvGRUCell, self).__init__()
-
-        self.seed = seed
 
         self.height, self.width = input_size
         self.input_dim  = input_dim
@@ -70,7 +68,7 @@ class ConvGRUCell(nn.Module):
         self.h_norm = RecurrentNorm2d(2 * self.hidden_dim, self.num_timesteps)
         self.input_norm = RecurrentNorm2d(2 * self.hidden_dim, self.num_timesteps)
         
-        initialize_weights(self, self.seed)
+        initialize_weights(self)
 
     def forward(self, input_tensor, cur_state, timestep):
         # TODO: should not have to call cuda here, figure out where this belongs

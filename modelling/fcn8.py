@@ -6,9 +6,8 @@ class FCN8(nn.Module):
     '''
     FCN implementation from https://github.com/wkentaro/pytorch-fcn/tree/63bc2c5bf02633f08d0847bb2dbd0b2f90034837
     '''
-    def __init__(self, n_class=5, n_channel=11, seed=None):
+    def __init__(self, n_class=5, n_channel=11): 
         super(FCN8s_croptype, self).__init__()
-        self.seed = seed
 
         # conv1
         self.conv1_1_croptype = nn.Conv2d(n_channel, 64, 3, padding=100)
@@ -75,7 +74,6 @@ class FCN8(nn.Module):
         self._initialize_weights()
 
     def _initialize_weights(self):
-        torch.cuda.manual_seed_all(self.seed)
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 m.weight.data.zero_()

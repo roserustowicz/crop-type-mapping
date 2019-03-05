@@ -141,7 +141,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
 
         for i in range(args.epochs):
             print('Epoch: {}'.format(i))
-            args.seed += 1
             all_metrics = {}
             for split in splits:
                 all_metrics[f'{split}_loss'] = 0
@@ -222,6 +221,14 @@ if __name__ == "__main__":
     parser = util.get_train_parser()
 
     args = parser.parse_args()
+
+    if args.seed is not None:
+        if args.device == 'cuda':
+            use_cuda=True
+        elif args.device == 'cpu':
+            use_cuda=False
+        util.random_seed(seed_value=args.seed, use_cuda=use_cuda)
+
     # load in data generator
     dataloaders = datasets.get_dataloaders(args.country, args.dataset, args)
     # load in model
