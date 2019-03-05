@@ -188,7 +188,7 @@ class CropTypeDS(Dataset):
                                's2': {'data': None, 'doy': None, 'use': self.use_s2, 'agg': self.s2_agg,
                                       'agg_reduction': 'min', 'cloudmasks': None, 'num_bands': self.s2_num_bands },
                                'planet': {'data': None, 'doy': None, 'use': self.use_planet, 'agg': self.planet_agg,
-                                          'agg_reduction': 'median', 'cloudmasks': None, 'num_bands': 4 } }
+                                          'agg_reduction': 'median', 'cloudmasks': None, 'num_bands': PLANET_NUM_BANDS } }
 
             for sat in ['s1', 's2', 'planet']:
                 sat_properties = self.setup_data(data, idx, sat, sat_properties)

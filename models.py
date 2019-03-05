@@ -342,7 +342,9 @@ def get_model(model_name, **kwargs):
                                      resize_planet = kwargs.get('resize_planet'))
 
         pre_trained_model=torch.load(PRETRAINED_GERMANY_PATH) 
-        
+       
+        # don't set weights for weights and bias before predictions 
+        #  because number of classs do not agree 
         dont_set = ['fcn_dec.final.6.weight', 'fcn_dec.final.6.bias']
         updated_keys = []
         for key, value in model.state_dict().items():
