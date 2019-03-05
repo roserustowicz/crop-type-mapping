@@ -325,8 +325,8 @@ def get_model(model_name, **kwargs):
         if (pretrained_model_path is not None) and (kwargs.get('pretrained') == True):
             pre_trained_model=torch.load(pretrained_model_path)
        
-            # don't set weights for weights and bias before predictions 
-            #  because number of classs do not agree 
+            # don't set pretrained weights for weights and bias before predictions 
+            #  because number of classes do not agree (i.e. germany has 17 classes)
             dont_set = ['fcn_dec.final.6.weight', 'fcn_dec.final.6.bias']
             updated_keys = []
             for key, value in model.state_dict().items():
