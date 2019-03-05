@@ -184,11 +184,9 @@ class CropTypeDS(Dataset):
 
             for sat in ['s1', 's2', 'planet']:
                 sat_properties = self.setup_data(data, idx, sat, sat_properties)
-            print('s2 doys: ', sat_properties['s2']['doy'])   
 
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
-            print('rot: ', rot)
             grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'],
                                                   sat_properties['s2']['data'], 
                                                   sat_properties['planet']['data'])
