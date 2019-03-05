@@ -89,6 +89,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         
         results = {'train_acc': [], 'train_f1': [], 'val_acc': [], 'val_f1': [], 'test_acc': [], 'test_f1': []}
         for rep in range(args.num_repeat):
+            print('rep: ', rep)
             for split in ['train', 'val'] if not args.eval_on_test else ['test']:
                 dl = dataloaders[split]
                 X, y = datasets.get_Xy(dl, args.country)            
@@ -111,6 +112,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
                 print('{} accuracy: {}, {} f1-score: {}'.format(split, accuracy, split, f1))
                 results[f'{split}_acc'].append(accuracy)
                 results[f'{split}_f1'].append(f1)
+                print('{} cm: {}'.format(split, cm))
+                print('{} per class f1 scores: {}'.format(split, metrics.get_f1score(cm, avg=False)))
 
         for split in ['train', 'val'] if not args.eval_on_test else ['test']: 
             print('\n------------------------\nOverall Results:\n')
