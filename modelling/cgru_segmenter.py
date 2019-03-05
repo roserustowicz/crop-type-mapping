@@ -20,7 +20,7 @@ class CGRUSegmenter(nn.Module):
         in_channels = hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))
         self.softmax = nn.Softmax2d()
-        initialize_weights(self) 
+        initialize_weights(self)
 
     def forward(self, inputs):
         layer_output_list, last_state_list = self.cgru(inputs)

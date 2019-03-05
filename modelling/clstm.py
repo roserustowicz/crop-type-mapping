@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import util
 
 from modelling.recurrent_norm import RecurrentNorm2d
 from modelling.clstm_cell import ConvLSTMCell
@@ -47,10 +46,10 @@ class CLSTM(nn.Module):
                                           hidden_dim = self.hidden_dims[i],
                                           num_timesteps = self.num_timesteps,
                                           kernel_size = self.kernel_sizes[i],
-                                          bias=self.bias)) 
+                                          bias=self.bias))
 
         self.cell_list = nn.ModuleList(cell_list)
-        initialize_weights(self) 
+        initialize_weights(self)
 
     def forward(self, input_tensor, hidden_state=None):
 

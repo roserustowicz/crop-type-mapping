@@ -16,7 +16,7 @@ class ConvLSTMCell(nn.Module):
 
         Implementation based on stefanopini's at https://github.com/ndrplz/ConvLSTM_pytorch/blob/master/convlstm.py
     """
-    def __init__(self, input_dim, hidden_dim, num_timesteps, kernel_size, bias): 
+    def __init__(self, input_dim, hidden_dim, num_timesteps, kernel_size, bias):
         """
         Initialize ConvLSTM cell.
         

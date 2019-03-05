@@ -6,9 +6,8 @@ class FCN8(nn.Module):
     '''
     FCN implementation from https://github.com/wkentaro/pytorch-fcn/tree/63bc2c5bf02633f08d0847bb2dbd0b2f90034837
     '''
-    def __init__(self, n_class=5, n_channel=11): 
+    def __init__(self, n_class=5, n_channel = 11):
         super(FCN8s_croptype, self).__init__()
-
         # conv1
         self.conv1_1_croptype = nn.Conv2d(n_channel, 64, 3, padding=100)
         self.relu1_1 = nn.LeakyReLU(inplace=True)
