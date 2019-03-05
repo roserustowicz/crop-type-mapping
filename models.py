@@ -54,7 +54,7 @@ class FCN_CRNN(nn.Module):
                 self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], late_feats_for_fcn=True, pretrained=pretrained)
             else:
                 self.fcn_enc = make_UNetEncoder_model(fcn_input_size[1], use_planet=use_planet, resize_planet=resize_planet, pretrained=pretrained)
-                self.fcn_dec = make_UNetDecoder_model(num_classes, late_feats_for_fcn=False) 
+                self.fcn_dec = make_UNetDecoder_model(num_classes, late_feats_for_fcn=False)
         
         if crnn_model_name == "gru":
             if self.early_feats:
@@ -107,7 +107,7 @@ def make_MI_CLSTM_model(s1_input_size, s2_input_size,
                      conv_kernel_size, num_classes, bidirectional)
     return model
 
-def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional):
+def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states):
     """ Defines a (bidirectional) CLSTM model 
     Args:
         input_size - (tuple) size of input dimensions 
@@ -122,7 +122,7 @@ def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kern
     Returns:
       returns the model! 
     """
-    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional)
+    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states)
 
     return clstm_segmenter
 
@@ -280,13 +280,13 @@ def get_model(model_name, **kwargs):
         # TODO: change the timestamps passed in to be more flexible (i.e allow specify variable length / fixed / truncuate / pad)
         # TODO: don't hardcode values
         model = make_bidir_clstm_model(input_size=(num_timesteps, num_bands, GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]), 
-
                                        hidden_dims=kwargs.get('hidden_dims'), 
                                        lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
                                        conv_kernel_size=kwargs.get('conv_kernel_size'), 
                                        lstm_num_layers=kwargs.get('crnn_num_layers'),
                                        num_classes=NUM_CLASSES[kwargs.get('country')],
-                                       bidirectional=kwargs.get('bidirectional'))
+                                       bidirectional=kwargs.get('bidirectional'),
+                                       avg_hidden_states=kwargs.get('avg_hidden_states'))
     elif model_name == 'fcn':
         num_bands = get_num_bands(kwargs)['all']
         model = make_fcn_model(n_class=NUM_CLASSES[kwargs.get('country')], n_channel = num_bands, freeze=True)
@@ -306,8 +306,7 @@ def get_model(model_name, **kwargs):
         model = make_fcn_clstm_model(country=kwargs.get('country'),
                                      fcn_input_size=(num_timesteps, num_bands, GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]), 
                                      fcn_model_name=kwargs.get('fcn_model_name'),
-                                     #crnn_input_size=(num_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]),
-                                     crnn_input_size=(num_timesteps, kwargs.get('fcn_out_feats')), #, GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]),
+                                     crnn_input_size=(num_timesteps, kwargs.get('fcn_out_feats')), 
                                      crnn_model_name=kwargs.get('crnn_model_name'),
                                      hidden_dims=kwargs.get('hidden_dims'), 
                                      lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 

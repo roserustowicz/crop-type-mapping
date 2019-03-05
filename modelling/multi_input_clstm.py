@@ -16,7 +16,7 @@ class MI_CLSTM(nn.Module):
             input_size - (tuple) should be (time_steps, channels, height, width)
         """
         super(MI_CLSTM, self).__init__()
-        
+
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims]        
 

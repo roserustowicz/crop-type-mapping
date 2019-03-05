@@ -396,7 +396,7 @@ def remap_cloud_stack(cloud_stack):
     return remapped_cloud_stack
 
 
-def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, seed=None, verbose=False, timestamps_first=False, least_cloudy=False, sample_w_clouds=True, all_samples=False):
+def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, remap_clouds=True, reverse=False, verbose=False, timestamps_first=False, least_cloudy=False, sample_w_clouds=True, all_samples=False):
     """
     Args:
       img_stack - (numpy array) [bands x rows x cols x timestamps], temporal stack of images
@@ -579,11 +579,11 @@ def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytim
 
                 if random_sample == True and satellite == 's2':
                     cloud_stack = np.load(os.path.join(gridded_dir,cloud_mask_fnames[i]))
-                    [sampled_img_stack, _,  sampled_cloud_stack] = sample_timeseries(X_one, num_samples = num_timestamp, cloud_stack=cloud_stack, reverse = reverse, seed = seed)
+                    [sampled_img_stack, _,  sampled_cloud_stack] = sample_timeseries(X_one, num_samples = num_timestamp, cloud_stack=cloud_stack, reverse = reverse)
                     Xtemp = np.copy(np.vstack((sampled_img_stack,np.expand_dims(sampled_cloud_stack, axis=0))))
                 
                 elif random_sample == True and satellite == 's1':
-                    [sampled_img_stack, _, _] = sample_timeseries(X_one, num_samples = num_timestamp, cloud_stack=None, reverse = reverse, seed = seed)
+                    [sampled_img_stack, _, _] = sample_timeseries(X_one, num_samples = num_timestamp, cloud_stack=None, reverse = reverse)
                     Xtemp = np.copy(sampled_img_stack)
                     
                 else:

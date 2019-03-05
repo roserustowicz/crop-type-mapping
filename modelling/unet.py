@@ -94,6 +94,8 @@ class UNet_Encode(nn.Module):
             nn.Conv2d(feats*8, feats*16, kernel_size=3, padding=1),
             nn.GroupNorm(feats*16 // 16, feats*16),
             nn.LeakyReLU(inplace=True))
+        
+        initialize_weights(self)
 
     def forward(self, x):
 

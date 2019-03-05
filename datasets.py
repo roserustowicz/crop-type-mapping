@@ -169,7 +169,6 @@ class CropTypeDS(Dataset):
         
         ## Timeslice for FCN
         self.timeslice = args.time_slice
-        self.seed = args.seed
         self.least_cloudy = args.least_cloudy
         self.s2_num_bands = args.s2_num_bands
         
@@ -190,7 +189,7 @@ class CropTypeDS(Dataset):
                                       'agg_reduction': 'min', 'cloudmasks': None, 'num_bands': self.s2_num_bands },
                                'planet': {'data': None, 'doy': None, 'use': self.use_planet, 'agg': self.planet_agg,
                                           'agg_reduction': 'median', 'cloudmasks': None } }
-  
+
             for sat in ['s1', 's2', 'planet']:
                 sat_properties = self.setup_data(data, idx, sat, sat_properties)
 
@@ -292,7 +291,7 @@ class CropTypeDS(Dataset):
                 sat_properties[sat]['data'], sat_properties[sat]['doy'], sat_properties[sat]['cloudmasks'] = preprocess.sample_timeseries(sat_properties[sat]['data'],
                                                                                                                self.num_timesteps, sat_properties[sat]['doy'],
                                                                                                                cloud_stack = sat_properties[sat]['cloudmasks'],
-                                                                                                               seed=self.seed, least_cloudy=self.least_cloudy,
+                                                                                                               least_cloudy=self.least_cloudy,
                                                                                                                sample_w_clouds=self.sample_w_clouds, 
                                                                                                                all_samples=self.all_samples)
 
