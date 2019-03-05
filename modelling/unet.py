@@ -70,12 +70,13 @@ class UNet(nn.Module):
 class UNet_Encode(nn.Module):
     """ U-Net architecture definition for encoding (first half of the "U")
     """
-    def __init__(self, num_channels, use_planet=False, resize_planet=False):
+    def __init__(self, num_channels, use_planet=False, resize_planet=False, seed=None):
         super(UNet_Encode, self).__init__()
 
         self.downsample = _DownSample() 
         self.use_planet = use_planet
         self.resize_planet = resize_planet      
+        self.seed = seed
   
         feats = 16
         if self.use_planet and self.resize_planet:
@@ -94,6 +95,8 @@ class UNet_Encode(nn.Module):
             nn.Conv2d(feats*8, feats*16, kernel_size=3, padding=1),
             nn.GroupNorm(feats*16 // 16, feats*16),
             nn.LeakyReLU(inplace=True))
+        
+        initialize_weights(self, self.seed)
 
     def forward(self, x):
 
@@ -121,11 +124,12 @@ class UNet_Encode(nn.Module):
 class UNet_Decode(nn.Module):
     """ U-Net architecture definition for decoding (second half of the "U")
     """
-    def __init__(self, num_classes, late_feats_for_fcn):
+    def __init__(self, num_classes, late_feats_for_fcn, seed=None):
         super(UNet_Decode, self).__init__()
 
         self.downsample = _DownSample() 
         self.late_feats_for_fcn = late_feats_for_fcn
+        self.seed = seed
 
         feats = 16
         self.center_decode = nn.Sequential(
@@ -145,7 +149,7 @@ class UNet_Decode(nn.Module):
         )
 
         self.softmax = nn.Softmax2d()
-        initialize_weights(self)
+        initialize_weights(self, self.seed)
 
     def forward(self, center1, enc4, enc3):
 

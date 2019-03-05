@@ -7,7 +7,7 @@ from modelling.util import initialize_weights
 
 class CGRU(nn.Module):
 
-    def __init__(self, input_size, hidden_dims, kernel_sizes, gru_num_layers, batch_first=True, bias=True, return_all_layers=False):
+    def __init__(self, input_size, hidden_dims, kernel_sizes, gru_num_layers, batch_first=True, bias=True, return_all_layers=False, seed=None):
         """
            Args:
                 input_size - (tuple) should be (time_steps, channels, height, width)
@@ -17,6 +17,7 @@ class CGRU(nn.Module):
         """
 
         super(CGRU, self).__init__()
+        self.seed = seed
         (self.num_timesteps, self.start_num_channels, self.height, self.width) = input_size
 
         self.gru_num_layers = gru_num_layers
@@ -52,7 +53,7 @@ class CGRU(nn.Module):
                                          bias=self.bias))
 
         self.cell_list = nn.ModuleList(cell_list)
-        initialize_weights(self)
+        initialize_weights(self, self.seed)
 
     def forward(self, input_tensor, hidden_state=None):
 

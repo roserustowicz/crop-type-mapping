@@ -40,36 +40,37 @@ class FCN_CRNN(nn.Module):
                        crnn_input_size, crnn_model_name, 
                        hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states, 
                        num_classes, bidirectional, pretrained, early_feats,
-                       use_planet, resize_planet):
+                       use_planet, resize_planet, seed):
         super(FCN_CRNN, self).__init__()
 
         self.early_feats = early_feats
+        self.seed = seed
 
         if fcn_model_name == 'simpleCNN':
-            self.fcn = simple_CNN(fcn_input_size, crnn_input_size[1])
+            self.fcn = simple_CNN(fcn_input_size, crnn_input_size[1], self.seed)
         elif fcn_model_name == 'fcn8':
-            self.fcn = make_fcn_model(crnn_input_size[1], fcn_input_size[1], freeze=False)
+            self.fcn = make_fcn_model(crnn_input_size[1], fcn_input_size[1], freeze=False, seed=self.seed)
         elif fcn_model_name == 'unet':
             if not self.early_feats:
-                self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], late_feats_for_fcn=True, pretrained=pretrained)
+                self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], late_feats_for_fcn=True, pretrained=pretrained, seed=self.seed)
             else:
-                self.fcn_enc = make_UNetEncoder_model(fcn_input_size[1], use_planet=use_planet, resize_planet=resize_planet, pretrained=pretrained)
-                self.fcn_dec = make_UNetDecoder_model(num_classes, late_feats_for_fcn=False) 
+                self.fcn_enc = make_UNetEncoder_model(fcn_input_size[1], use_planet=use_planet, resize_planet=resize_planet, pretrained=pretrained, seed=self.seed)
+                self.fcn_dec = make_UNetDecoder_model(num_classes, late_feats_for_fcn=False, seed=self.seed+1) 
         
         if crnn_model_name == "gru":
             if self.early_feats:
                 self.crnn = CGRUSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
-                                      conv_kernel_size, lstm_num_layers, crnn_input_size[1], bidirectional, avg_hidden_states)
+                                      conv_kernel_size, lstm_num_layers, crnn_input_size[1], bidirectional, avg_hidden_states, self.seed)
             else:
                 self.crnn = CGRUSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
-                                      conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states)
+                                      conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, self.seed)
         elif crnn_model_name == "clstm":
             if self.early_feats:
                 self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
-                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1], bidirectional, avg_hidden_states, seed)
+                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1], bidirectional, avg_hidden_states, self.seed)
             else:
                 self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
-                                       conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, seed)
+                                       conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, self.seed)
 
     def forward(self, input_tensor):
         batch, timestamps, bands, rows, cols = input_tensor.size()
@@ -151,7 +152,7 @@ def make_fcn_model(n_class, n_channel, freeze=True):
     
     return fcn8s
 
-def make_UNet_model(n_class, n_channel, late_feats_for_fcn=False, pretrained=True, resize_planet=False):
+def make_UNet_model(n_class, n_channel, late_feats_for_fcn=False, pretrained=True, resize_planet=False, seed=None):
     """ Defines a U-Net model
     Args:
       n_class - (int) number of classes to predict
@@ -165,7 +166,7 @@ def make_UNet_model(n_class, n_channel, late_feats_for_fcn=False, pretrained=Tru
     Returns: 
       returns the model!
     """
-    model = UNet(n_class, n_channel, late_feats_for_fcn)
+    model = UNet(n_class, n_channel, late_feats_for_fcn, seed)
     
     if pretrained:
         # TODO: Why are pretrained weights from vgg13? 
@@ -181,8 +182,8 @@ def make_UNet_model(n_class, n_channel, late_feats_for_fcn=False, pretrained=Tru
     model = model.cuda()
     return model
 
-def make_UNetEncoder_model(n_channel, use_planet=True, resize_planet=False, pretrained=True):
-    model = UNet_Encode(n_channel, use_planet, resize_planet)
+def make_UNetEncoder_model(n_channel, use_planet=True, resize_planet=False, pretrained=True, seed=None):
+    model = UNet_Encode(n_channel, use_planet, resize_planet, seed)
     
     if pretrained:
        # TODO: Why are pretrained weights from vgg13? 
@@ -197,15 +198,15 @@ def make_UNetEncoder_model(n_channel, use_planet=True, resize_planet=False, pret
     model = model.cuda()
     return model
 
-def make_UNetDecoder_model(n_class, late_feats_for_fcn):
-    model = UNet_Decode(n_class, late_feats_for_fcn=False)
+def make_UNetDecoder_model(n_class, late_feats_for_fcn, seed=None):
+    model = UNet_Decode(n_class, late_feats_for_fcn=False, seed=seed)
     model = model.cuda()
     return model
 
 def make_fcn_clstm_model(country, fcn_input_size, fcn_model_name, 
                          crnn_input_size, crnn_model_name, 
                          hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states,
-                         num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet):
+                         num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet, seed):
     """ Defines a fully-convolutional-network + CLSTM model
     Args:
       fcn_input_size - (tuple) input dimensions for FCN model
@@ -231,7 +232,7 @@ def make_fcn_clstm_model(country, fcn_input_size, fcn_model_name,
 
     model = FCN_CRNN(fcn_input_size, fcn_model_name, 
                      crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, 
-                     avg_hidden_states, num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet)
+                     avg_hidden_states, num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet, seed)
     model = model.cuda()
 
     return model

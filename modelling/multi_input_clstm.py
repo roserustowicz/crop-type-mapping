@@ -11,12 +11,14 @@ class MI_CLSTM(nn.Module):
     def __init__(self, s1_input_size, s2_input_size,
                  unet_out_channels,
                  hidden_dims, lstm_kernel_sizes, lstm_num_layers, 
-                 conv_kernel_size, num_classes, bidirectional):
+                 conv_kernel_size, num_classes, bidirectional, seed):
         """
             input_size - (tuple) should be (time_steps, channels, height, width)
         """
         super(MI_CLSTM, self).__init__()
-        
+
+        self.seed = seed        
+
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims]        
 
@@ -45,7 +47,7 @@ class MI_CLSTM(nn.Module):
         in_channels = 2 * hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))
         self.softmax = nn.Softmax2d()
-        initialize_weights(self)
+        initialize_weights(self, self.seed)
 
     def forward(self, inputs):
  
