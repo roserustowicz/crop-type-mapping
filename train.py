@@ -89,7 +89,6 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         
         results = {'train_acc': [], 'train_f1': [], 'val_acc': [], 'val_f1': [], 'test_acc': [], 'test_f1': []}
         for rep in range(args.num_repeat):
-            print('rep: ', rep)
             for split in ['train', 'val'] if not args.eval_on_test else ['test']:
                 dl = dataloaders[split]
                 X, y = datasets.get_Xy(dl, args.country)            
