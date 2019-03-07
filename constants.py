@@ -41,6 +41,9 @@ GHANA_RASTER_NPY_DIR = GCP_DATA_DIR + '/ghana/raster_npy/'
 GHANA_S1_DIR = GCP_DATA_DIR + '/ghana/s1_npy'
 GHANA_S2_DIR = GCP_DATA_DIR + '/ghana/s2_npy'
 
+
+PRETRAINED_GERMANY_PATH = '/home/roserustowicz/crop-type-mapping/runs/20190303_fcncrnn_germany_s2_15dayagg_weightdecay01_noclouds_yesdoy_hiddendims128_avghiddenstatesyes_s2numbands10_yesearlyfeats_yesvegindices_best'
+
 # HYPERPARAMETER SEARCH
 # INT_POWER_EXP = ["hidden_dims"]
 # REAL_POWER_EXP = ["weight_decay", "lr"]

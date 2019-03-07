@@ -424,6 +424,9 @@ def get_train_parser():
                          help="Model to use for crnn part of fcn + crnn")
     parser.add_argument('--pretrained', type=str2bool, default=True,
                         help="Pretrained unet model for fcn-crnn")
+    parser.add_argument('--pretrained_model_path', type=str, 
+                        default=None, #PRETRAINED_GERMANY_PATH,
+                        help='Path to pretrained model')
     parser.add_argument('--dropout', type=int, default=.5,
                         help="Dropout probability to be used")
     parser.add_argument('--model_path', type=str)
@@ -440,4 +443,6 @@ def get_train_parser():
                         default=False)
     parser.add_argument('--include_indices', type=str2bool, default=False,
                          help="Include ndvi and gcvi as input features")
+    parser.add_argument('--fix_feats', type=str2bool, default=False,
+                         help="Fix pretrained features")
     return parser
