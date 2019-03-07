@@ -154,91 +154,53 @@ class VisdomLogger:
             predsmask_grid = make_grid(torch.from_numpy(disp_preds_w_mask), nrow=NROW, normalize=True, padding=8, pad_value=255)
             return labels_grid, inputs_grid, targets_grid, preds_grid, predsmask_grid
     
-def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None, show_visdom=True, show_matplot=False):
-    """ Record values and images for batch in visdom
-    """
-    # Create and show mask for labeled areas
-    label_mask = np.sum(targets.numpy(), axis=1)
-    label_mask = np.expand_dims(label_mask, axis=1)
-    if show_visdom:
-        visdom_plot_images(vis, label_mask, 'Label Masks')
-        #visdom_plot_images(vis, confidence, 'Confidence')
-
-    # Show best inputs judging from cloud masks
-    if torch.sum(clouds) != 0 and len(clouds.shape) > 1: 
-        best = np.argmax(np.mean(np.mean(clouds.numpy()[:, 0, :, :, :], axis=1), axis=1), axis=1)
-    else:
-        best = np.random.randint(0, high=inputs.shape[1], size=(inputs.shape[0],))
-    best = np.zeros_like(best)
-
-    # Get bands of interest (boi) to show best rgb version of s2 or vv, vh, vv version of s1
-    boi = []
-    add_doy = 1 if use_s2 and use_s1 and include_doy else 0
-    # TODO: change these to be constants in constants.py eventually
-    start_idx = 2 if use_s2 and use_s1 else 0
-    end_idx = 5 if use_s2 and use_s1 else 3
-    if model_name in ['fcn_crnn', 'bidir_clstm','unet3d', 'mi_clstm']:
-        for idx, b in enumerate(best):
-            boi.append(inputs[idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
-        boi = torch.cat(boi, dim=0)
-    elif model_name in ['fcn', 'unet'] and time_slice is not None:
-        boi = inputs[:, start_idx+add_doy:end_idx+add_doy, :, :]
-    elif model_name in ['unet'] and time_slice is None:
-        inputs = inputs.view(inputs.shape[0], inputs.shape[1], -1, inputs.shape[2], inputs.shape[3])  
-        for idx, b in enumerate(best):
-            boi.append(inputs[idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
-        boi = torch.cat(boi, dim=0)
-    else:
-        raise ValueError(f"Model {model_name} unsupported! check --model_name args")
-            
-    # Clip and show input bands of interest
-    boi = clip_boi(boi)
-    if show_visdom:
-        visdom_plot_images(vis, boi, 'Input Images') 
-
-    # Show targets (labels)
-    disp_targets = np.concatenate((np.zeros_like(label_mask), targets.numpy()), axis=1)
-    disp_targets = np.argmax(disp_targets, axis=1)
-    disp_targets = np.expand_dims(disp_targets, axis=1)
-    disp_targets = visualize_rgb(disp_targets, num_classes)
-    if show_visdom:
-        visdom_plot_images(vis, disp_targets, 'Target Images')
-
-    # Show predictions, masked with label mask
-    disp_preds = np.argmax(preds.detach().cpu().numpy(), axis=1) + 1
-    disp_preds = np.expand_dims(disp_preds, axis=1)
-    disp_preds = visualize_rgb(disp_preds, num_classes)
-    disp_preds_w_mask = disp_preds * label_mask
-
-    if show_visdom:
-        visdom_plot_images(vis, disp_preds, 'Predicted Images')
-        visdom_plot_images(vis, disp_preds_w_mask, 'Predicted Images with Label Mask')
-
-    # Show gradnorm per batch
-    if show_visdom:
-        if split == 'train':
-            visdom_plot_metric('gradnorm', split, 'Grad Norm', 'Batch', 'Norm', vis_data, vis)
     
-    # TODO: put this into a separate helper function?
-    if save:
-        save_dir = save_dir.replace(" ", "")
-        save_dir = save_dir.replace(":", "")
-        
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        save_image(torch.from_numpy(label_mask), os.path.join(save_dir, 'label_masks.png'), nrow=NROW, normalize=True) 
-        save_image(boi, os.path.join(save_dir, 'inputs.png'), nrow=NROW, normalize=True)
-        save_image(torch.from_numpy(disp_targets), os.path.join(save_dir, 'targets.png'), nrow=NROW, normalize=True) 
-        save_image(torch.from_numpy(disp_preds), os.path.join(save_dir, 'preds.png'), nrow=NROW, normalize=True)
-        save_image(torch.from_numpy(disp_preds_w_mask), os.path.join(save_dir, 'preds_w_masks.png'), nrow=NROW, normalize=True)
-    
-    if show_matplot:
-        labels_grid = make_grid(torch.from_numpy(label_mask), nrow=NROW, normalize=True, padding=8, pad_value=255) 
-        inputs_grid = make_grid(boi, nrow=NROW, normalize=True, padding=8, pad_value=255)
-        targets_grid = make_grid(torch.from_numpy(disp_targets), nrow=NROW, normalize=True, padding=8, pad_value=255) 
-        preds_grid = make_grid(torch.from_numpy(disp_preds), nrow=NROW, normalize=True, padding=8, pad_value=255)
-        predsmask_grid = make_grid(torch.from_numpy(disp_preds_w_mask), nrow=NROW, normalize=True, padding=8, pad_value=255)
-        return labels_grid, inputs_grid, targets_grid, preds_grid, predsmask_grid
+    def record_epoch(self, split, epoch_num, country, save=False, save_dir=None):
+        """ Record values for epoch in visdom
+        """
+        if country in ['ghana', 'southsudan', 'tanzania', 'germany']:
+            class_names = CROPS[country]
+        else:
+            raise ValueError(f"Country {country} not supported in visualize.py, record_epoch")
+
+        if self.epoch_data[f'{split}_loss'] is not None: 
+            loss_epoch = self.epoch_data[f'{split}_loss'] / self.epoch_data[f'{split}_pix']
+        if self.epoch_data[f'{split}_correct'] is not None: 
+            acc_epoch = self.epoch_data[f'{split}_correct'] / self.epoch_data[f'{split}_pix']
+
+        # Don't append if you are saving. Information has already been appended!
+        if save == False:
+            self.progress_data[f'{split}_loss'].append(loss_epoch)
+            self.progress_data[f'{split}_acc'].append(acc_epoch)
+            self.progress_data[f'{split}_f1'].append(metrics.get_f1score(self.epoch_data[f'{split}_cm'], avg=True))
+
+            if self.progress_data[f'{split}_classf1'] is None:
+                self.progress_data[f'{split}_classf1'] = metrics.get_f1score(self.epoch_data[f'{split}_cm'], avg=False)
+                self.progress_data[f'{split}_classf1'] = np.vstack(self.progress_data[f'{split}_classf1']).T
+            else:
+                self.progress_data[f'{split}_classf1'] = np.vstack((self.progress_data[f'{split}_classf1'], metrics.get_f1score(self.epoch_data[f'{split}_cm'], avg=False)))
+
+        for cur_metric in ['loss', 'acc', 'f1']:
+            visdom_plot_metric(cur_metric, split, f'{split} {cur_metric}', 'Epoch', cur_metric, self.progress_data, self.vis)
+            if save or split in['test']:
+                save_dir = save_dir.replace(" ", "")
+                save_dir = save_dir.replace(":", "")
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir) 
+                visdom_save_metric(cur_metric, split, f'{split}{cur_metric}', 'Epoch', cur_metric, self.progress_data, save_dir)
+
+        visdom_plot_many_metrics('classf1', split, f'{split}_per_class_f1-score', 'Epoch', 'per class f1-score', class_names, self.progress_data, self.vis)
+
+        fig = util.plot_confusion_matrix(self.epoch_data[f'{split}_cm'], class_names,
+                                         normalize=True,
+                                         title='{} confusion matrix, epoch {}'.format(split, epoch_num),
+                                         cmap=plt.cm.Blues)
+
+        self.vis.matplot(fig, win=f'{split} CM')
+        if save or split in ['test']:
+            visdom_save_many_metrics('classf1', split, f'{split}_per_class_f1', 'Epoch', 'per class f1-score', class_names, self.progress_data, save_dir)               
+            fig.savefig(os.path.join(save_dir, f'{split}_cm.png')) 
+            classification_report(self.epoch_data, split, epoch_num, country, save_dir)
 
 def clip_boi(boi):
     """ Clip bands of interest outside of 2*std per image sample
@@ -254,51 +216,6 @@ def clip_boi(boi):
    
         boi[sample, :, :, :] = (boi[sample, :, :, :] - min_clip)/(max_clip - min_clip)
     return boi
-
-def record_epoch(all_metrics, split, vis_data, vis, epoch_num, country, save=False, save_dir=None):
-    """ Record values for epoch in visdom
-    """
-    if country in ['ghana', 'southsudan', 'tanzania', 'germany']:
-        class_names = CROPS[country]
-    else:
-        raise ValueError(f"Country {country} not supported in visualize.py, record_epoch")
-
-    if all_metrics[f'{split}_loss'] is not None: loss_epoch = all_metrics[f'{split}_loss'] / all_metrics[f'{split}_pix']
-    if all_metrics[f'{split}_correct'] is not None: acc_epoch = all_metrics[f'{split}_correct'] / all_metrics[f'{split}_pix']
-
-    # Don't append if you are saving. Information has already been appended!
-    if save == False:
-        vis_data[f'{split}_loss'].append(loss_epoch)
-        vis_data[f'{split}_acc'].append(acc_epoch)
-        vis_data[f'{split}_f1'].append(metrics.get_f1score(all_metrics[f'{split}_cm'], avg=True))
-
-        if vis_data[f'{split}_classf1'] is None:
-            vis_data[f'{split}_classf1'] = metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False)
-            vis_data[f'{split}_classf1'] = np.vstack(vis_data[f'{split}_classf1']).T
-        else:
-            vis_data[f'{split}_classf1'] = np.vstack((vis_data[f'{split}_classf1'], metrics.get_f1score(all_metrics[f'{split}_cm'], avg=False)))
-
-    for cur_metric in ['loss', 'acc', 'f1']:
-        visdom_plot_metric(cur_metric, split, f'{split} {cur_metric}', 'Epoch', cur_metric, vis_data, vis)
-        if save or split in['test']:
-            save_dir = save_dir.replace(" ", "")
-            save_dir = save_dir.replace(":", "")
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir) 
-            visdom_save_metric(cur_metric, split, f'{split}{cur_metric}', 'Epoch', cur_metric, vis_data, save_dir)
-
-    visdom_plot_many_metrics('classf1', split, f'{split}_per_class_f1-score', 'Epoch', 'per class f1-score', class_names, vis_data, vis)
-
-    fig = util.plot_confusion_matrix(all_metrics[f'{split}_cm'], class_names,
-                                     normalize=True,
-                                     title='{} confusion matrix, epoch {}'.format(split, epoch_num),
-                                     cmap=plt.cm.Blues)
-
-    vis.matplot(fig, win=f'{split} CM')
-    if save or split in ['test']:
-        visdom_save_many_metrics('classf1', split, f'{split}_per_class_f1', 'Epoch', 'per class f1-score', class_names, vis_data, save_dir)               
-        fig.savefig(os.path.join(save_dir, f'{split}_cm.png')) 
-        classification_report(all_metrics, split, epoch_num, country, save_dir)
 
 def classification_report(all_metrics, split, epoch_num, country, save_dir):
     if country in ['ghana', 'southsudan', 'tanzania', 'germany']:
