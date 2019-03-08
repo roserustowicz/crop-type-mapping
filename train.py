@@ -146,11 +146,10 @@ def train_dl_model(model, model_name, dataloaders, args):
                                         args.include_doy, args.use_s1, args.use_s2, 
                                         model_name, args.time_slice)
 
-
             if split in ['test']:
-                visualize.record_epoch(vis_logger.epoch_data, split, vis_logger.progress_data, vis_logger.vis, i, args.country, save=False, save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
+                vis_logger.record_epoch(split, i, args.country, save=False, save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
             else:
-                visualize.record_epoch(vis_logger.epoch_data, split, vis_logger.progress_data, vis_logger.vis, i, args.country)
+                vis_logger.record_epoch(split, i, args.country)
 
             if split == 'val':
                 val_f1 = metrics.get_f1score(vis_logger.epoch_data['val_cm'], avg=True)                 
@@ -167,10 +166,10 @@ def train_dl_model(model, model_name, dataloaders, args):
                                                 model_name, args.time_slice, save=True, 
                                                 save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
 
-                        visualize.record_epoch(vis_logger.epoch_data, split, vis_logger.progress_data, vis_logger.vis, i, args.country, save=True, 
+                        vis_logger.record_epoch(split, i, args.country, save=True, 
                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               
 
-                        visualize.record_epoch(vis_logger.epoch_data, 'train', vis_logger.progress_data, vis_logger.vis, i, args.country, save=True, 
+                        vis_logger.record_epoch('train', i, args.country, save=True, 
                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               
 
             
