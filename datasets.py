@@ -4,6 +4,7 @@ File that houses the dataset wrappers we have.
 
 """
 
+import time
 import torch
 from torch.utils.data import Dataset, DataLoader, Sampler
 import pickle
@@ -192,13 +193,15 @@ class CropTypeDS(Dataset):
 
             for sat in ['s1', 's2', 'planet']:
                 sat_properties = self.setup_data(data, idx, sat, sat_properties)
-
+            
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
             grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'],
                                                   sat_properties['s2']['data'], 
                                                   sat_properties['planet']['data'])
+
             grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
+            
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
         
@@ -224,18 +227,11 @@ class CropTypeDS(Dataset):
     def setup_data(self, data, idx, sat, sat_properties):
         if sat_properties[sat]['use']:
             sat_properties[sat]['data'] = data[sat][self.grid_list[idx]]       
-                    
-            if sat in ['planet']:
-                sat_properties[sat]['data'] = sat_properties[sat]['data'][:, :, :, :].astype(np.double)  
-                if self.resize_planet:
-                    sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'], 
-                                                           (sat_properties[sat]['data'].shape[0], self.grid_size, self.grid_size, sat_properties[sat]['data'].shape[3]), 
-                                                           anti_aliasing=True, mode='reflect')
-                else:
-                    # upsample to 256 x 256 to fit into model
-                    sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'],
-                                                           (sat_properties[sat]['data'].shape[0], 256, 256, sat_properties[sat]['data'].shape[3]),
-                                                           anti_aliasing=True, mode='reflect')
+            if sat in ['planet']: sat_properties[sat]['data'] = sat_properties[sat]['data'][:, :, :, :].astype(np.double)  
+            
+            if self.include_doy:
+                sat_properties[sat]['doy'] = data[f'{sat}_dates'][self.grid_list[idx]][()]
+
             if sat in ['s2']:
                 if sat_properties[sat]['num_bands'] == 4:
                     sat_properties[sat]['data'] = sat_properties[sat]['data'][[BANDS[sat]['10']['BLUE'], 
@@ -250,10 +246,7 @@ class CropTypeDS(Dataset):
 
                 if self.include_clouds:
                     sat_properties[sat]['cloudmasks'] = data['cloudmasks'][self.grid_list[idx]][()]
-
-            if self.include_doy:
-                sat_properties[sat]['doy'] = data[f'{sat}_dates'][self.grid_list[idx]][()]
- 
+            
             if sat_properties[sat]['agg']:
                 sat_properties[sat]['data'], sat_properties[sat]['doy'] = split_and_aggregate(sat_properties[sat]['data'], 
                                                                                           sat_properties[sat]['doy'],
@@ -265,6 +258,21 @@ class CropTypeDS(Dataset):
                     with np.errstate(divide='ignore', invalid='ignore'):
                         sat_properties[sat]['data'][BANDS[sat]['RATIO'],:,:,:] = sat_properties[sat]['data'][BANDS[sat]['VH'],:,:,:] / sat_properties[sat]['data'][BANDS[sat]['VV'],:,:,:]
                         sat_properties[sat]['data'][BANDS[sat]['RATIO'],:,:,:][sat_properties[sat]['data'][BANDS[sat]['VV'],:,:,:] == 0] = 0
+            
+            else:
+                sat_properties[sat]['data'], sat_properties[sat]['doy'], sat_properties[sat]['cloudmasks'] = preprocess.sample_timeseries(sat_properties[sat]['data'],
+                                                                                                               self.num_timesteps, sat_properties[sat]['doy'],
+                                                                                                               cloud_stack = sat_properties[sat]['cloudmasks'],
+                                                                                                               least_cloudy=self.least_cloudy,
+                                                                                                               sample_w_clouds=self.sample_w_clouds, 
+                                                                                                               all_samples=self.all_samples)
+
+                    
+            if sat in ['planet'] and self.resize_planet:
+                sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'], 
+                                                       (sat_properties[sat]['data'].shape[0], self.grid_size, self.grid_size, sat_properties[sat]['data'].shape[3]), 
+                                                       anti_aliasing=True, mode='reflect')
+
             
             # Include NDVI and GCVI for s2 and planet, calculate before normalization and numband selection but AFTER AGGREGATION
             if self.include_indices and sat in ['planet', 's2']:
@@ -282,18 +290,10 @@ class CropTypeDS(Dataset):
             if self.normalize:
                 sat_properties[sat]['data'] = preprocess.normalization(sat_properties[sat]['data'], sat, self.country)
             
-            # Concatenate vegetation indices after normalization, before temporal sample
+            # Concatenate vegetation indices after normalization
             if sat in ['planet', 's2'] and self.include_indices:
                 sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(ndvi, axis=0)), 0)
                 sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(gcvi, axis=0)), 0)
-
-            if not sat_properties[sat]['agg']:
-                sat_properties[sat]['data'], sat_properties[sat]['doy'], sat_properties[sat]['cloudmasks'] = preprocess.sample_timeseries(sat_properties[sat]['data'],
-                                                                                                               self.num_timesteps, sat_properties[sat]['doy'],
-                                                                                                               cloud_stack = sat_properties[sat]['cloudmasks'],
-                                                                                                               least_cloudy=self.least_cloudy,
-                                                                                                               sample_w_clouds=self.sample_w_clouds, 
-                                                                                                               all_samples=self.all_samples)
 
             # Concatenate cloud mask bands
             if sat_properties[sat]['cloudmasks'] is not None and self.include_clouds:
@@ -304,6 +304,12 @@ class CropTypeDS(Dataset):
             if sat_properties[sat]['doy'] is not None and self.include_doy:
                 doy_stack = preprocess.doy2stack(sat_properties[sat]['doy'], sat_properties[sat]['data'].shape)
                 sat_properties[sat]['data'] = np.concatenate((sat_properties[sat]['data'], doy_stack), 0)
+            
+            if sat in ['planet'] and not self.resize_planet:
+                # upsample to 256 x 256 to fit into model
+                sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'],
+                                                       (sat_properties[sat]['data'].shape[0], 256, 256, sat_properties[sat]['data'].shape[3]),
+                                                       anti_aliasing=True, mode='reflect')
         return sat_properties
 
     
