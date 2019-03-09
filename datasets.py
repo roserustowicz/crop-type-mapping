@@ -198,12 +198,12 @@ class CropTypeDS(Dataset):
             
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
-            grid, large_planet_grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'], sat_properties['s2']['data'], 
-                                                                     sat_properties['planet']['data'], self.resize_planet)
+            grid, highres_grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'], sat_properties['s2']['data'], 
+                                                                sat_properties['planet']['data'], self.resize_planet)
 
             grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
-            if large_planet_grid is not None: 
-                large_planet_grid = preprocess.preprocess_grid(large_planet_grid, self.model_name, self.timeslice, transform, rot)           
+            if highres_grid is not None: 
+                highres_grid = preprocess.preprocess_grid(highres_grid, self.model_name, self.timeslice, transform, rot)           
 
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
@@ -212,6 +212,8 @@ class CropTypeDS(Dataset):
             cloudmasks = False
         else:
             cloudmasks = sat_properties['s2']['cloudmasks']
+        if highres_grid is None:
+            highres_grid = False
 
 #         if self.split == 'train':
 #             x_start = np.random.randint(0, 32)
@@ -224,7 +226,7 @@ class CropTypeDS(Dataset):
 
 #             if cloudmasks is not None:
 #                 cloudmasks = cloudmasks[:, x_start:x_start+32, y_start:y_start+32, :]
-        return grid, label, cloudmasks, large_planet_grid
+        return grid, label, cloudmasks, highres_grid
     
 
     def setup_data(self, data, idx, sat, sat_properties):
@@ -339,11 +341,11 @@ class CropTypeDS(Dataset):
             #ckpt11 = time.time()
             #print('ckpt11: ', ckpt11 - ckpt10)
             
-            if sat in ['planet'] and not self.resize_planet:
-                # upsample to 256 x 256 to fit into model
-                sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'],
-                                                       (sat_properties[sat]['data'].shape[0], 256, 256, sat_properties[sat]['data'].shape[3]),
-                                                       anti_aliasing=True, mode='reflect')
+            #if sat in ['planet'] and not self.resize_planet:
+            #    # upsample to 256 x 256 to fit into model
+            #    sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'],
+            #                                           (sat_properties[sat]['data'].shape[0], 256, 256, sat_properties[sat]['data'].shape[3]),
+            #                                           anti_aliasing=True, mode='reflect')
         return sat_properties
 
     

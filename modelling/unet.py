@@ -103,19 +103,15 @@ class UNet_Encode(nn.Module):
 
         # ENCODE
         x = x.cuda()
-        hres = hres.cuda()
-
+        if hres is not None: hres = hres.cuda()
         if (self.use_planet and self.resize_planet) or (not self.use_planet):
             enc3 = self.enc3(x)
         else:
-            print('x shape: ', x.shape)
-            print('planet bands: ', self.planet_numbands)
-            print('s1 bands: ', self.s1_numbands)
-            print('s2 bands: ', self.s2_numbands)
-            enc1 = self.enc1(x)
+            enc1 = self.enc1(x) if hres is None else self.enc1(hres)
             down1 = self.downsample(enc1)
             enc2 = self.enc2(down1)
             down2 = self.downsample(enc2)
+            if hres is not None: down2 = torch.cat((x, down2), 1)
             enc3 = self.enc3(down2)
 
         down3 = self.downsample(enc3)

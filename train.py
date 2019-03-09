@@ -123,6 +123,10 @@ def train_dl_model(model, model_name, dataloaders, args):
             dl = dataloaders[split]
             model.train() if split == ['train'] else model.eval()
             for inputs, targets, cloudmasks, hres_inputs in tqdm(dl):
+                print('inputs: ', inputs.shape)
+                print('targets: ', targets.shape)
+                print('cloudmasks: ', cloudmasks.shape)
+                print('hres_inputs: ', hres_inputs.shape)
                 with torch.set_grad_enabled(True):
                     inputs.to(args.device)
                     if hres_inputs is not None: hres_inputs.to(args.device)
