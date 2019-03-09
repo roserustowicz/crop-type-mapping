@@ -191,14 +191,14 @@ class CropTypeDS(Dataset):
                                       'agg_reduction': 'min', 'cloudmasks': None, 'num_bands': self.s2_num_bands },
                                'planet': {'data': None, 'doy': None, 'use': self.use_planet, 'agg': self.planet_agg,
                                           'agg_reduction': 'median', 'cloudmasks': None, 'num_bands': PLANET_NUM_BANDS } }
- 
+
             for sat in ['s1', 's2', 'planet']:
                 sat_properties = self.setup_data(data, idx, sat, sat_properties)
-            
+ 
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
             grid, highres_grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'], sat_properties['s2']['data'], 
-                                                                sat_properties['planet']['data'], self.resize_planet)
+                                                  sat_properties['planet']['data'], self.resize_planet)
 
             grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
             if highres_grid is not None: 
@@ -230,7 +230,6 @@ class CropTypeDS(Dataset):
 
     def setup_data(self, data, idx, sat, sat_properties):
         if sat_properties[sat]['use']:
-
             sat_properties[sat]['data'] = data[sat][self.grid_list[idx]]       
             
             if sat in ['planet']: sat_properties[sat]['data'] = sat_properties[sat]['data'][:, :, :, :].astype(np.double)  
