@@ -172,7 +172,6 @@ class UNet_Decode(nn.Module):
 
         final = self.final(torch.cat([dec4, enc3], 1)) 
 
-            
         if self.late_feats_for_fcn:
             return final
         else:
