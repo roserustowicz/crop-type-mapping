@@ -75,7 +75,7 @@ def evaluate(model_name, preds, labels, country, loss_fn=None, reduction=None, l
 def train_non_dl_model(model, model_name, dataloaders, args, X, y):
     results = {'train_acc': [], 'train_f1': [], 'val_acc': [], 'val_f1': [], 'test_acc': [], 'test_f1': []}
     for rep in range(args.num_repeat):
-        for split in ['train', 'val'] if not args.eval_on_test else ['test']:
+        for split in ['train', 'val', 'test'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             X, y = datasets.get_Xy(dl, args.country)            
 
@@ -100,7 +100,7 @@ def train_non_dl_model(model, model_name, dataloaders, args, X, y):
             print('{} cm: {}'.format(split, cm))
             print('{} per class f1 scores: {}'.format(split, metrics.get_f1score(cm, avg=False)))
 
-    for split in ['train', 'val'] if not args.eval_on_test else ['test']: 
+    for split in ['train', 'val', 'test'] if not args.eval_on_test else ['test']: 
         print('\n------------------------\nOverall Results:\n')
         print('{} accuracy: {} +/- {}'.format(split, np.mean(results[f'{split}_acc']), np.std(results[f'{split}_acc'])))
         print('{} f1-score: {} +/- {}'.format(split, np.mean(results[f'{split}_f1']), np.std(results[f'{split}_f1'])))

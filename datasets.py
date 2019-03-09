@@ -226,11 +226,21 @@ class CropTypeDS(Dataset):
 
     def setup_data(self, data, idx, sat, sat_properties):
         if sat_properties[sat]['use']:
+            start = time.time()
+
             sat_properties[sat]['data'] = data[sat][self.grid_list[idx]]       
+            #ckpt1 = time.time()
+            #print('ckpt1: ', ckpt1 - start)
+            
             if sat in ['planet']: sat_properties[sat]['data'] = sat_properties[sat]['data'][:, :, :, :].astype(np.double)  
+            #ckpt2 = time.time()
+            #print('ckpt2: ', ckpt2 - ckpt1)
             
             if self.include_doy:
                 sat_properties[sat]['doy'] = data[f'{sat}_dates'][self.grid_list[idx]][()]
+            
+            #ckpt3 = time.time()
+            #print('ckpt3: ', ckpt3 - ckpt2)
 
             if sat in ['s2']:
                 if sat_properties[sat]['num_bands'] == 4:
@@ -247,6 +257,9 @@ class CropTypeDS(Dataset):
                 if self.include_clouds:
                     sat_properties[sat]['cloudmasks'] = data['cloudmasks'][self.grid_list[idx]][()]
             
+            #ckpt4 = time.time()
+            #print('ckpt4: ', ckpt4 - ckpt3)
+
             if sat_properties[sat]['agg']:
                 sat_properties[sat]['data'], sat_properties[sat]['doy'] = split_and_aggregate(sat_properties[sat]['data'], 
                                                                                           sat_properties[sat]['doy'],
@@ -267,12 +280,16 @@ class CropTypeDS(Dataset):
                                                                                                                sample_w_clouds=self.sample_w_clouds, 
                                                                                                                all_samples=self.all_samples)
 
+            #ckpt5 = time.time()
+            #print('ckpt5: ', ckpt5 - ckpt4)
                     
             if sat in ['planet'] and self.resize_planet:
                 sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'], 
                                                        (sat_properties[sat]['data'].shape[0], self.grid_size, self.grid_size, sat_properties[sat]['data'].shape[3]), 
                                                        anti_aliasing=True, mode='reflect')
 
+            #ckpt6 = time.time()
+            #print('ckpt6: ', ckpt6 - ckpt5)
             
             # Include NDVI and GCVI for s2 and planet, calculate before normalization and numband selection but AFTER AGGREGATION
             if self.include_indices and sat in ['planet', 's2']:
@@ -286,24 +303,38 @@ class CropTypeDS(Dataset):
 
 
             #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
+            #ckpt7 = time.time()
+            #print('ckpt7: ', ckpt7 - ckpt6)
                 
             if self.normalize:
                 sat_properties[sat]['data'] = preprocess.normalization(sat_properties[sat]['data'], sat, self.country)
+            
+            #ckpt8 = time.time()
+            #print('ckpt8: ', ckpt8 - ckpt7)
             
             # Concatenate vegetation indices after normalization
             if sat in ['planet', 's2'] and self.include_indices:
                 sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(ndvi, axis=0)), 0)
                 sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(gcvi, axis=0)), 0)
+            
+            #ckpt9 = time.time()
+            #print('ckpt9: ', ckpt9 - ckpt8)
 
             # Concatenate cloud mask bands
             if sat_properties[sat]['cloudmasks'] is not None and self.include_clouds:
                 sat_properties[sat]['cloudmasks'] = preprocess.preprocess_clouds(sat_properties[sat]['cloudmasks'], self.model_name, self.timeslice)
                 sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], sat_properties[sat]['cloudmasks']), 0)
 
+            #ckpt10 = time.time()
+            #print('ckpt10: ', ckpt10 - ckpt9)
+            
             # Concatenate doy bands
             if sat_properties[sat]['doy'] is not None and self.include_doy:
                 doy_stack = preprocess.doy2stack(sat_properties[sat]['doy'], sat_properties[sat]['data'].shape)
                 sat_properties[sat]['data'] = np.concatenate((sat_properties[sat]['data'], doy_stack), 0)
+            
+            #ckpt11 = time.time()
+            #print('ckpt11: ', ckpt11 - ckpt10)
             
             if sat in ['planet'] and not self.resize_planet:
                 # upsample to 256 x 256 to fit into model
