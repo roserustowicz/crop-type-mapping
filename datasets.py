@@ -32,8 +32,8 @@ def get_Xy(dl, country):
     X = []
     y = []
     num_samples = 0
-    for inputs, targets, cloudmasks, big_planet_inputs in dl:
-        if big_planet_inputs is not None:
+    for inputs, targets, cloudmasks, hres_inputs in dl:
+        if hres_inputs is not None:
             raise ValueError('Planet inputs must be resized to the grid size')
         X, y = get_Xy_batch(inputs, targets, X, y, country)
         num_samples += y[-1].shape[0]

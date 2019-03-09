@@ -73,8 +73,6 @@ class FCN_CRNN(nn.Module):
         batch, timestamps, bands, rows, cols = input_tensor.size()
         fcn_input = input_tensor.view(batch * timestamps, bands, rows, cols)
 
-        print('hres inputs: ', hres_inputs)
-        print('hres size: ', hres_inputs.shape)
         if len(hres_inputs.shape) > 1:
             _, _, hbands, hrows, hcols = hres_inputs.size()
             fcn_input_hres = hres_inputs.view(batch * timestamps, hbands, hrows, hcols)  
