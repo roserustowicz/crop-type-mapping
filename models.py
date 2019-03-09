@@ -49,10 +49,10 @@ class FCN_CRNN(nn.Module):
             self.fcn = make_fcn_model(crnn_input_size[1], fcn_input_size[1], freeze=False)
         elif fcn_model_name == 'unet':
             if not self.early_feats:
-                self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], late_feats_for_fcn=True, pretrained=pretrained)
+                self.fcn = make_UNet_model(crnn_input_size[1], num_bands_dict, late_feats_for_fcn=True, pretrained=pretrained, use_planet=use_planet, resize_planet=resize_planet)
             else:
                 self.fcn_enc = make_UNetEncoder_model(num_bands_dict, use_planet=use_planet, resize_planet=resize_planet, pretrained=pretrained)
-                self.fcn_dec = make_UNetDecoder_model(num_classes, late_feats_for_fcn=False)
+                self.fcn_dec = make_UNetDecoder_model(num_classes, late_feats_for_fcn=False,  use_planet=use_planet, resize_planet=resize_planet)
         
         if crnn_model_name == "gru":
             if self.early_feats:
@@ -79,18 +79,24 @@ class FCN_CRNN(nn.Module):
         else: fcn_input_hres = None 
 
         if self.early_feats:
-            center1_feats, enc4_feats, enc3_feats = self.fcn_enc(fcn_input, fcn_input_hres)
+            center1_feats, enc4_feats, enc3_feats, enc2_feats, enc1_feats = self.fcn_enc(fcn_input, fcn_input_hres)
 
             # Reshape tensors to separate batch and timestamps
+            # TODO: Use attn weights here instead of averaging??
             crnn_input = center1_feats.view(batch, timestamps, -1, center1_feats.shape[-2], center1_feats.shape[-1])
             enc4_feats = enc4_feats.view(batch, timestamps, -1, enc4_feats.shape[-2], enc4_feats.shape[-1])
-            enc3_feats = enc3_feats.view(batch, timestamps, -1, enc3_feats.shape[-2], enc3_feats.shape[-1])
-
-            enc3_feats = torch.mean(enc3_feats, dim=1, keepdim=False)
             enc4_feats = torch.mean(enc4_feats, dim=1, keepdim=False)
+            enc3_feats = enc3_feats.view(batch, timestamps, -1, enc3_feats.shape[-2], enc3_feats.shape[-1])
+            enc3_feats = torch.mean(enc3_feats, dim=1, keepdim=False)
+
+            if enc2_feats is not None:
+                enc2_feats = enc2_feats.view(batch, timestamps, -1, enc2_feats.shape[-2], enc2_feats.shape[-1])
+                enc2_feats = torch.mean(enc2_feats, dim=1, keepdim=False)
+                enc1_feats = enc1_feats.view(batch, timestamps, -1, enc1_feats.shape[-2], enc1_feats.shape[-1])
+                enc1_feats = torch.mean(enc1_feats, dim=1, keepdim=False)
 
             pred_enc = self.crnn(crnn_input)
-            preds = self.fcn_dec(pred_enc, enc4_feats, enc3_feats)
+            preds = self.fcn_dec(pred_enc, enc4_feats, enc3_feats, enc2_feats, enc1_feats)
 
         else:
             fcn_output = self.fcn(fcn_input, fcn_input_hres)
@@ -153,8 +159,7 @@ def make_fcn_model(n_class, n_channel, freeze=True):
                 param.requires_grad = False
     
     return fcn8s
-
-def make_UNet_model(n_class, n_channel, late_feats_for_fcn=False, pretrained=True, resize_planet=False):
+def make_UNet_model(n_class, num_bands_dict, late_feats_for_fcn=False, pretrained=True, use_planet=False, resize_planet=False):
     """ Defines a U-Net model
     Args:
       n_class - (int) number of classes to predict
@@ -168,7 +173,7 @@ def make_UNet_model(n_class, n_channel, late_feats_for_fcn=False, pretrained=Tru
     Returns: 
       returns the model!
     """
-    model = UNet(n_class, n_channel, late_feats_for_fcn)
+    model = UNet(n_class, num_bands_dict, late_feats_for_fcn, use_planet, resize_planet)
     
     if pretrained:
         # TODO: Why are pretrained weights from vgg13? 
@@ -199,8 +204,8 @@ def make_UNetEncoder_model(num_bands_dict, use_planet=True, resize_planet=False,
     model = model.cuda()
     return model
 
-def make_UNetDecoder_model(n_class, late_feats_for_fcn):
-    model = UNet_Decode(n_class, late_feats_for_fcn=False)
+def make_UNetDecoder_model(n_class, late_feats_for_fcn, use_planet, resize_planet):
+    model = UNet_Decode(n_class, late_feats_for_fcn, use_planet, resize_planet)
     model = model.cuda()
     return model
 
