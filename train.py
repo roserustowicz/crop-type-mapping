@@ -109,28 +109,16 @@ def train_dl_model(model, model_name, dataloaders, args):
     splits = ['train', 'val'] if not args.eval_on_test else ['test']
     
     # set up information lists for visdom    
-    vis_data = {}
-    for split in splits:
-        vis_data[f'{split}_loss'] = []
-        vis_data[f'{split}_acc'] = []
-        vis_data[f'{split}_f1'] = []
-        vis_data[f'{split}_classf1'] = None
-        
-    vis_data['train_gradnorm'] = []
-    vis = visualize.setup_visdom(args.env_name, model_name)
+    vis_logger = visualize.VisdomLogger(args.env_name, model_name, args.country, splits)
     loss_fn = loss_fns.get_loss_fn(model_name)
     optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
     best_val_f1 = 0
     
     for i in range(args.epochs if not args.eval_on_test else 1):
         print('Epoch: {}'.format(i))
-        all_metrics = {}
-        for split in splits:
-            all_metrics[f'{split}_loss'] = 0
-            all_metrics[f'{split}_correct'] = 0
-            all_metrics[f'{split}_pix'] = 0
-            all_metrics[f'{split}_cm'] = np.zeros((NUM_CLASSES[args.country], NUM_CLASSES[args.country])).astype(int)
-
+        
+        vis_logger.reset_epoch_data()
+        
         for split in ['train', 'val'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             model.train() if split == ['train'] else model.eval()
@@ -147,25 +135,24 @@ def train_dl_model(model, model_name, dataloaders, args):
                         loss.backward()
                         optimizer.step()
                         gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
-                        vis_data['train_gradnorm'].append(gradnorm)
+                        vis_logger.update_progress('train', 'gradnorm', gradnorm)
                     
                     if cm_cur is not None:
                         # If there are valid pixels, update metrics
-                        all_metrics[f'{split}_cm'] += cm_cur
-                        all_metrics[f'{split}_loss'] += loss.item()
-                        all_metrics[f'{split}_correct'] += total_correct
-                        all_metrics[f'{split}_pix'] += num_pixels
-
-                visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, NUM_CLASSES[args.country], split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
-
+                        vis_logger.update_epoch_all(split, cm_cur, loss, total_correct, num_pixels)
+                
+                vis_logger.record_batch(inputs, cloudmasks, targets, preds, confidence, 
+                                        NUM_CLASSES[args.country], split, 
+                                        args.include_doy, args.use_s1, args.use_s2, 
+                                        model_name, args.time_slice)
 
             if split in ['test']:
-                visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country, save=False, save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
+                vis_logger.record_epoch(split, i, args.country, save=False, save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
             else:
-                visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country)
+                vis_logger.record_epoch(split, i, args.country)
 
             if split == 'val':
-                val_f1 = metrics.get_f1score(all_metrics['val_cm'], avg=True)                 
+                val_f1 = metrics.get_f1score(vis_logger.epoch_data['val_cm'], avg=True)                 
 
                 if val_f1 > best_val_f1:
                     torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
@@ -173,15 +160,16 @@ def train_dl_model(model, model_name, dataloaders, args):
                     if args.save_best: 
                         # TODO: Ideally, this would save any batch except the last one so that the saved images
                         #  are not only the remainder from the last batch 
-                        visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, NUM_CLASSES[args.country], 
-                                               split, vis_data, vis, args.include_doy, args.use_s1, 
-                                               args.use_s2, model_name, args.time_slice, save=True, 
-                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
+                        vis_logger.record_batch(inputs, cloudmasks, targets, preds, confidence, 
+                                                NUM_CLASSES[args.country], split, 
+                                                args.include_doy, args.use_s1, args.use_s2, 
+                                                model_name, args.time_slice, save=True, 
+                                                save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
 
-                        visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country, save=True, 
+                        vis_logger.record_epoch(split, i, args.country, save=True, 
                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               
 
-                        visualize.record_epoch(all_metrics, 'train', vis_data, vis, i, args.country, save=True, 
+                        vis_logger.record_epoch('train', i, args.country, save=True, 
                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               
 
             
