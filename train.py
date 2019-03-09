@@ -122,11 +122,14 @@ def train_dl_model(model, model_name, dataloaders, args):
         for split in ['train', 'val'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             model.train() if split == ['train'] else model.eval()
-            for inputs, targets, cloudmasks in tqdm(dl):
+            for inputs, targets, cloudmasks, hres_inputs in tqdm(dl):
                 with torch.set_grad_enabled(True):
                     inputs.to(args.device)
+                    if hres_inputs is not None: hres_inputs.to(args.device)
                     targets.to(args.device)
-                    preds = model(inputs)
+
+                    preds = model(inputs, hres_inputs) if model_name in MULTI_RES_MODELS else model(inputs)
+
                     loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                  
                     if split == 'train':         # TODO: not sure if we need this check?

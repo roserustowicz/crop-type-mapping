@@ -32,7 +32,9 @@ def get_Xy(dl, country):
     X = []
     y = []
     num_samples = 0
-    for inputs, targets, cloudmasks in dl:
+    for inputs, targets, cloudmasks, big_planet_inputs in dl:
+        if big_planet_inputs is not None:
+            raise ValueError('Planet inputs must be resized to the grid size')
         X, y = get_Xy_batch(inputs, targets, X, y, country)
         num_samples += y[-1].shape[0]
         if num_samples > 100000:
@@ -196,12 +198,13 @@ class CropTypeDS(Dataset):
             
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
-            grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'],
-                                                  sat_properties['s2']['data'], 
-                                                  sat_properties['planet']['data'])
+            grid, large_planet_grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'], sat_properties['s2']['data'], 
+                                                                     sat_properties['planet']['data'], self.resize_planet)
 
             grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
-            
+            if large_planet_grid is not None: 
+                large_planet_grid = preprocess.preprocess_grid(large_planet_grid, self.model_name, self.timeslice, transform, rot)           
+
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
         
@@ -221,7 +224,7 @@ class CropTypeDS(Dataset):
 
 #             if cloudmasks is not None:
 #                 cloudmasks = cloudmasks[:, x_start:x_start+32, y_start:y_start+32, :]
-        return grid, label, cloudmasks
+        return grid, label, cloudmasks, large_planet_grid
     
 
     def setup_data(self, data, idx, sat, sat_properties):

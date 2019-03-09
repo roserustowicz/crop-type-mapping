@@ -70,22 +70,24 @@ class UNet(nn.Module):
 class UNet_Encode(nn.Module):
     """ U-Net architecture definition for encoding (first half of the "U")
     """
-    def __init__(self, num_channels, use_planet=False, resize_planet=False):
+    def __init__(self, num_bands_dict, use_planet=False, resize_planet=False):
         super(UNet_Encode, self).__init__()
 
         self.downsample = _DownSample() 
         self.use_planet = use_planet
         self.resize_planet = resize_planet      
-  
+
+        self.planet_numbands = num_bands_dict['planet']
+        self.s1_numbands = num_bands_dict['s1']
+        self.s2_numbands = num_bands_dict['s2']
+
         feats = 16
-        if self.use_planet and self.resize_planet:
-            enc3_infeats = num_channels
-        elif not self.use_planet:
-            enc3_infeats = num_channels
-        else:
-            enc3_infeats = feats*2
-            self.enc1 = _EncoderBlock(num_channels, feats)
+        if (self.use_planet and self.resize_planet) or (not self.use_planet):
+            enc3_infeats = num_bands_dict['all']
+        elif self.use_planet and not self.resize_planet: # else
+            self.enc1 = _EncoderBlock(self.planet_numbands, feats)
             self.enc2 = _EncoderBlock(feats, feats*2)
+            enc3_infeats = feats*2 + self.s1_numbands + self.s2_numbands
         
         self.enc3 = _EncoderBlock(enc3_infeats, feats*4)
         self.enc4 = _EncoderBlock(feats*4, feats*8)
@@ -97,16 +99,19 @@ class UNet_Encode(nn.Module):
         
         initialize_weights(self)
 
-    def forward(self, x):
+    def forward(self, x, hres):
 
         # ENCODE
         x = x.cuda()
+        hres = hres.cuda()
 
-        if self.use_planet and self.resize_planet:
-            enc3 = self.enc3(x)
-        elif not self.use_planet:
+        if (self.use_planet and self.resize_planet) or (not self.use_planet):
             enc3 = self.enc3(x)
         else:
+            print('x shape: ', x.shape)
+            print('planet bands: ', self.planet_numbands)
+            print('s1 bands: ', self.s1_numbands)
+            print('s2 bands: ', self.s2_numbands)
             enc1 = self.enc1(x)
             down1 = self.downsample(enc1)
             enc2 = self.enc2(down1)
