@@ -32,7 +32,7 @@ def get_Xy(dl, country):
     y = []
     num_samples = 0
     for inputs, targets, cloudmasks, hres_inputs in dl:
-        if hres_inputs is not None:
+        if len(hres_inputs.shape) > 1:
             raise ValueError('Planet inputs must be resized to the grid size')
         X, y = get_Xy_batch(inputs, targets, X, y, country)
         num_samples += y[-1].shape[0]
@@ -231,8 +231,10 @@ class CropTypeDS(Dataset):
     def setup_data(self, data, idx, sat, sat_properties):
         if sat_properties[sat]['use']:
             sat_properties[sat]['data'] = data[sat][self.grid_list[idx]]       
-            
+            #print('sat: ', sat)
+            #print('before: ', np.max(sat_properties[sat]['data']))            
             if sat in ['planet']: sat_properties[sat]['data'] = sat_properties[sat]['data'][:, :, :, :].astype(np.double)  
+            #print('after: ', np.max(sat_properties[sat]['data']))            
             
             if self.include_doy:
                 sat_properties[sat]['doy'] = data[f'{sat}_dates'][self.grid_list[idx]][()]
