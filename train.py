@@ -14,6 +14,8 @@ import util
 import numpy as np
 import pickle 
 
+from torch import autograd
+
 from constants import *
 from tqdm import tqdm
 import visualize
@@ -132,22 +134,19 @@ def train_dl_model(model, model_name, dataloaders, args):
 
                     loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                     print('loss: ', loss)
-                    print('num pixels: ', num_pixels)                
-                    if np.isnan(loss):
-                        print('LOSS NaN!')
-                        break
  
                     if split == 'train' and loss is not None:         # TODO: not sure if we need this check?
                         # If there are valid pixels, update weights
                         optimizer.zero_grad()
-                        with autograd.detect_anomaly():
-                            loss.backward()
-                            optimizer.step()
+                        #with autograd.detect_anomaly():
+                        loss.backward()
+                        # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+                        if args.clip_val is not None:
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_val)
+                        optimizer.step()
 
                         gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
-                        if np.isnan(gradnorm):
-                            print('GRADNORM NaN!')
-                            break
+                        print('gradnrm: ', gradnorm)
 
                         vis_logger.update_progress('train', 'gradnorm', gradnorm)
                     
