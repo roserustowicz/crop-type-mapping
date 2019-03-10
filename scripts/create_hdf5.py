@@ -41,12 +41,12 @@ def load_splits(data_dir, country):
         test = pickle.load(f)
     return train, val, test
 
-def save_splits(country, new_splits, suffix):
-    with open(os.path.join(GRID_DIR[country], f'{country}_full_train_' + suffix), 'wb') as f:
+def save_splits(country, data_dir, new_splits, suffix):
+    with open(os.path.join(data_dir, f'{country}_full_train_' + suffix), 'wb') as f:
         pickle.dump(new_splits['train'], f)
-    with open(os.path.join(GRID_DIR[country], f'{country}_full_val_' + suffix), 'wb') as f:
+    with open(os.path.join(data_dir, f'{country}_full_val_' + suffix), 'wb') as f:
         pickle.dump(new_splits['val'], f)
-    with open(os.path.join(GRID_DIR[country], f'{country}_full_test_' + suffix), 'wb') as f:
+    with open(os.path.join(data_dir, f'{country}_full_test_' + suffix), 'wb') as f:
         pickle.dump(new_splits['test'], f)
 
 def create_hdf5(args, groups=None):
@@ -147,7 +147,7 @@ def create_hdf5(args, groups=None):
                                 print(f"Processed {length_group}/{new_grid_name} with length {l}")
                                 hdf5_file.create_dataset(f'/{length_group}/{new_grid_name}', data=l, dtype='i2')
     pprint(new_splits)
-    save_splits(country, new_splits, suffix=str(num_pixels))
+    save_splits(country, data_dir, new_splits, suffix=str(num_pixels))
     hdf5_file.close()
 
 
