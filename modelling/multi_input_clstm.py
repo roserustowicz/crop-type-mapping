@@ -55,7 +55,7 @@ class MI_CLSTM(nn.Module):
                                            late_feats_for_fcn=True,
                                            use_planet= sat == "planet",
                                            resize_planet=(sat == "planet" and self.resize_planet))
-                    print(crnn_input_size)
+                    
                     self.clstms[sat] = CLSTMSegmenter(input_size=crnn_input_size,
                                                       hidden_dims=hidden_dims, 
                                                       lstm_kernel_sizes=lstm_kernel_sizes, 
@@ -128,5 +128,4 @@ class MI_CLSTM(nn.Module):
         all_preds = torch.cat(preds, dim=1)
         preds = self.out_conv(all_preds)
         preds = torch.log(self.softmax(preds))
-        print(preds.shape)
         return preds

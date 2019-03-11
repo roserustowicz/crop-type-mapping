@@ -498,7 +498,7 @@ def get_model(model_name, **kwargs):
         if kwargs.get('early_feats'):
             crnn_input_size = (max_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE[country] // 4, GRID_SIZE[country] // 4)
         else:
-            crnn_input_size = (max_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE[country], GRID_SIZE[country])
+            crnn_input_size = (max_timesteps, NUM_CLASSES[kwargs.get('country')], GRID_SIZE[country], GRID_SIZE[country])
         
         model = make_MI_CLSTM_model(num_bands=num_bands,
                                     unet_out_channels=kwargs.get('fcn_out_feats'),
