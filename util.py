@@ -440,4 +440,6 @@ def get_train_parser():
                         default=False)
     parser.add_argument('--include_indices', type=str2bool, default=False,
                          help="Include ndvi and gcvi as input features")
+    parser.add_argument('--var_length', action="store_true", default=False,
+                         help="use variable length sequences")
     return parser
