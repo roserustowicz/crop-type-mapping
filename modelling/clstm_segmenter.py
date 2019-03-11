@@ -22,8 +22,9 @@ class VectorAtt(nn.Module):
         hidden_states = hidden_states.permute(0, 1, 3, 4, 2).contiguous() # puts channels last
         weights = self.softmax(self.linear(hidden_states))
         b, t, c, h, w = weights.shape
-        for i, length in enumerate(lengths):
-            weights[i, t:] *= 0
+        if lengths is not None: #TODO: gives backprop bug
+            for i, length in enumerate(lengths):
+                weights[i, t:] *= 0
         reweighted = weights * hidden_states
         return reweighted.permute(0, 1, 4, 2, 3).contiguous()
     
