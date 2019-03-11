@@ -238,11 +238,7 @@ class CropTypeDS(Dataset):
             sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'], 
                                                   (sat_properties[sat]['data'].shape[0], self.grid_size, self.grid_size, sat_properties[sat]['data'].shape[3]), 
                                                    anti_aliasing=True, mode='reflect')
-        else:
-            # upsample to 256 x 256 to fit into model
-                sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'],
-                                                       (sat_properties[sat]['data'].shape[0], 256, 256, sat_properties[sat]['data'].shape[3]),
-                                                        anti_aliasing=True, mode='reflect')
+        
                 
     def setup_s2(self, data, idx, sat, sat_properties):
         if sat_properties[sat]['num_bands'] == 4:
@@ -390,18 +386,21 @@ def collate_var_length(batch):
     batch_size = len(batch)
     labels = [batch[i][1] for i in range(batch_size)]
     labels = torch.stack(labels)
-    cloudmasks = [batch[i][2].transpose(3, 0, 1, 2) for i in range(batch_size)]
-    cloudmasks, lengths = pad_to_equal_length(cloudmasks)
-    cloudmasks = torch.tensor(np.stack(cloudmasks).transpose(0, 2, 3, 4, 1))
-
-    sats = batch[0][0].keys()
     inputs = {}
+    sats = batch[0][0].keys()
     for sat in sats:
         grids = [batch[i][0][sat] for i in range(batch_size)]
         grids, lengths = pad_to_equal_length(grids)
         grids = torch.stack(grids)
         inputs[sat] = grids
         inputs[sat + "_lengths"] = lengths
+    
+    if 's2' in sats: 
+        cloudmasks = [batch[i][2].transpose(3, 0, 1, 2) for i in range(batch_size)]
+        cloudmasks, lengths = pad_to_equal_length(cloudmasks)
+        cloudmasks = torch.tensor(np.stack(cloudmasks).transpose(0, 2, 3, 4, 1))
+    else:
+        cloudmasks = None
         
     return inputs, labels, cloudmasks
         
