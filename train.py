@@ -131,14 +131,18 @@ def train_dl_model(model, model_name, dataloaders, args):
         for split in ['train', 'val'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             model.train() if split == ['train'] else model.eval()
+            # TODO: figure out how to pack inputs from dataloader together in the case of variable length sequences
             for inputs, targets, cloudmasks, hres_inputs in tqdm(dl):
                 with torch.set_grad_enabled(True):
-                    inputs.to(args.device)
-                    if hres_inputs is not None: hres_inputs.to(args.device)
+                    if not args.var_length:
+                        inputs.to(args.device)
+                        if hres_inputs is not None: hres_inputs.to(args.device)
+                    else:
+                        for sat in inputs:
+                            if "length" not in sat:
+                                inputs[sat].to(args.device)
                     targets.to(args.device)
-
                     preds = model(inputs, hres_inputs) if model_name in MULTI_RES_MODELS else model(inputs)
-
                     loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, 
                                               reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
  
@@ -162,7 +166,7 @@ def train_dl_model(model, model_name, dataloaders, args):
 
                         vis_logger.update_progress('train', 'gradnorm', gradnorm)
                     
-                    if cm_cur is not None:
+                    if cm_cur is not None: # TODO: not sure if we need this check?
                         # If there are valid pixels, update metrics
                         vis_logger.update_epoch_all(split, cm_cur, loss, total_correct, num_pixels)
                 
