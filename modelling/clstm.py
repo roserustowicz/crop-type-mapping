@@ -7,7 +7,15 @@ from modelling.util import initialize_weights
 
 class CLSTM(nn.Module):
 
-    def __init__(self, input_size, hidden_dims, kernel_sizes, lstm_num_layers, batch_first=True, bias=True, return_all_layers=False):
+    def __init__(self, 
+                 input_size, 
+                 hidden_dims, 
+                 kernel_sizes, 
+                 lstm_num_layers, 
+                 batch_first=True, 
+                 bias=True, 
+                 return_all_layers=False,
+                 var_length=False):
         """
            Args:
                 input_size - (tuple) should be (time_steps, channels, height, width)
@@ -20,6 +28,8 @@ class CLSTM(nn.Module):
         (self.num_timesteps, self.start_num_channels, self.height, self.width) = input_size
         self.lstm_num_layers = lstm_num_layers
         self.bias = bias
+        self.var_length = var_length
+        
         if isinstance(kernel_sizes, list):
             if len(kernel_sizes) != lstm_num_layers and len(kernel_sizes) == 1:
                 self.kernel_sizes = kernel_sizes * lstm_num_layers
@@ -57,7 +67,6 @@ class CLSTM(nn.Module):
         last_state_list = []
         
         seq_len = input_tensor.size(1)
-        assert seq_len == self.num_timesteps
         cur_layer_input = input_tensor
         
         for layer_idx in range(self.lstm_num_layers):
