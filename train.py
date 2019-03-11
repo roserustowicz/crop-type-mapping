@@ -134,29 +134,39 @@ def train_dl_model(model, model_name, dataloaders, args):
         for split in ['train', 'val'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             model.train() if split == ['train'] else model.eval()
+            # TODO: figure out how to pack inputs from dataloader together in the case of variable length sequences
             for inputs, targets, cloudmasks in tqdm(dl):
                 with torch.set_grad_enabled(True):
-                    inputs.to(args.device)
+                    if not args.var_length:
+                        inputs.to(args.device)
+                    else:
+                        for sat in inputs:
+                            if "length" not in sat:
+                                inputs[sat].to(args.device)
                     targets.to(args.device)
                     preds = model(inputs)
                     loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
                  
-                    if split == 'train':         # TODO: not sure if we need this check?
+                    if cm_cur is not None and split == 'train':         
                         # If there are valid pixels, update weights
                         optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
-                        gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
+#                         print("TEST:", list(model.parameters())[0])
+                        gradnorm = 0 # torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
                         vis_data['train_gradnorm'].append(gradnorm)
                     
-                    if cm_cur is not None:
+                    if cm_cur is not None: # TODO: not sure if we need this check?
                         # If there are valid pixels, update metrics
                         all_metrics[f'{split}_cm'] += cm_cur
                         all_metrics[f'{split}_loss'] += loss.item()
                         all_metrics[f'{split}_correct'] += total_correct
                         all_metrics[f'{split}_pix'] += num_pixels
 
-                visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, NUM_CLASSES[args.country], split, vis_data, vis, args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice)
+                visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, 
+                                       NUM_CLASSES[args.country], split, vis_data, vis, 
+                                       args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice,
+                                       var_length=args.var_length)
 
 
             if split in ['test']:
@@ -176,7 +186,8 @@ def train_dl_model(model, model_name, dataloaders, args):
                         visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, NUM_CLASSES[args.country], 
                                                split, vis_data, vis, args.include_doy, args.use_s1, 
                                                args.use_s2, model_name, args.time_slice, save=True, 
-                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
+                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"),
+                                               var_length=args.var_length)
 
                         visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country, save=True, 
                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               

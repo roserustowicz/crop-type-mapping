@@ -98,7 +98,7 @@ def visdom_plot_images(vis, imgs, win):
     """
     vis.images(imgs, nrow=NROW, win=win, padding=8, opts={'title': win})
 
-def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None, show_visdom=True, show_matplot=False):
+def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split, vis_data, vis, include_doy, use_s1, use_s2, model_name, time_slice, save=False, save_dir=None, show_visdom=True, show_matplot=False, var_length=False):
     """ Record values and images for batch in visdom
     """
     # Create and show mask for labeled areas
@@ -107,7 +107,6 @@ def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split,
     if show_visdom:
         visdom_plot_images(vis, label_mask, 'Label Masks')
         #visdom_plot_images(vis, confidence, 'Confidence')
-
     # Show best inputs judging from cloud masks
     if torch.sum(clouds) != 0 and len(clouds.shape) > 1: 
         best = np.argmax(np.mean(np.mean(clouds.numpy()[:, 0, :, :, :], axis=1), axis=1), axis=1)
@@ -121,6 +120,10 @@ def record_batch(inputs, clouds, targets, preds, confidence, num_classes, split,
     # TODO: change these to be constants in constants.py eventually
     start_idx = 2 if use_s2 and use_s1 else 0
     end_idx = 5 if use_s2 and use_s1 else 3
+    
+    if var_length:
+        inputs = inputs['s2'] # hacky fix, should be using s2 (rgb) to do viz
+    
     if model_name in ['fcn_crnn', 'bidir_clstm','unet3d', 'mi_clstm']:
         for idx, b in enumerate(best):
             boi.append(inputs[idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
