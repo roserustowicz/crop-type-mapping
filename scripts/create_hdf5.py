@@ -110,7 +110,7 @@ def create_hdf5(args, groups=None):
                 with open(os.path.join(data_dir, actual_dir_name, filepath)) as f:
                     dates = json.load(f)['dates']
                 data = util.dates2doy(dates)
-            dtype = 'i2' if group_name not in ['s1', 's2', 'planet'] else 'f16' 
+            dtype = 'i2' if group_name not in ['s1', 's2', 'planet'] else 'f8' 
             for i in range(0, 64 // num_pixels):
                 for j in range(0, 64 // num_pixels):
                     new_grid_name = grid_num + "_{}_{}".format(i, j)
