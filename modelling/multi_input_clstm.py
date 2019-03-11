@@ -54,8 +54,9 @@ class MI_CLSTM(nn.Module):
                                            use_planet= sat == "planet",
                                            resize_planet= sat == "planet") 
                     (t, _, _, _) = crnn_input_size
-                    crnn_input_size = (t, num_classes, grid_size, grid_size)
-                    self.clstms[sat] = CLSTMSegmenter(input_size=crnn_input_size,
+                    sat_grid_size = grid_size if sat != "planet" else grid_size * 4
+                    sat_crnn_input_size = (t, num_classes, sat_grid_size, sat_grid_size)
+                    self.clstms[sat] = CLSTMSegmenter(input_size=sat_crnn_input_size,
                                                       hidden_dims=hidden_dims, 
                                                       lstm_kernel_sizes=lstm_kernel_sizes, 
                                                       conv_kernel_size=conv_kernel_size, 
@@ -69,7 +70,14 @@ class MI_CLSTM(nn.Module):
                     self.decs[sat] = UNet_Decode(num_classes, 
                                                  late_feats_for_fcn= not early_feats)
                 
-                    self.clstms[sat] = CLSTMSegmenter(input_size=crnn_input_size, 
+                    if sat == "planet":
+                        (t, c, h, w) = crnn_input_size
+                        sat_grid_size = h * 4
+                        sat_crnn_input_size = (t, c, sat_grid_size, sat_grid_size)
+                    else:
+                        sat_crnn_input_size = crnn_input_size
+                        
+                    self.clstms[sat] = CLSTMSegmenter(input_size=sat_crnn_input_size, 
                                                       hidden_dims=hidden_dims, 
                                                       lstm_kernel_sizes=lstm_kernel_sizes, 
                                                       conv_kernel_size=conv_kernel_size, 
@@ -98,10 +106,11 @@ class MI_CLSTM(nn.Module):
     def forward(self, inputs):
         
         preds = []
-        
+#         print('test')
         for sat in self.satellites:
             if self.satellites[sat]:
                 sat_data = inputs[sat]
+#                 print(sat_data.shape)
                 lengths = inputs[sat + "_lengths"]
                 batch, timestamps, bands, rows, cols = sat_data.size()
                 fcn_input = sat_data.view(batch * timestamps, bands, rows, cols)
@@ -125,5 +134,5 @@ class MI_CLSTM(nn.Module):
         all_preds = torch.cat(preds, dim=1)
         preds = self.out_conv(all_preds)
         preds = torch.log(self.softmax(preds))
-        
+        print(preds.shape)
         return preds
