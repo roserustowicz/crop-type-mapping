@@ -203,15 +203,35 @@ class FCN_CRNN(nn.Module):
         self.final_convs = { 'main': self.main_finalconv, 'enc4': self.enc4_finalconv, 'enc3': self.enc3_finalconv, 'enc2': self.enc2_finalconv, 'enc1': self.enc1_finalconv}
         return self.final_convs
 
-def make_MI_CLSTM_model(s1_input_size, s2_input_size, 
+def make_MI_CLSTM_model(num_bands, 
                         unet_out_channels,
-                        hidden_dims, lstm_kernel_sizes, lstm_num_layers, 
+                        crnn_input_size,
+                        hidden_dims, 
+                        lstm_kernel_sizes, 
+                        lstm_num_layers, 
                         conv_kernel_size, 
-                        num_classes, bidirectional):
-    model = MI_CLSTM(s1_input_size, s2_input_size,
+                        num_classes, 
+                        avg_hidden_states, 
+                        early_feats, 
+                        bidirectional,
+                        max_timesteps,
+                        satellites,
+                        grid_size):
+    
+    model = MI_CLSTM(num_bands,
                      unet_out_channels,
-                     hidden_dims, lstm_kernel_sizes, lstm_num_layers, 
-                     conv_kernel_size, num_classes, bidirectional)
+                     crnn_input_size,
+                     hidden_dims, 
+                     lstm_kernel_sizes, 
+                     conv_kernel_size, 
+                     lstm_num_layers, 
+                     avg_hidden_states, 
+                     num_classes,
+                     early_feats,
+                     bidirectional,
+                     max_timesteps,
+                     satellites,
+                     grid_size)
     return model
 
 def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, 
@@ -469,17 +489,25 @@ def get_model(model_name, **kwargs):
         num_bands = get_num_bands(kwargs)['all']
         model = make_UNet3D_model(n_class=NUM_CLASSES[kwargs.get('country')], n_channel=num_bands, timesteps=kwargs.get('num_timesteps'), dropout=kwargs.get('dropout'))
     elif model_name == 'mi_clstm':
-        num_s1_bands, num_s2_bands = get_num_bands(kwargs)['s1'], get_num_bands(kwargs)['s2']
-        model = make_MI_CLSTM_model(s1_input_size=(num_timesteps, num_s1_bands, GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]),
-                                    s2_input_size=(num_timesteps, num_s2_bands, GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]),
+        satellites = {'s1': kwargs.get('use_s1'), 's2': kwargs.get('use_s2'), 'planet': kwargs.get('use_planet')}
+        num_bands = {'s1': get_num_bands(kwargs)['s1'], 's2': get_num_bands(kwargs)['s2'], 'planet': get_num_bands(kwargs)['planet']}
+        max_timesteps = kwargs.get('num_timesteps')
+        country = kwargs.get('country')
+        crnn_input_size = (max_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE[country] // 4, GRID_SIZE[country] // 4)
+        model = make_MI_CLSTM_model(num_bands=num_bands,
                                     unet_out_channels=kwargs.get('fcn_out_feats'),
+                                    crnn_input_size=crnn_input_size,
                                     hidden_dims=kwargs.get('hidden_dims'), 
                                     lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
                                     conv_kernel_size=kwargs.get('conv_kernel_size'), 
                                     lstm_num_layers=kwargs.get('crnn_num_layers'), 
                                     avg_hidden_states=kwargs.get('avg_hidden_states'), 
                                     num_classes=NUM_CLASSES[kwargs.get('country')],
-                                    bidirectional=kwargs.get('bidirectional'))
+                                    early_feats=kwargs.get('early_feats'),
+                                    bidirectional=kwargs.get('bidirectional'),
+                                    max_timesteps = kwargs.get('num_timesteps'),
+                                    satellites=satellites,
+                                    grid_size=GRID_SIZE[country])
     else:
         raise ValueError(f"Model {model_name} unsupported, check `model_name` arg") 
         
