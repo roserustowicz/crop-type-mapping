@@ -24,6 +24,7 @@ class MI_CLSTM(nn.Module):
                  bidirectional,
                  max_timesteps,
                  satellites,
+                 resize_planet,
                  grid_size):
         """
             input_size - (tuple) should be (time_steps, channels, height, width)
@@ -36,6 +37,7 @@ class MI_CLSTM(nn.Module):
         self.early_feats = early_feats
         self.satellites = satellites
         self.num_bands = num_bands
+        self.resize_planet = resize_planet
         
         if early_feats:
             self.encs = {}
@@ -52,11 +54,9 @@ class MI_CLSTM(nn.Module):
                                            num_bands[sat], 
                                            late_feats_for_fcn=True,
                                            use_planet= sat == "planet",
-                                           resize_planet= sat == "planet") 
-                    (t, _, _, _) = crnn_input_size
-                    sat_grid_size = grid_size if sat != "planet" else grid_size * 4
-                    sat_crnn_input_size = (t, num_classes, sat_grid_size, sat_grid_size)
-                    self.clstms[sat] = CLSTMSegmenter(input_size=sat_crnn_input_size,
+                                           resize_planet=(sat == "planet" and self.resize_planet))
+                    print(crnn_input_size)
+                    self.clstms[sat] = CLSTMSegmenter(input_size=crnn_input_size,
                                                       hidden_dims=hidden_dims, 
                                                       lstm_kernel_sizes=lstm_kernel_sizes, 
                                                       conv_kernel_size=conv_kernel_size, 
@@ -66,18 +66,14 @@ class MI_CLSTM(nn.Module):
                                                       avg_hidden_states=avg_hidden_states,
                                                       var_length=True)
                 else:
-                    self.encs[sat] = UNet_Encode(num_bands[sat]) # should be num bands, will take in Batch X Timesteps, Bands, H, W examples and run fwd
+                    self.encs[sat] = UNet_Encode(num_bands[sat],
+                                                 use_planet= sat == "planet",
+                                                 resize_planet=(sat == "planet" and self.resize_planet)) 
+                    
                     self.decs[sat] = UNet_Decode(num_classes, 
                                                  late_feats_for_fcn= not early_feats)
                 
-                    if sat == "planet":
-                        (t, c, h, w) = crnn_input_size
-                        sat_grid_size = h * 4
-                        sat_crnn_input_size = (t, c, sat_grid_size, sat_grid_size)
-                    else:
-                        sat_crnn_input_size = crnn_input_size
-                        
-                    self.clstms[sat] = CLSTMSegmenter(input_size=sat_crnn_input_size, 
+                    self.clstms[sat] = CLSTMSegmenter(input_size=crnn_input_size, 
                                                       hidden_dims=hidden_dims, 
                                                       lstm_kernel_sizes=lstm_kernel_sizes, 
                                                       conv_kernel_size=conv_kernel_size, 
@@ -106,11 +102,9 @@ class MI_CLSTM(nn.Module):
     def forward(self, inputs):
         
         preds = []
-#         print('test')
         for sat in self.satellites:
             if self.satellites[sat]:
                 sat_data = inputs[sat]
-#                 print(sat_data.shape)
                 lengths = inputs[sat + "_lengths"]
                 batch, timestamps, bands, rows, cols = sat_data.size()
                 fcn_input = sat_data.view(batch * timestamps, bands, rows, cols)

@@ -216,6 +216,7 @@ def make_MI_CLSTM_model(num_bands,
                         bidirectional,
                         max_timesteps,
                         satellites,
+                        resize_planet,
                         grid_size):
     
     model = MI_CLSTM(num_bands,
@@ -231,6 +232,7 @@ def make_MI_CLSTM_model(num_bands,
                      bidirectional,
                      max_timesteps,
                      satellites,
+                     resize_planet,
                      grid_size)
     return model
 
@@ -493,7 +495,11 @@ def get_model(model_name, **kwargs):
         num_bands = {'s1': get_num_bands(kwargs)['s1'], 's2': get_num_bands(kwargs)['s2'], 'planet': get_num_bands(kwargs)['planet']}
         max_timesteps = kwargs.get('num_timesteps')
         country = kwargs.get('country')
-        crnn_input_size = (max_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE[country] // 4, GRID_SIZE[country] // 4)
+        if kwargs.get('early_feats'):
+            crnn_input_size = (max_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE[country] // 4, GRID_SIZE[country] // 4)
+        else:
+            crnn_input_size = (max_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE[country], GRID_SIZE[country])
+        
         model = make_MI_CLSTM_model(num_bands=num_bands,
                                     unet_out_channels=kwargs.get('fcn_out_feats'),
                                     crnn_input_size=crnn_input_size,
@@ -507,6 +513,7 @@ def get_model(model_name, **kwargs):
                                     bidirectional=kwargs.get('bidirectional'),
                                     max_timesteps = kwargs.get('num_timesteps'),
                                     satellites=satellites,
+                                    resize_planet=kwargs.get('resize_planet'),
                                     grid_size=GRID_SIZE[country])
     else:
         raise ValueError(f"Model {model_name} unsupported, check `model_name` arg") 
