@@ -153,7 +153,7 @@ def train_dl_model(model, model_name, dataloaders, args):
                         loss.backward()
                         optimizer.step()
 #                         print("TEST:", list(model.parameters())[0])
-                        gradnorm = 0 # torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
+                        gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
                         vis_data['train_gradnorm'].append(gradnorm)
                     
                     if cm_cur is not None: # TODO: not sure if we need this check?
