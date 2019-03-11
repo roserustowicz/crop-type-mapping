@@ -92,6 +92,8 @@ class MI_CLSTM(nn.Module):
 
         total_sats = len([sat for sat in self.satellites if self.satellites[sat]])
         self.out_conv = nn.Conv2d(num_classes * total_sats, num_classes, kernel_size=1, stride=1)
+        self.softmax = nn.Softmax2d()
+
                 
     def forward(self, inputs):
         
@@ -122,5 +124,6 @@ class MI_CLSTM(nn.Module):
         
         all_preds = torch.cat(preds, dim=1)
         preds = self.out_conv(all_preds)
+        preds = torch.log(self.softmax(preds))
         
         return preds
