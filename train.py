@@ -14,6 +14,8 @@ import util
 import numpy as np
 import pickle 
 
+from torch import autograd
+
 from constants import *
 from tqdm import tqdm
 import visualize
@@ -23,11 +25,14 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
     total_pixels = 0
     total_cm = np.zeros((num_classes, num_classes)).astype(int) 
     loss_fn = loss_fns.get_loss_fn(model_name)
-    for inputs, targets, cloudmasks in split_loader:
+    for inputs, targets, cloudmasks, hres_inputs in split_loader:
         with torch.set_grad_enabled(False):
             inputs.to(device)
             targets.to(device)
-            preds = model(inputs)   
+            hres_inputs.to(device)
+            if hres_inputs is not None: hres_inputs.to(device)
+
+            preds = model(inputs, hres_inputs) if model_name in MULTI_RES_MODELS else model(inputs)   
             batch_loss, batch_cm, _, num_pixels, confidence = evaluate(model_name, preds, targets, country, loss_fn=loss_fn, reduction="sum", loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
             total_loss += batch_loss.item()
             total_pixels += num_pixels
@@ -75,7 +80,7 @@ def evaluate(model_name, preds, labels, country, loss_fn=None, reduction=None, l
 def train_non_dl_model(model, model_name, dataloaders, args, X, y):
     results = {'train_acc': [], 'train_f1': [], 'val_acc': [], 'val_f1': [], 'test_acc': [], 'test_f1': []}
     for rep in range(args.num_repeat):
-        for split in ['train', 'val'] if not args.eval_on_test else ['test']:
+        for split in ['train', 'val', 'test'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             X, y = datasets.get_Xy(dl, args.country)            
 
@@ -100,7 +105,7 @@ def train_non_dl_model(model, model_name, dataloaders, args, X, y):
             print('{} cm: {}'.format(split, cm))
             print('{} per class f1 scores: {}'.format(split, metrics.get_f1score(cm, avg=False)))
 
-    for split in ['train', 'val'] if not args.eval_on_test else ['test']: 
+    for split in ['train', 'val', 'test'] if not args.eval_on_test else ['test']: 
         print('\n------------------------\nOverall Results:\n')
         print('{} accuracy: {} +/- {}'.format(split, np.mean(results[f'{split}_acc']), np.std(results[f'{split}_acc'])))
         print('{} f1-score: {} +/- {}'.format(split, np.mean(results[f'{split}_f1']), np.std(results[f'{split}_f1'])))
@@ -122,19 +127,34 @@ def train_dl_model(model, model_name, dataloaders, args):
         for split in ['train', 'val'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             model.train() if split == ['train'] else model.eval()
-            for inputs, targets, cloudmasks in tqdm(dl):
+            for inputs, targets, cloudmasks, hres_inputs in tqdm(dl):
                 with torch.set_grad_enabled(True):
                     inputs.to(args.device)
+                    if hres_inputs is not None: hres_inputs.to(args.device)
                     targets.to(args.device)
-                    preds = model(inputs)
+
+                    preds = model(inputs, hres_inputs) if model_name in MULTI_RES_MODELS else model(inputs)
+
                     loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
-                 
-                    if split == 'train':         # TODO: not sure if we need this check?
+ 
+                    if split == 'train' and loss is not None:         # TODO: not sure if we need this check?
                         # If there are valid pixels, update weights
                         optimizer.zero_grad()
+                        #with autograd.detect_anomaly():
                         loss.backward()
+                        if args.clip_val is not None:
+                            # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_val)
                         optimizer.step()
-                        gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
+                       
+                        total_norm = 0 
+                        for p in model.parameters():
+                            if p.grad is not None:
+                                param_norm = p.grad.data.norm(2)
+                                total_norm += param_norm.item() ** 2
+                        gradnorm = total_norm ** (1. / 2)
+                        #gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
+
                         vis_logger.update_progress('train', 'gradnorm', gradnorm)
                     
                     if cm_cur is not None:

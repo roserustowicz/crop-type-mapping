@@ -54,7 +54,7 @@ class CLSTMSegmenter(nn.Module):
     def forward(self, inputs):
         layer_outputs, last_states = self.clstm(inputs)
         final_state = torch.sum(self.att1(layer_outputs), dim=1)#, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
-#         final_state = last_states[0] if not self.avg_hidden_states else torch.mean(layer_outputs, dim=1)
+        #final_state = last_states[0] if not self.avg_hidden_states else torch.mean(layer_outputs, dim=1)
         if self.bidirectional:
             rev_inputs = torch.flip(inputs, dims=[1])
             rev_layer_outputs, rev_last_states = self.clstm_rev(rev_inputs)

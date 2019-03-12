@@ -345,7 +345,7 @@ def padToVariableLength(batch):
     return [batch_X, lengths, batch_y]
 
 
-def concat_s1_s2_planet(s1, s2, planet):
+def concat_s1_s2_planet(s1, s2, planet, resize_planet):
     """ Returns a concatenation of s1, s2, and planet data.
 
     Downsamples the larger series to size of the smaller one and returns the concatenation on the time axis.
@@ -362,13 +362,22 @@ def concat_s1_s2_planet(s1, s2, planet):
     """
     inputs = [s1, s2, planet]
 
+    use_s1 = True if inputs[0] is not None else False
+    use_s2 = True if inputs[1] is not None else False
+    use_planet = True if inputs[2] is not None else False
+
     # Get indices that are not none and index inputs and ntimes
     not_none = [i for i in range(len(inputs)) if inputs[i] is not None]
     inputs = [inputs[i] for i in not_none]
     ntimes = [i.shape[-1] for i in inputs]
-
+ 
     if len(np.unique(ntimes)) == 1:
-        return np.concatenate(inputs, axis=0)
+        if not use_planet or (use_planet and resize_planet) or (use_planet and not resize_planet and len(inputs)==1):
+            return np.concatenate(inputs, axis=0), None
+        elif use_planet and not resize_planet:
+            return np.concatenate(inputs[:-1], axis=0), inputs[-1]
+        else:
+            raise ValueError('Concatenation error given specified flags')
     else:
         min_ntimes = np.min(ntimes)
         min_ntimes_idx = np.argmin(ntimes)
@@ -380,7 +389,12 @@ def concat_s1_s2_planet(s1, s2, planet):
             else:
                 cur_sat, _, _ = sample_timeseries(sat, min_ntimes)
                 sampled.append(cur_sat)
-        return np.concatenate(sampled, axis=0)
+        if not use_planet or (use_planet and resize_planet):
+            return np.concatenate(sampled, axis=0), None
+        elif use_planet and not resize_planet:
+            return np.concatenate(sampled[:-1], axis=0), sampled[-1]
+        else:
+            raise ValueError('Concatenation error given specified flags')
 
 
 def remap_cloud_stack(cloud_stack):
