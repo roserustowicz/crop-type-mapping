@@ -376,6 +376,8 @@ def concat_s1_s2_planet(s1, s2, planet, resize_planet):
             return np.concatenate(inputs, axis=0), None
         elif use_planet and not resize_planet:
             return np.concatenate(inputs[:-1], axis=0), inputs[-1]
+        else:
+            raise ValueError('Concatenation error given specified flags')
     else:
         min_ntimes = np.min(ntimes)
         min_ntimes_idx = np.argmin(ntimes)
@@ -391,6 +393,8 @@ def concat_s1_s2_planet(s1, s2, planet, resize_planet):
             return np.concatenate(sampled, axis=0), None
         elif use_planet and not resize_planet:
             return np.concatenate(sampled[:-1], axis=0), sampled[-1]
+        else:
+            raise ValueError('Concatenation error given specified flags')
 
 
 def remap_cloud_stack(cloud_stack):

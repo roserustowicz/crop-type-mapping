@@ -125,9 +125,9 @@ NUM_CLASSES = { 'ghana': 4,
                 'tanzania': 5,
                 'germany': 17 }
 
-GRID_SIZE = { 'ghana': 64, 
+GRID_SIZE = { 'ghana': 32, 
               'southsudan': 32, 
-              'tanzania': 64, 
+              'tanzania': 32, 
               'germany': 48 }
 
 CM_LABELS = { 'ghana': [0, 1, 2, 3], 

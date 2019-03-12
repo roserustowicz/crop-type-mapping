@@ -133,7 +133,6 @@ def train_dl_model(model, model_name, dataloaders, args):
                     preds = model(inputs, hres_inputs) if model_name in MULTI_RES_MODELS else model(inputs)
 
                     loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
-                    print('loss: ', loss)
  
                     if split == 'train' and loss is not None:         # TODO: not sure if we need this check?
                         # If there are valid pixels, update weights
@@ -152,7 +151,6 @@ def train_dl_model(model, model_name, dataloaders, args):
                                 total_norm += param_norm.item() ** 2
                         gradnorm = total_norm ** (1. / 2)
                         #gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
-                        #print('gradnrm: ', gradnorm)
 
                         vis_logger.update_progress('train', 'gradnorm', gradnorm)
                     
