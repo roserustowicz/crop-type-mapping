@@ -46,7 +46,6 @@ class CLSTMSegmenter(nn.Module):
         in_channels = hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))
         
-        #self.softmax = nn.Softmax2d()
         self.logsoftmax = nn.LogSoftmax(dim=1) 
         initialize_weights(self)
         
