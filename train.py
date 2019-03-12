@@ -140,13 +140,19 @@ def train_dl_model(model, model_name, dataloaders, args):
                         optimizer.zero_grad()
                         #with autograd.detect_anomaly():
                         loss.backward()
-                        # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
                         if args.clip_val is not None:
+                            # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
                             torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_val)
                         optimizer.step()
-
-                        gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
-                        print('gradnrm: ', gradnorm)
+                       
+                        total_norm = 0 
+                        for p in model.parameters():
+                            if p.grad is not None:
+                                param_norm = p.grad.data.norm(2)
+                                total_norm += param_norm.item() ** 2
+                        gradnorm = total_norm ** (1. / 2)
+                        #gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
+                        #print('gradnrm: ', gradnorm)
 
                         vis_logger.update_progress('train', 'gradnorm', gradnorm)
                     

@@ -171,6 +171,9 @@ class UNet_Decode(nn.Module):
             dec4 = torch.cat([dec4, enc2, enc1], 1)
 
         final = self.final(torch.cat([dec4, enc3], 1)) 
+        print('final shape from decoder: ', final.shape)
+        print('max final', torch.max(final))
+        print('min final', torch.min(final))
 
         if self.late_feats_for_fcn:
             return final
