@@ -25,11 +25,14 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
     total_pixels = 0
     total_cm = np.zeros((num_classes, num_classes)).astype(int) 
     loss_fn = loss_fns.get_loss_fn(model_name)
-    for inputs, targets, cloudmasks in split_loader:
+    for inputs, targets, cloudmasks, hres_inputs in split_loader:
         with torch.set_grad_enabled(False):
             inputs.to(device)
             targets.to(device)
-            preds = model(inputs)   
+            hres_inputs.to(device)
+            if hres_inputs is not None: hres_inputs.to(device)
+
+            preds = model(inputs, hres_inputs) if model_name in MULTI_RES_MODELS else model(inputs)   
             batch_loss, batch_cm, _, num_pixels, confidence = evaluate(model_name, preds, targets, country, loss_fn=loss_fn, reduction="sum", loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
             total_loss += batch_loss.item()
             total_pixels += num_pixels

@@ -231,10 +231,7 @@ class CropTypeDS(Dataset):
     def setup_data(self, data, idx, sat, sat_properties):
         if sat_properties[sat]['use']:
             sat_properties[sat]['data'] = data[sat][self.grid_list[idx]]       
-            #print('sat: ', sat)
-            #print('before: ', np.max(sat_properties[sat]['data']))            
             if sat in ['planet']: sat_properties[sat]['data'] = sat_properties[sat]['data'][:, :, :, :].astype(np.double)  
-            #print('after: ', np.max(sat_properties[sat]['data']))            
             
             if self.include_doy:
                 sat_properties[sat]['doy'] = data[f'{sat}_dates'][self.grid_list[idx]][()]
@@ -309,11 +306,6 @@ class CropTypeDS(Dataset):
                 doy_stack = preprocess.doy2stack(sat_properties[sat]['doy'], sat_properties[sat]['data'].shape)
                 sat_properties[sat]['data'] = np.concatenate((sat_properties[sat]['data'], doy_stack), 0)
             
-            #if sat in ['planet'] and not self.resize_planet:
-            #    # upsample to 256 x 256 to fit into model
-            #    sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'],
-            #                                           (sat_properties[sat]['data'].shape[0], 256, 256, sat_properties[sat]['data'].shape[3]),
-            #                                           anti_aliasing=True, mode='reflect')
         return sat_properties
 
     
