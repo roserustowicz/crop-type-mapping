@@ -33,10 +33,5 @@ class CGRUSegmenter(nn.Module):
             final_state = torch.cat([final_state, rev_last_state_list[0][0]], dim=1)
         scores = self.conv(final_state)
 
-        if self.early_feats:
-            return scores
-        else:
-            #preds = self.softmax(scores)
-            #preds = torch.log(preds)
-            preds = self.logsoftmax(scores)
-            return preds
+        output = scores if self.early_feats else self.logsoftmax(scores)
+        return output
