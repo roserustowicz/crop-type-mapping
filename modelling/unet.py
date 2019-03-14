@@ -158,7 +158,7 @@ class UNet_Decode(nn.Module):
             nn.Conv2d(feats*2, num_classes, kernel_size=3, padding=1),
         )
 
-        self.softmax = nn.Softmax2d()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
         initialize_weights(self)
 
     def forward(self, center1, enc4, enc3, enc2=None, enc1=None):
@@ -172,9 +172,6 @@ class UNet_Decode(nn.Module):
 
         final = self.final(torch.cat([dec4, enc3], 1)) 
 
-        if self.late_feats_for_fcn:
-            return final
-        else:
-            final = self.softmax(final)
-            final = torch.log(final)
-            return final
+        if not self.late_feats_for_fcn:
+            final = self.logsoftmax(final)
+        return final

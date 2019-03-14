@@ -45,7 +45,7 @@ class UNet3D(nn.Module):
         self.dc2 = conv_block(128+64, 64, 64)
         self.final = nn.Conv3d(64, n_classes, kernel_size=3, stride=1, padding=1)    
         self.fn = nn.Linear(timesteps, 1)
-        self.softmax = nn.Softmax2d()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
         self.dropout = nn.Dropout(p=dropout, inplace=True)
         
     def forward(self, x):
@@ -75,7 +75,6 @@ class UNet3D(nn.Module):
         final = self.dropout(final)
         final = self.fn(final)
         final = final.reshape(shape_num)
-        final = self.softmax(final)
-        final = torch.log(final)
+        final = self.logsoftmax(final)
         
         return final

@@ -27,9 +27,10 @@ class CLSTMSegmenter(nn.Module):
 
     def __init__(self, input_size, hidden_dims, lstm_kernel_sizes, 
                  conv_kernel_size, lstm_num_layers, num_classes, bidirectional,
-                 avg_hidden_states):
+                 avg_hidden_states, early_feats):
 
         super(CLSTMSegmenter, self).__init__()
+        self.early_feats = early_feats
 
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims]        
@@ -44,7 +45,8 @@ class CLSTMSegmenter(nn.Module):
         
         in_channels = hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))
-        self.softmax = nn.Softmax2d()
+        
+        self.logsoftmax = nn.LogSoftmax(dim=1) 
         initialize_weights(self)
         
         self.att1 = VectorAtt(hidden_dims[-1])        
@@ -61,9 +63,7 @@ class CLSTMSegmenter(nn.Module):
             final_state_rev = torch.sum(self.att_rev(rev_layer_outputs), dim=1)
             final_state = torch.cat([final_state, final_state_rev], dim=1)
         scores = self.conv(final_state)
-        preds = self.softmax(scores)
-        preds = torch.log(preds)
-
-        return preds
+        
+        output = scores if self.early_feats else self.lofsoftmax(scores)
 
         
