@@ -49,12 +49,10 @@ class CLSTMSegmenter(nn.Module):
 
     def __init__(self, input_size, hidden_dims, lstm_kernel_sizes, 
                  conv_kernel_size, lstm_num_layers, num_classes, bidirectional,
-                 avg_hidden_states, early_feats, batch_size):
+                 avg_hidden_states, early_feats):
 
         super(CLSTMSegmenter, self).__init__()
         self.early_feats = early_feats
-        self.input_size = input_size
-        self.batch_size = batch_size
         d_attn_dim = 128
         r_attn_dim = 1
 
