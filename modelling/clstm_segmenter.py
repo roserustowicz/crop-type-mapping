@@ -23,15 +23,25 @@ class VectorAtt(nn.Module):
 
 class TemporalAtt(nn.Module):
 
-    def __init__(self):
+    def __init__(self, hidden_dim_size, d, r):
         """
             Assumes input will be in the form (batch, time_steps, hidden_dim_size, height, width)
             Returns reweighted timestamps.
         """
         super(TemporalAtt, self).__init__()
- 
+        self.w_s1 = nn.Linear(in_features=hidden_dim_size, out_features=d, bias=False) 
+        self.w_s2 = nn.Linear(in_features=d, out_features=r, bias=False) 
+        nn.init.constant_(self.w_s1.weight, 1)
+        nn.init.constant_(self.w_s2.weight, 1)
+        self.tanh = nn.Tanh()
+        self.softmax = nn.Softmax(dim=1)
+
     def forward(self, hidden_states):
-        print(hidden_states.shape)    
+        hidden_states = hidden_states.permute(0, 1, 3, 4, 2).contiguous()
+        z1 = self.tanh(self.w_s1(hidden_states))
+        attn_weights = self.softmax(self.w_s2(z1))
+        reweighted = attn_weights * hidden_states
+        return reweighted.permute(0, 1, 4, 2, 3).contiguous()
 
 class CLSTMSegmenter(nn.Module):
     """ CLSTM followed by conv for segmentation output
@@ -39,10 +49,14 @@ class CLSTMSegmenter(nn.Module):
 
     def __init__(self, input_size, hidden_dims, lstm_kernel_sizes, 
                  conv_kernel_size, lstm_num_layers, num_classes, bidirectional,
-                 avg_hidden_states, early_feats):
+                 avg_hidden_states, early_feats, batch_size):
 
         super(CLSTMSegmenter, self).__init__()
         self.early_feats = early_feats
+        self.input_size = input_size
+        self.batch_size = batch_size
+        d_attn_dim = 128
+        r_attn_dim = 1
 
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims]        
@@ -53,6 +67,7 @@ class CLSTMSegmenter(nn.Module):
         if self.bidirectional:
             self.clstm_rev = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers)
             self.att_rev = VectorAtt(hidden_dims[-1])
+            #self.att_rev = TemporalAtt(hidden_dims[-1], d_attn_dim, r_attn_dim)
         self.avg_hidden_states = avg_hidden_states
         
         in_channels = hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
@@ -61,7 +76,7 @@ class CLSTMSegmenter(nn.Module):
         self.logsoftmax = nn.LogSoftmax(dim=1) 
         initialize_weights(self)
        
-        print(hidden_dims[-1])
+        #self.att1 = TemporalAtt(hidden_dims[-1], d_attn_dim, r_attn_dim)
         self.att1 = VectorAtt(hidden_dims[-1])        
 #         self.att2 = VectorAtt(hidden_dims[-1])
 
