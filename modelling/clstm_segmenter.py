@@ -64,6 +64,6 @@ class CLSTMSegmenter(nn.Module):
             final_state = torch.cat([final_state, final_state_rev], dim=1)
         scores = self.conv(final_state)
         
-        output = scores if self.early_feats else self.lofsoftmax(scores)
+        output = scores if self.early_feats else self.logsoftmax(scores)
 
         
