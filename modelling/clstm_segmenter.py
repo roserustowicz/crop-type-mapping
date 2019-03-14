@@ -20,7 +20,19 @@ class VectorAtt(nn.Module):
         hidden_states = hidden_states.permute(0, 1, 3, 4, 2).contiguous() # puts channels last
         reweighted = self.softmax(self.linear(hidden_states)) * hidden_states
         return reweighted.permute(0, 1, 4, 2, 3).contiguous()
-    
+
+class TemporalAtt(nn.Module):
+
+    def __init__(self):
+        """
+            Assumes input will be in the form (batch, time_steps, hidden_dim_size, height, width)
+            Returns reweighted timestamps.
+        """
+        super(TemporalAtt, self).__init__()
+ 
+    def forward(self, hidden_states):
+        print(hidden_states.shape)    
+
 class CLSTMSegmenter(nn.Module):
     """ CLSTM followed by conv for segmentation output
     """
@@ -48,7 +60,8 @@ class CLSTMSegmenter(nn.Module):
         
         self.logsoftmax = nn.LogSoftmax(dim=1) 
         initialize_weights(self)
-        
+       
+        print(hidden_dims[-1])
         self.att1 = VectorAtt(hidden_dims[-1])        
 #         self.att2 = VectorAtt(hidden_dims[-1])
 
