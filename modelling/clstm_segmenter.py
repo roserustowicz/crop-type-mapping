@@ -65,5 +65,5 @@ class CLSTMSegmenter(nn.Module):
         scores = self.conv(final_state)
         
         output = scores if self.early_feats else self.logsoftmax(scores)
-
+        return output
         
