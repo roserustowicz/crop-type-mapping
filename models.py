@@ -39,7 +39,7 @@ class FCN_CRNN(nn.Module):
     def __init__(self, fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, 
                  hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states, 
                  num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet, 
-                 num_bands_dict):
+                 num_bands_dict, d_attn_dim):
         super(FCN_CRNN, self).__init__()
 
         self.early_feats = early_feats
@@ -66,11 +66,13 @@ class FCN_CRNN(nn.Module):
             if self.early_feats:
                 self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
                                        conv_kernel_size, lstm_num_layers, crnn_input_size[1],
-                                       bidirectional, avg_hidden_states, self.early_feats)
+                                       bidirectional, avg_hidden_states, self.early_feats, 
+                                       d_attn_dim)
             else:
                 self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
                                        conv_kernel_size, lstm_num_layers, num_classes, 
-                                       bidirectional, avg_hidden_states, self.early_feats)
+                                       bidirectional, avg_hidden_states, self.early_feats,
+                                       d_attn_dim)
 
     def forward(self, input_tensor, hres_inputs=None):
         batch, timestamps, bands, rows, cols = input_tensor.size()
@@ -119,7 +121,7 @@ def make_MI_CLSTM_model(s1_input_size, s2_input_size,
                      conv_kernel_size, num_classes, bidirectional)
     return model
 
-def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats):
+def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats, d_attn_dim):
     """ Defines a (bidirectional) CLSTM model 
     Args:
         input_size - (tuple) size of input dimensions 
@@ -134,7 +136,7 @@ def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kern
     Returns:
       returns the model! 
     """
-    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats)
+    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats, d_attn_dim)
 
     return clstm_segmenter
 
@@ -215,7 +217,7 @@ def make_UNetDecoder_model(n_class, late_feats_for_fcn, use_planet, resize_plane
 def make_fcn_clstm_model(country, fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, 
                          hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states,
                          num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet,
-                         num_bands_dict):
+                         num_bands_dict, d_attn_dim):
     """ Defines a fully-convolutional-network + CLSTM model
     Args:
       fcn_input_size - (tuple) input dimensions for FCN model
@@ -241,7 +243,7 @@ def make_fcn_clstm_model(country, fcn_input_size, fcn_model_name, crnn_input_siz
 
     model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, 
                      conv_kernel_size, lstm_num_layers, avg_hidden_states, num_classes, bidirectional, pretrained, 
-                     early_feats, use_planet, resize_planet, num_bands_dict)
+                     early_feats, use_planet, resize_planet, num_bands_dict, d_attn_dim)
     model = model.cuda()
 
     return model
@@ -297,7 +299,8 @@ def get_model(model_name, **kwargs):
                                        num_classes=NUM_CLASSES[kwargs.get('country')],
                                        bidirectional=kwargs.get('bidirectional'),
                                        avg_hidden_states=kwargs.get('avg_hidden_states'),
-                                       early_feats=kwargs.get('early_feats'))
+                                       early_feats=kwargs.get('early_feats'),
+                                       d_attn_dim=kwargs.get('d_attn_dim'))
     elif model_name == 'fcn':
         num_bands = get_num_bands(kwargs)['all']
         model = make_fcn_model(n_class=NUM_CLASSES[kwargs.get('country')], n_channel = num_bands, freeze=True)
@@ -329,11 +332,12 @@ def get_model(model_name, **kwargs):
                                      avg_hidden_states=kwargs.get('avg_hidden_states'), 
                                      num_classes=NUM_CLASSES[kwargs.get('country')],
                                      bidirectional=kwargs.get('bidirectional'),                                       
-                                     pretrained = kwargs.get('pretrained'),
-                                     early_feats = kwargs.get('early_feats'),
-                                     use_planet = kwargs.get('use_planet'),
-                                     resize_planet = kwargs.get('resize_planet'), 
-                                     num_bands_dict = num_bands))
+                                     pretrained=kwargs.get('pretrained'),
+                                     early_feats=kwargs.get('early_feats'),
+                                     use_planet=kwargs.get('use_planet'),
+                                     resize_planet=kwargs.get('resize_planet'), 
+                                     num_bands_dict=num_bands,
+                                     d_attn_dim=kwargs.get('d_attn_dim'))
 
         if (pretrained_model_path is not None) and (kwargs.get('pretrained') == True):
             pre_trained_model=torch.load(pretrained_model_path)

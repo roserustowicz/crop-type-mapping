@@ -447,4 +447,6 @@ def get_train_parser():
                          help="Fix pretrained features")
     parser.add_argument('--clip_val', type=float, default=100,
                          help="Clip value for gradient norm")
+    parser.add_argument('--d_attn_dim', type=int, default=10,
+                         help="Number of features in w_s1 output for attention")
     return parser
