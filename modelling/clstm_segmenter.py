@@ -24,8 +24,8 @@ class CLSTMSegmenter(nn.Module):
         self.bidirectional = bidirectional
         if self.bidirectional:
             self.clstm_rev = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers)
-            #self.att_rev = VectorAtt(hidden_dims[-1])
-            self.att_rev = TemporalAtt(hidden_dims[-1], d_attn_dim, r_attn_dim)
+            self.att_rev = VectorAtt(hidden_dims[-1])
+            #self.att_rev = TemporalAtt(hidden_dims[-1], d_attn_dim, r_attn_dim)
         self.avg_hidden_states = avg_hidden_states
         
         in_channels = hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
@@ -34,8 +34,8 @@ class CLSTMSegmenter(nn.Module):
         self.logsoftmax = nn.LogSoftmax(dim=1) 
         initialize_weights(self)
        
-        self.att1 = TemporalAtt(hidden_dims[-1], d_attn_dim, r_attn_dim)
-        #self.att1 = VectorAtt(hidden_dims[-1])        
+        #self.att1 = TemporalAtt(hidden_dims[-1], d_attn_dim, r_attn_dim)
+        self.att1 = VectorAtt(hidden_dims[-1])        
 #         self.att2 = VectorAtt(hidden_dims[-1])
 
         

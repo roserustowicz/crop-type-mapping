@@ -89,6 +89,13 @@ class FCN_CRNN(nn.Module):
             # Reshape tensors to separate batch and timestamps
             # TODO: Use attn weights here instead of averaging??
             crnn_input = center1_feats.view(batch, timestamps, -1, center1_feats.shape[-2], center1_feats.shape[-1])
+            print('BEFORE ATTN')
+            print('crnn input: ', crnn_input.shape)
+            print('enc4_feats: ', enc4_feats.shape)
+            print('enc3_feats: ', enc3_feats.shape)
+            print('enc2_feats: ', enc2_feats.shape)
+            print('enc1_feats: ', enc1_feats.shape)
+
             enc4_feats = enc4_feats.view(batch, timestamps, -1, enc4_feats.shape[-2], enc4_feats.shape[-1])
             enc4_feats = torch.mean(enc4_feats, dim=1, keepdim=False)
             enc3_feats = enc3_feats.view(batch, timestamps, -1, enc3_feats.shape[-2], enc3_feats.shape[-1])
@@ -101,6 +108,12 @@ class FCN_CRNN(nn.Module):
                 enc1_feats = torch.mean(enc1_feats, dim=1, keepdim=False)
 
             pred_enc = self.crnn(crnn_input)
+            print('INPUTS TO DECODER')
+            print('pred enc: ', pred_enc.shape)
+            print('enc4_feats: ', enc4_feats.shape)
+            print('enc3_feats: ', enc3_feats.shape)
+            print('enc2_feats: ', enc2_feats.shape)
+            print('enc1_feats: ', enc1_feats.shape)
             preds = self.fcn_dec(pred_enc, enc4_feats, enc3_feats, enc2_feats, enc1_feats)
 
         else:
