@@ -18,6 +18,7 @@ from torch import autograd
 
 from constants import *
 from tqdm import tqdm
+from torch import autograd
 import visualize
 
 def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes, country):

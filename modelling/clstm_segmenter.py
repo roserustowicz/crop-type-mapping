@@ -4,31 +4,6 @@ from modelling.util import initialize_weights
 from modelling.clstm import CLSTM
 from modelling.attention import ApplyAtt
 
-<<<<<<< e50c4cc3acfec5d4d79e80ce7e60d24b082245c2
-=======
-class VectorAtt(nn.Module):
-    
-    def __init__(self, hidden_dim_size):
-        """
-            Assumes input will be in the form (batch, time_steps, hidden_dim_size, height, width)
-            Returns reweighted hidden states.
-        """
-        super(VectorAtt, self).__init__()
-        self.linear = nn.Linear(hidden_dim_size, 1, bias=False)
-        nn.init.constant_(self.linear.weight, 1)
-        self.softmax = nn.Softmax(dim=1)
-        
-    def forward(self, hidden_states, lengths=None):
-        hidden_states = hidden_states.permute(0, 1, 3, 4, 2).contiguous() # puts channels last
-        weights = self.softmax(self.linear(hidden_states))
-        b, t, c, h, w = weights.shape
-        if lengths is not None: #TODO: gives backprop bug
-            for i, length in enumerate(lengths):
-                weights[i, t:] *= 0
-        reweighted = weights * hidden_states
-        return reweighted.permute(0, 1, 4, 2, 3).contiguous()
-    
->>>>>>> updates to mi model for var length
 class CLSTMSegmenter(nn.Module):
     """ CLSTM followed by conv for segmentation output
     """
@@ -55,7 +30,7 @@ class CLSTMSegmenter(nn.Module):
             hidden_dims = [hidden_dims]        
 
         self.clstm = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers, var_length=var_length)
-        
+        self.early_feats = early_feats
         self.var_length = var_length
         self.bidirectional = bidirectional
         if self.bidirectional:
@@ -71,8 +46,11 @@ class CLSTMSegmenter(nn.Module):
         b, t, c, h, w = layer_outputs.shape
         # layer outputs is size (b, t, c, h, w)
         if self.avg_hidden_states:
-            final_states = [torch.mean(layer_outputs[i], dim=0) for i, length in enumerate(lengths)]
-            final_state = torch.stack(final_states)
+            if lengths is not None:
+                final_states = [torch.mean(layer_outputs[i, :length], dim=0) for i, length in enumerate(lengths)]
+                final_state = torch.stack(final_states)
+            else:
+                final_state = torch.mean(layer_outputs, dim=1)
         else:
             final_state = torch.sum(self.att1(layer_outputs, lengths), dim=1)
         
@@ -85,6 +63,7 @@ class CLSTMSegmenter(nn.Module):
             
         output = torch.cat([layer_outputs, rev_layer_outputs], dim=1) if rev_layer_outputs is not None else layer_outputs       
         #scores = self.conv(final_state)
+        # if not self.early_feats
         #preds = self.softmax(scores)
         #preds = torch.log(preds)
 

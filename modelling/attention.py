@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class VectorAtt(nn.Module):
-    
+
     def __init__(self, hidden_dim_size):
         """
             Assumes input will be in the form (batch, time_steps, hidden_dim_size, height, width)
@@ -12,11 +12,15 @@ class VectorAtt(nn.Module):
         self.linear = nn.Linear(hidden_dim_size, 1, bias=False)
         nn.init.constant_(self.linear.weight, 1)
         self.softmax = nn.Softmax(dim=1)
-        
-    def forward(self, hidden_states):
-        print(self.linear.weight)
+
+    def forward(self, hidden_states, lengths=None):
         hidden_states = hidden_states.permute(0, 1, 3, 4, 2).contiguous() # puts channels last
-        reweighted = self.softmax(self.linear(hidden_states)) * hidden_states
+        weights = self.softmax(self.linear(hidden_states))
+        b, t, c, h, w = weights.shape
+        if lengths is not None: #TODO: gives backprop bug
+            for i, length in enumerate(lengths):
+                weights[i, t:] *= 0
+        reweighted = weights * hidden_states
         return reweighted.permute(0, 1, 4, 2, 3).contiguous()
 
 class TemporalAtt(nn.Module):
