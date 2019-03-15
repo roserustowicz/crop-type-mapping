@@ -126,11 +126,6 @@ class UNet_Encode(nn.Module):
             enc2 = self.downsample(enc2)
             enc1 = self.downsample(self.downsample(enc1))
 
-        #print('center1: ', center1.shape)
-        #print('enc4: ', enc4.shape)
-        #print('enc3: ', enc3.shape)
-        #print('enc2: ', enc2.shape)
-        #print('enc1: ', enc1.shape)
         return center1, enc4, enc3, enc2, enc1
 
 class UNet_Decode(nn.Module):

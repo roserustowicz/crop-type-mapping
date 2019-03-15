@@ -39,7 +39,7 @@ class FCN_CRNN(nn.Module):
     def __init__(self, fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, 
                  hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states, 
                  num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet, 
-                 num_bands_dict, d_attn_dim, attn_type, enc_clstm_attn=True):
+                 num_bands_dict, d_attn_dim, attn_type, enc_clstm_attn=False):
         super(FCN_CRNN, self).__init__()
 
         self.early_feats = early_feats
@@ -104,7 +104,10 @@ class FCN_CRNN(nn.Module):
 
         if self.early_feats:
             center1_feats, enc4_feats, enc3_feats, enc2_feats, enc1_feats = self.fcn_enc(fcn_input, fcn_input_hres)
-            crnns = { 'center1': self.crnn_main, 'enc4': self.crnn_enc4, 'enc3': self.crnn_enc3, 'enc2': self.crnn_enc2, 'enc1': self.crnn_enc1 }
+            if self.enc_clstm_attn:
+                crnns = { 'center1': self.crnn_main, 'enc4': self.crnn_enc4, 'enc3': self.crnn_enc3, 'enc2': self.crnn_enc2, 'enc1': self.crnn_enc1 }
+            else:
+                crnns = { 'center1': self.crnn_main, 'enc4': None, 'enc3': None, 'enc2': None, 'enc1': None }
             processed_feats = {}
             
             # Reshape tensors to separate batch and timestamps
@@ -118,12 +121,6 @@ class FCN_CRNN(nn.Module):
                 processed_feats[cur_enc] = cur_feats
 
             preds = self.fcn_dec(processed_feats['center1'], processed_feats['enc4'], processed_feats['enc3'], processed_feats['enc2'], processed_feats['enc1'])
-            #print('center after csltm + attn: ', processed_feats['center1'].shape)
-            #print('enc4 after csltm + attn: ', processed_feats['enc4'].shape)
-            #print('enc3 after csltm + attn: ', processed_feats['enc3'].shape)
-            #print('enc2 after csltm + attn: ', processed_feats['enc2'].shape)
-            #print('enc1 after csltm + attn: ', processed_feats['enc1'].shape)
-            #print('preds: ', preds.shape)
         else:
             fcn_output = self.fcn(fcn_input, fcn_input_hres)
             crnn_input = fcn_output.view(batch, timestamps, -1, fcn_output.shape[-2], fcn_output.shape[-1])
@@ -142,7 +139,7 @@ def make_MI_CLSTM_model(s1_input_size, s2_input_size,
                      conv_kernel_size, num_classes, bidirectional)
     return model
 
-def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats, d_attn_dim):
+def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats, d_attn_dim, attn_type):
     """ Defines a (bidirectional) CLSTM model 
     Args:
         input_size - (tuple) size of input dimensions 
@@ -157,7 +154,7 @@ def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kern
     Returns:
       returns the model! 
     """
-    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats, d_attn_dim)
+    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats, d_attn_dim, attn_type)
 
     return clstm_segmenter
 
@@ -322,7 +319,8 @@ def get_model(model_name, **kwargs):
                                        bidirectional=kwargs.get('bidirectional'),
                                        avg_hidden_states=kwargs.get('avg_hidden_states'),
                                        early_feats=kwargs.get('early_feats'),
-                                       d_attn_dim=kwargs.get('d_attn_dim'))
+                                       d_attn_dim=kwargs.get('d_attn_dim'),
+                                       attn_type=kwargs.get('attn_type'))
     elif model_name == 'fcn':
         num_bands = get_num_bands(kwargs)['all']
         model = make_fcn_model(n_class=NUM_CLASSES[kwargs.get('country')], n_channel = num_bands, freeze=True)
