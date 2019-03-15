@@ -32,6 +32,8 @@ class CLSTMSegmenter(nn.Module):
                 self.att_rev = VectorAtt(hidden_dims[-1])
             elif attn_type == 'temporal':
                 self.att_rev = TemporalAtt(hidden_dims[-1], d_attn_dim, r_attn_dim)
+            elif attn_type == 'self':
+                self.att_rev = SelfAtt(hidden_dims[-1], 64, 64)
             elif attn_type is None:
                 self.att_rev = None
             else:

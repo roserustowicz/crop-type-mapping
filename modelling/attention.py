@@ -45,8 +45,14 @@ class TemporalAtt(nn.Module):
         reweighted = attn_weights * hidden_states
         return reweighted.permute(0, 1, 4, 2, 3).contiguous()
 
-class SelfAttention(nn.Module):
+class SelfAtt(nn.Module):
+    """
+        Self attention.
+        Assumes input will be in the form (batch, time_steps, hidden_dim_size, height, width) 
 
+        Implementation based on self attention in the following paper: 
+        https://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf
+    """
     def __init__(self, hidden_dim_size, d_k, d_v):
         super(SelfAttention, self).__init__()
         self.d_k = d_k
