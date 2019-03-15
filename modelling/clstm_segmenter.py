@@ -18,7 +18,7 @@ class CLSTMSegmenter(nn.Module):
         self.num_classes = num_classes
 
         self.early_feats = early_feats
-        r_attn_dim = 1 # number of attn weights per element
+        r_attn_dim = 1 # number of attention heads
 
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims]        
