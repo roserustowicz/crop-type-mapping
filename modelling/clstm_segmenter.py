@@ -3,6 +3,7 @@ import torch.nn as nn
 from modelling.util import initialize_weights
 from modelling.clstm import CLSTM
 
+
 class VectorAtt(nn.Module):
     
     def __init__(self, hidden_dim_size):
@@ -31,7 +32,7 @@ class CLSTMSegmenter(nn.Module):
 
     def __init__(self, input_size, hidden_dims, lstm_kernel_sizes, 
                  conv_kernel_size, lstm_num_layers, num_classes, bidirectional,
-                 avg_hidden_states, var_length=False):
+                 avg_hidden_states, early_feats=False, var_length=False):
 
         super(CLSTMSegmenter, self).__init__()
 
@@ -39,7 +40,7 @@ class CLSTMSegmenter(nn.Module):
             hidden_dims = [hidden_dims]        
 
         self.clstm = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers, var_length=var_length)
-        
+        self.early_feats = early_feats
         self.var_length = var_length
         self.bidirectional = bidirectional
         if self.bidirectional:
@@ -61,8 +62,11 @@ class CLSTMSegmenter(nn.Module):
         b, t, c, h, w = layer_outputs.shape
         # layer outputs is size (b, t, c, h, w)
         if self.avg_hidden_states:
-            final_states = [torch.mean(layer_outputs[i], dim=0) for i, length in enumerate(lengths)]
-            final_state = torch.stack(final_states)
+            if lengths is not None:
+                final_states = [torch.mean(layer_outputs[i, :length], dim=0) for i, length in enumerate(lengths)]
+                final_state = torch.stack(final_states)
+            else:
+                final_state = torch.mean(layer_outputs, dim=1)
         else:
             final_state = torch.sum(self.att1(layer_outputs, lengths), dim=1)
             
@@ -72,9 +76,11 @@ class CLSTMSegmenter(nn.Module):
             final_state_rev = torch.sum(self.att_rev(rev_layer_outputs, lengths), dim=1)
             final_state = torch.cat([final_state, final_state_rev], dim=1)
             
-        scores = self.conv(final_state)
-        preds = self.softmax(scores)
-        preds = torch.log(preds)
+        preds = self.conv(final_state)
+        if not self.early_feats:
+            preds = self.softmax(preds)
+            preds = torch.log(preds)
+#         print(torch.unique(preds, sorted=True))
 
         return preds
 

@@ -16,6 +16,7 @@ import pickle
 
 from constants import *
 from tqdm import tqdm
+from torch import autograd
 import visualize
 
 def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes, country):
@@ -150,9 +151,12 @@ def train_dl_model(model, model_name, dataloaders, args):
                     if cm_cur is not None and split == 'train':         
                         # If there are valid pixels, update weights
                         optimizer.zero_grad()
+#                         with autograd.detect_anomaly():
                         loss.backward()
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), 100)
                         optimizer.step()
 #                         print("TEST:", list(model.parameters())[0])
+
                         gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
                         vis_data['train_gradnorm'].append(gradnorm)
                     

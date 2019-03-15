@@ -342,7 +342,7 @@ def get_model(model_name, **kwargs):
                                      resize_planet = kwargs.get('resize_planet'))
     elif model_name == 'unet3d':
         num_bands = get_num_bands(kwargs)['all']
-        model = make_UNet3D_model(n_class = NUM_CLASSES[kwargs.get('country')], n_channel = num_bands, timesteps=kwargs.get('num_timesteps'))
+        model = make_UNet3D_model(n_class = NUM_CLASSES[kwargs.get('country')], n_channel = num_bands, timesteps=kwargs.get('num_timesteps'), dropout = kwargs.get('dropout'))
     elif model_name == 'mi_clstm':
         satellites = {'s1': kwargs.get('use_s1'), 's2': kwargs.get('use_s2'), 'planet': kwargs.get('use_planet')}
         num_bands = {'s1': get_num_bands(kwargs)['s1'], 's2': get_num_bands(kwargs)['s2'], 'planet': get_num_bands(kwargs)['planet']}

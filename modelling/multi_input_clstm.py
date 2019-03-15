@@ -64,6 +64,7 @@ class MI_CLSTM(nn.Module):
                                                       num_classes=num_classes, 
                                                       bidirectional=bidirectional,
                                                       avg_hidden_states=avg_hidden_states,
+                                                      early_feats=False,
                                                       var_length=True)
                 else:
                     self.encs[sat] = UNet_Encode(num_bands[sat],
@@ -81,6 +82,7 @@ class MI_CLSTM(nn.Module):
                                                       num_classes=crnn_input_size[1], 
                                                       bidirectional=bidirectional,
                                                       avg_hidden_states=avg_hidden_states,
+                                                      early_feats=True,
                                                       var_length=True)
                 # input size should be (time_steps, channels, height, width)
         
