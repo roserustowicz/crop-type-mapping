@@ -94,17 +94,40 @@ class UNet3D(nn.Module):
         #final   = self.final(dc2)
         
         en3 = self.en3(x)
+        print('en3: ', en3.shape)
+
         pool_3 = self.pool_3(en3)
+        print('pool3: ', pool_3.shape)
+
         en4 = self.en4(pool_3)
+        print('en4: ', en4.shape)
+
         pool_4 = self.pool_4(en4)
+        print('pool4: ', pool_4.shape)
+
         center_in = self.center_in(pool_4)
+        print('center in: ', center_in.shape)
+
         center_out = self.center_out(center_in)
+        print('center out: ', center_out.shape)
+
         concat4 = torch.cat([center_out,en4],dim=1)
-        dc4     = self.dc4(concat4)
+        print('concat 4: ', concat4.shape)
+
+        dc4 = self.dc4(concat4)
+        print('dc4: ', dc4.shape)
+
         trans3  = self.trans3(dc4)
+        print('trans3: ', trans3.shape)
+
         concat3 = torch.cat([trans3,en3],dim=1)
+        print('concat3: ', concat3.shape)
+
         dc3     = self.dc3(concat3)
+        print('dc3: ', dc3.shape)
+
         final   = self.final(dc3)
+        print('final: ', final.shape)
         
         final = final.permute(0,1,3,4,2)
         
