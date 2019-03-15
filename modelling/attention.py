@@ -45,3 +45,29 @@ class TemporalAtt(nn.Module):
         reweighted = attn_weights * hidden_states
         return reweighted.permute(0, 1, 4, 2, 3).contiguous()
 
+class SelfAttention(nn.Module):
+
+    def __init__(self, hidden_dim_size, d_k, d_v):
+        super(SelfAttention, self).__init__()
+        self.d_k = d_k
+        self.d_v = d_v
+
+        self.w_q = nn.Linear(in_features=hidden_dim_size, out_features=d_k, bias=False)
+        self.w_k = nn.Linear(in_features=hidden_dim_size, out_features=d_k, bias=False)
+        self.w_v = nn.Linear(in_features=hidden_dim_size, out_features=d_v, bias=False)
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, hidden_states)
+        hidden_states = hidden_states.permute(0, 1, 3, 4, 2).contiguous()
+        hidden_states = hidden_states.view(-1, hidden_states.shape[-1])
+        queries = self.w_q(hidden_states)
+        keys = self.w_k(hidden_states)
+        values = self.w_v(hidden_states)
+        print('hidden states: ', hidden_states.shape)
+        print('queries: ', queries.shape)
+        print('keys: ', keys.shape)
+        print('values: ', values.shape)
+        
+        attn = torch.mm(self.softmax(torch.mm(queries, torch.transpose(keys)) / torch.sqrt(d_k)), values)      
+        print('attn: ', attn.shape)
+
