@@ -237,7 +237,8 @@ if __name__ == "__main__":
     dataloaders = datasets.get_dataloaders(args.country, args.dataset, args)
     # load in model
     model = models.get_model(**vars(args))
-    print('Total trainable model parameters: {}'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
+    if args.model_name in DL_MODELS:
+        print('Total trainable model parameters: {}'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
 
     if args.model_path is not None:
         model.load_state_dict(torch.load(args.model_path))

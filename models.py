@@ -39,7 +39,7 @@ class FCN_CRNN(nn.Module):
     def __init__(self, fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, 
                  hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states, 
                  num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet, 
-                 num_bands_dict, d_attn_dim, attn_type, enc_clstm_attn=False):
+                 num_bands_dict, d_attn_dim, attn_type, enc_clstm_attn=True):
         super(FCN_CRNN, self).__init__()
 
         self.early_feats = early_feats

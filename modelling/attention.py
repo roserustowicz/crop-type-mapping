@@ -63,7 +63,7 @@ class SelfAtt(nn.Module):
         self.w_v = nn.Linear(in_features=hidden_dim_size, out_features=d_v, bias=False)
         self.softmax = nn.Softmax(dim=1)
 
-    def forward(self, hidden_states)
+    def forward(self, hidden_states):
         hidden_states = hidden_states.permute(0, 1, 3, 4, 2).contiguous()
         hidden_states = hidden_states.view(-1, hidden_states.shape[-1])
         queries = self.w_q(hidden_states)
