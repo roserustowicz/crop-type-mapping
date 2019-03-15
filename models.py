@@ -39,10 +39,11 @@ class FCN_CRNN(nn.Module):
     def __init__(self, fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, 
                  hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states, 
                  num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet, 
-                 num_bands_dict, d_attn_dim):
+                 num_bands_dict, d_attn_dim, attn_type, enc_clstm_attn=True):
         super(FCN_CRNN, self).__init__()
 
         self.early_feats = early_feats
+        self.enc_clstm_attn = enc_clstm_attn
 
         if fcn_model_name == 'simpleCNN':
             self.fcn = simple_CNN(fcn_input_size, crnn_input_size[1])
@@ -64,15 +65,33 @@ class FCN_CRNN(nn.Module):
                                       conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states)
         elif crnn_model_name == "clstm":
             if self.early_feats:
-                self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
+                self.crnn_main = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
                                        conv_kernel_size, lstm_num_layers, crnn_input_size[1],
                                        bidirectional, avg_hidden_states, self.early_feats, 
-                                       d_attn_dim)
+                                       d_attn_dim, attn_type)
+                if self.enc_clstm_attn:
+                    crnn_input0, crnn_input1, crnn_input2, crnn_input3 = crnn_input_size
+                    self.crnn_enc4 = CLSTMSegmenter([crnn_input0, crnn_input1//2, crnn_input2*2, crnn_input3*2], hidden_dims, lstm_kernel_sizes, 
+                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1]//2,
+                                       bidirectional, avg_hidden_states, self.early_feats, 
+                                       d_attn_dim, attn_type)
+                    self.crnn_enc3 = CLSTMSegmenter([crnn_input0, crnn_input1//4, crnn_input2*4, crnn_input3*4], hidden_dims, lstm_kernel_sizes, 
+                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1]//4,
+                                       bidirectional, avg_hidden_states, self.early_feats, 
+                                       d_attn_dim, attn_type)
+                    self.crnn_enc2 = CLSTMSegmenter([crnn_input0, crnn_input1//8, crnn_input2*8, crnn_input3*8], hidden_dims, lstm_kernel_sizes, 
+                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1]//8,
+                                       bidirectional, avg_hidden_states, self.early_feats, 
+                                       d_attn_dim, attn_type)
+                    self.crnn_enc1 = CLSTMSegmenter([crnn_input0, crnn_input1//16, crnn_input2*16, crnn_input3*16], hidden_dims, lstm_kernel_sizes, 
+                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1]//16,
+                                       bidirectional, avg_hidden_states, self.early_feats, 
+                                       d_attn_dim, attn_type)
             else:
-                self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
+                self.crnn_main = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
                                        conv_kernel_size, lstm_num_layers, num_classes, 
                                        bidirectional, avg_hidden_states, self.early_feats,
-                                       d_attn_dim)
+                                       d_attn_dim, attn_type)
 
     def forward(self, input_tensor, hres_inputs=None):
         batch, timestamps, bands, rows, cols = input_tensor.size()
@@ -85,41 +104,30 @@ class FCN_CRNN(nn.Module):
 
         if self.early_feats:
             center1_feats, enc4_feats, enc3_feats, enc2_feats, enc1_feats = self.fcn_enc(fcn_input, fcn_input_hres)
-
+            crnns = { 'center1': self.crnn_main, 'enc4': self.crnn_enc4, 'enc3': self.crnn_enc3, 'enc2': self.crnn_enc2, 'enc1': self.crnn_enc1 }
+            processed_feats = {}
+            
             # Reshape tensors to separate batch and timestamps
-            # TODO: Use attn weights here instead of averaging??
-            crnn_input = center1_feats.view(batch, timestamps, -1, center1_feats.shape[-2], center1_feats.shape[-1])
-            print('BEFORE ATTN')
-            print('crnn input: ', crnn_input.shape)
-            print('enc4_feats: ', enc4_feats.shape)
-            print('enc3_feats: ', enc3_feats.shape)
-            print('enc2_feats: ', enc2_feats.shape)
-            print('enc1_feats: ', enc1_feats.shape)
+            for cur_feats, cur_enc in zip([center1_feats, enc4_feats, enc3_feats, enc2_feats, enc1_feats], crnns):
+                if cur_feats is not None:
+                    cur_feats = cur_feats.view(batch, timestamps, -1, cur_feats.shape[-2], cur_feats.shape[-1])
+                    if self.enc_clstm_attn:
+                        cur_feats = crnns[cur_enc](cur_feats)
+                    else:
+                        cur_feats = crnns[cur_enc](cur_feats) if cur_enc == 'center1' else torch.mean(cur_feats, dim=1, keepdim=False)
+                processed_feats[cur_enc] = cur_feats
 
-            enc4_feats = enc4_feats.view(batch, timestamps, -1, enc4_feats.shape[-2], enc4_feats.shape[-1])
-            enc4_feats = torch.mean(enc4_feats, dim=1, keepdim=False)
-            enc3_feats = enc3_feats.view(batch, timestamps, -1, enc3_feats.shape[-2], enc3_feats.shape[-1])
-            enc3_feats = torch.mean(enc3_feats, dim=1, keepdim=False)
-
-            if enc2_feats is not None:
-                enc2_feats = enc2_feats.view(batch, timestamps, -1, enc2_feats.shape[-2], enc2_feats.shape[-1])
-                enc2_feats = torch.mean(enc2_feats, dim=1, keepdim=False)
-                enc1_feats = enc1_feats.view(batch, timestamps, -1, enc1_feats.shape[-2], enc1_feats.shape[-1])
-                enc1_feats = torch.mean(enc1_feats, dim=1, keepdim=False)
-
-            pred_enc = self.crnn(crnn_input)
-            print('INPUTS TO DECODER')
-            print('pred enc: ', pred_enc.shape)
-            print('enc4_feats: ', enc4_feats.shape)
-            print('enc3_feats: ', enc3_feats.shape)
-            print('enc2_feats: ', enc2_feats.shape)
-            print('enc1_feats: ', enc1_feats.shape)
-            preds = self.fcn_dec(pred_enc, enc4_feats, enc3_feats, enc2_feats, enc1_feats)
-
+            preds = self.fcn_dec(processed_feats['center1'], processed_feats['enc4'], processed_feats['enc3'], processed_feats['enc2'], processed_feats['enc1'])
+            #print('center after csltm + attn: ', processed_feats['center1'].shape)
+            #print('enc4 after csltm + attn: ', processed_feats['enc4'].shape)
+            #print('enc3 after csltm + attn: ', processed_feats['enc3'].shape)
+            #print('enc2 after csltm + attn: ', processed_feats['enc2'].shape)
+            #print('enc1 after csltm + attn: ', processed_feats['enc1'].shape)
+            #print('preds: ', preds.shape)
         else:
             fcn_output = self.fcn(fcn_input, fcn_input_hres)
             crnn_input = fcn_output.view(batch, timestamps, -1, fcn_output.shape[-2], fcn_output.shape[-1])
-            preds = self.crnn(crnn_input)
+            preds = self.crnn_main(crnn_input)
         
         return preds
 
@@ -177,6 +185,7 @@ def make_fcn_model(n_class, n_channel, freeze=True):
                 param.requires_grad = False
     
     return fcn8s
+
 def make_UNet_model(n_class, num_bands_dict, late_feats_for_fcn=False, pretrained=True, use_planet=False, resize_planet=False):
     """ Defines a U-Net model
     Args:
@@ -230,7 +239,7 @@ def make_UNetDecoder_model(n_class, late_feats_for_fcn, use_planet, resize_plane
 def make_fcn_clstm_model(country, fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, 
                          hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states,
                          num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet,
-                         num_bands_dict, d_attn_dim):
+                         num_bands_dict, d_attn_dim, attn_type):
     """ Defines a fully-convolutional-network + CLSTM model
     Args:
       fcn_input_size - (tuple) input dimensions for FCN model
@@ -256,7 +265,7 @@ def make_fcn_clstm_model(country, fcn_input_size, fcn_model_name, crnn_input_siz
 
     model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, 
                      conv_kernel_size, lstm_num_layers, avg_hidden_states, num_classes, bidirectional, pretrained, 
-                     early_feats, use_planet, resize_planet, num_bands_dict, d_attn_dim)
+                     early_feats, use_planet, resize_planet, num_bands_dict, d_attn_dim, attn_type)
     model = model.cuda()
 
     return model
@@ -350,7 +359,8 @@ def get_model(model_name, **kwargs):
                                      use_planet=kwargs.get('use_planet'),
                                      resize_planet=kwargs.get('resize_planet'), 
                                      num_bands_dict=num_bands,
-                                     d_attn_dim=kwargs.get('d_attn_dim'))
+                                     d_attn_dim=kwargs.get('d_attn_dim'),
+                                     attn_type=kwargs.get('attn_type'))
 
         if (pretrained_model_path is not None) and (kwargs.get('pretrained') == True):
             pre_trained_model=torch.load(pretrained_model_path)

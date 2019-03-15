@@ -118,13 +118,20 @@ class UNet_Encode(nn.Module):
         enc4 = self.enc4(down3)
         down4 = self.downsample(enc4)
         center1 = self.center(down4)
-        
+
         if (self.use_planet and self.resize_planet) or (not self.use_planet):
-            return center1, enc4, enc3, None, None
+            enc2 = None 
+            enc1 = None
         else:
             enc2 = self.downsample(enc2)
             enc1 = self.downsample(self.downsample(enc1))
-            return center1, enc4, enc3, enc2, enc1
+
+        #print('center1: ', center1.shape)
+        #print('enc4: ', enc4.shape)
+        #print('enc3: ', enc3.shape)
+        #print('enc2: ', enc2.shape)
+        #print('enc1: ', enc1.shape)
+        return center1, enc4, enc3, enc2, enc1
 
 class UNet_Decode(nn.Module):
     """ U-Net architecture definition for decoding (second half of the "U")
