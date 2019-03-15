@@ -449,7 +449,7 @@ def get_train_parser():
                          help="Whether or not to use gradient clipping, value is computed based on the number of parameters")
     parser.add_argument('--d_attn_dim', type=int, default=10,
                          help="Number of features in w_s1 output for attention")
-    parser.add_argument('--attn_type', type=str, default='temporal',
-                         help="Attention type to use, must be 'None', 'temporal', or 'vector'")
+    parser.add_argument('--attn_type', type=str, default='self',
+                         help="Attention type to use, must be 'None', 'temporal', 'self', or 'vector'")
 
     return parser
