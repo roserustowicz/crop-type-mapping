@@ -445,8 +445,11 @@ def get_train_parser():
                          help="Include ndvi and gcvi as input features")
     parser.add_argument('--fix_feats', type=str2bool, default=False,
                          help="Fix pretrained features")
-    parser.add_argument('--clip_val', type=float, default=100,
-                         help="Clip value for gradient norm")
+    parser.add_argument('--clip_val', type=str2bool, default=True,
+                         help="Whether or not to use gradient clipping, value is computed based on the number of parameters")
     parser.add_argument('--d_attn_dim', type=int, default=10,
                          help="Number of features in w_s1 output for attention")
+    parser.add_argument('--attn_type', type=str, default='temporal',
+                         help="Attention type to use, must be 'None', 'temporal', or 'vector'")
+
     return parser

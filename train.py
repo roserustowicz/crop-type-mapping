@@ -113,6 +113,10 @@ def train_non_dl_model(model, model_name, dataloaders, args, X, y):
 def train_dl_model(model, model_name, dataloaders, args):
     splits = ['train', 'val'] if not args.eval_on_test else ['test']
     
+    if args.clip_val:
+        clip_val = sum(p.numel() for p in model.parameters() if p.requires_grad) // 20000
+        print('clip value: ', clip_val)
+
     # set up information lists for visdom    
     vis_logger = visualize.VisdomLogger(args.env_name, model_name, args.country, splits)
     loss_fn = loss_fns.get_loss_fn(model_name)
@@ -142,9 +146,9 @@ def train_dl_model(model, model_name, dataloaders, args):
                         optimizer.zero_grad()
                         #with autograd.detect_anomaly():
                         loss.backward()
-                        if args.clip_val is not None:
+                        if args.clip_val:
                             # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-                            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_val)
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
                         optimizer.step()
                        
                         total_norm = 0 
@@ -233,7 +237,8 @@ if __name__ == "__main__":
     dataloaders = datasets.get_dataloaders(args.country, args.dataset, args)
     # load in model
     model = models.get_model(**vars(args))
-    
+    print('Total trainable model parameters: {}'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
+
     if args.model_path is not None:
         model.load_state_dict(torch.load(args.model_path))
 
