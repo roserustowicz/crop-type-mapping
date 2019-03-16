@@ -2,9 +2,21 @@ import torch
 import torch.nn as nn
 
 class ApplyAtt(nn.Module):
-    def __init__(self, attn_type, hidden_dim_size, proj_weight1, proj_weight2):
-        if attn
-    def forward(self, hidden_states)
+    def __init__(self, attn_type, hidden_dim_size, d, r, dk, dv):
+        if attn_type == 'vector':
+            self.attention = VectorAtt(hidden_dims[-1])
+        elif attn_type == 'temporal':
+            self.attention = TemporalAtt(hidden_dims[-1], d, r)
+        elif attn_type == 'self':
+            self.attention = SelfAtt(hidden_dims[-1], dk, dv)
+        elif self.attn_type is None:
+            self.attention = None
+        else:
+            raise ValueError('Specified attention type is not compatible')
+
+    def forward(self, hidden_states):
+        attn_method = self.attention(hidden_states) if self.attention is not None else None
+
 
 class VectorAtt(nn.Module):
     
