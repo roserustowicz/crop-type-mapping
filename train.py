@@ -139,7 +139,8 @@ def train_dl_model(model, model_name, dataloaders, args):
 
                     preds = model(inputs, hres_inputs) if model_name in MULTI_RES_MODELS else model(inputs)
 
-                    loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
+                    loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, 
+                                              reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
  
                     if split == 'train' and loss is not None:         # TODO: not sure if we need this check?
                         # If there are valid pixels, update weights

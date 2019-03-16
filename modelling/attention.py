@@ -1,21 +1,6 @@
 import torch
 import torch.nn as nn
 
-class ApplyAtt(nn.Module):
-    def __init__(self, attn_type, hidden_dim_size, d, r, dk, dv):
-        if attn_type == 'vector':
-            self.attention = VectorAtt(hidden_dims[-1])
-        elif attn_type == 'temporal':
-            self.attention = TemporalAtt(hidden_dims[-1], d, r)
-        elif attn_type == 'self':
-            self.attention = SelfAtt(hidden_dims[-1], dk, dv)
-        elif self.attn_type is None:
-            self.attention = None
-        else:
-            raise ValueError('Specified attention type is not compatible')
-
-    def forward(self, hidden_states):
-        attn_method = self.attention(hidden_states) if self.attention is not None else None
 
 
 class VectorAtt(nn.Module):
@@ -63,15 +48,15 @@ class TemporalAtt(nn.Module):
         return reweighted.permute(0, 1, 4, 2, 3).contiguous()
 
 class SelfAtt(nn.Module):
-    """
-        Self attention.
-        Assumes input will be in the form (batch, time_steps, hidden_dim_size, height, width) 
-
-        Implementation based on self attention in the following paper: 
-        https://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf
-    """
     def __init__(self, hidden_dim_size, d_k, d_v):
-        super(SelfAttention, self).__init__()
+        """
+            Self attention.
+            Assumes input will be in the form (batch, time_steps, hidden_dim_size, height, width) 
+
+            Implementation based on self attention in the following paper: 
+            https://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf
+        """
+        super(SelfAtt, self).__init__()
         self.d_k = d_k
         self.d_v = d_v
 
@@ -91,6 +76,24 @@ class SelfAtt(nn.Module):
         print('keys: ', keys.shape)
         print('values: ', values.shape)
         
-        attn = torch.mm(self.softmax(torch.mm(queries, torch.transpose(keys)) / torch.sqrt(d_k)), values)      
+        attn = torch.mm(self.softmax(torch.mm(queries, torch.transpose(keys, 0, 1)) / torch.sqrt(torch.tensor(self.d_k, dtype=torch.float).cuda())), values)      
         print('attn: ', attn.shape)
+
+class ApplyAtt(nn.Module):
+    def __init__(self, attn_type, hidden_dim_size, d, r, dk, dv):
+        super(ApplyAtt, self).__init__()
+        if attn_type == 'vector':
+            self.attention = VectorAtt(hidden_dim_size)
+        elif attn_type == 'temporal':
+            self.attention = TemporalAtt(hidden_dim_size, d, r)
+        elif attn_type == 'self':
+            self.attention = SelfAtt(hidden_dim_size, dk, dv)
+        elif attn_type == 'None':
+            self.attention = None
+        else:
+            raise ValueError('Specified attention type is not compatible')
+
+    def forward(self, hidden_states):
+        attn_weighted = self.attention(hidden_states) if self.attention is not None else None
+        return attn_weighted
 

@@ -26,13 +26,13 @@ from modelling.recurrent_norm import RecurrentNorm2d
 from modelling.clstm_cell import ConvLSTMCell
 from modelling.clstm import CLSTM
 from modelling.cgru_segmenter import CGRUSegmenter
-from modelling.clstm_segmenter import CLSTMSegmenter
+from modelling.clstm_segmenter import CLSTMSegmenter, CLSTMSegmenterWPred
 from modelling.util import initialize_weights, get_num_bands, get_upsampling_weight, set_parameter_requires_grad
 from modelling.fcn8 import FCN8
 from modelling.unet import UNet, UNet_Encode, UNet_Decode
 from modelling.unet3d import UNet3D
 from modelling.multi_input_clstm import MI_CLSTM
-
+from modelling.attention import ApplyAtt
 
 # TODO: figure out how to decompose this       
 class FCN_CRNN(nn.Module):
@@ -42,21 +42,34 @@ class FCN_CRNN(nn.Module):
                  num_bands_dict, d_attn_dim, attn_type, enc_crnn=True, enc_attn=True):
         super(FCN_CRNN, self).__init__()
 
+        self.fcn_input_size = fcn_input_size
+        self.crnn_input_size = crnn_input_size
+        self.hidden_dims = hidden_dims
+        self.lstm_kernel_sizes = lstm_kernel_sizes
+        self.conv_kernel_size = conv_kernel_size
+        self.lstm_num_layers = lstm_num_layers
+        self.avg_hidden_states = avg_hidden_states
+        self.num_classes = num_classes
+        self.bidirectional = bidirectional
         self.early_feats = early_feats
+        self.use_planet = use_planet
+        self.resize_planet = resize_planet
+        self.num_bands_dict = num_bands_dict       
+        self.d_attn_dim = d_attn_dim
+        self.attn_type = attn_type
         self.enc_crnn = enc_crnn
         self.enc_attn = enc_attn
-
+        self.processed_feats = {'main': None, 'enc4': None, 'enc3': None, 'enc2': None, 'enc1': None }
 
         # get appropriate encoder / decoder
         if not self.early_feats:
-            self.fcn = make_UNet_model(nclass=crnn_input_size[1], num_bands_dict=num_bands_dict, late_feats_for_fcn=True, pretrained=pretrained, use_planet=use_planet, resize_planet=resize_planet)
+            self.fcn = make_UNet_model(n_class=crnn_input_size[1], num_bands_dict=num_bands_dict, late_feats_for_fcn=True, pretrained=pretrained, use_planet=use_planet, resize_planet=resize_planet)
         else:
             self.fcn_enc = make_UNetEncoder_model(num_bands_dict, use_planet=use_planet, resize_planet=resize_planet, pretrained=pretrained)
             self.fcn_dec = make_UNetDecoder_model(num_classes, late_feats_for_fcn=False,  use_planet=use_planet, resize_planet=resize_planet)
         
         if crnn_model_name == "gru":
             if self.early_feats:
-                self.processed_feats = {}
                 self.crnn = CGRUSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1], bidirectional, avg_hidden_states)
             else:
@@ -64,59 +77,11 @@ class FCN_CRNN(nn.Module):
                                       conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states)
         
         elif crnn_model_name == "clstm":
-            self.crnn_enc4 = self.crnn_enc3 = self.crnn_enc2 = self.crnn_enc1 = None
-            self.attn_enc4 = self.attn_enc3 = self.attn_enc2 = self.attn_enc1 = None
+            self.attns = self.get_attns()
+            self.crnns = self.get_crnns()  
+            self.final_convs = self.get_final_convs()
 
-            if self.early_feats:
-                self.processed_feats = {}
-                self.crnn_main = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
-                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1],
-                                       bidirectional, avg_hidden_states, self.early_feats, 
-                                       d_attn_dim, attn_type)
-                self.main_finalconv = nn.Conv2d(in_channels=hidden_dims[-1], out_channels=crnn_input_size[1], kernel_size=conv_kernel_size, padding=int((conv_kernel_size-1)/2))
-                
-                if self.enc_clstm:
-                    crnn_input0, crnn_input1, crnn_input2, crnn_input3 = crnn_input_size
-                    # __init__(self, input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_outputs, bidirectional, avg_hidden_states, early_feats, d_attn_dim, attn_type):
-                    # self.final_conv = nn.Conv2d(in_channels=hidden_dims[-1], out_channels=num_outputs, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))        
-                    self.crnn_enc4 = CLSTMSegmenter([crnn_input0, crnn_input1//2, crnn_input2*2, crnn_input3*2], hidden_dims, lstm_kernel_sizes, 
-                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1]//2,
-                                       bidirectional, avg_hidden_states, self.early_feats, 
-                                       d_attn_dim, attn_type)
-                    self.crnn_enc3 = CLSTMSegmenter([crnn_input0, crnn_input1//4, crnn_input2*4, crnn_input3*4], hidden_dims, lstm_kernel_sizes, 
-                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1]//4,
-                                       bidirectional, avg_hidden_states, self.early_feats, 
-                                       d_attn_dim, attn_type)
-                    self.crnn_enc2 = CLSTMSegmenter([crnn_input0, crnn_input1//8, crnn_input2*8, crnn_input3*8], hidden_dims, lstm_kernel_sizes, 
-                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1]//8,
-                                       bidirectional, avg_hidden_states, self.early_feats, 
-                                       d_attn_dim, attn_type)
-                    self.crnn_enc1 = CLSTMSegmenter([crnn_input0, crnn_input1//16, crnn_input2*16, crnn_input3*16], hidden_dims, lstm_kernel_sizes, 
-                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1]//16,
-                                       bidirectional, avg_hidden_states, self.early_feats, 
-                                       d_attn_dim, attn_type)
-                    self.enc4_finalconv = nn.Conv2d(in_channels=hidden_dims[-1], out_channels=crnn_input_size[1]//2, kernel_size=conv_kernel_size, padding=int((conv_kernel_size-1)/2))
-                    self.enc3_finalconv = nn.Conv2d(in_channels=hidden_dims[-1], out_channels=crnn_input_size[1]//4, kernel_size=conv_kernel_size, padding=int((conv_kernel_size-1)/2))
-                    self.enc2_finalconv = nn.Conv2d(in_channels=hidden_dims[-1], out_channels=crnn_input_size[1]//8, kernel_size=conv_kernel_size, padding=int((conv_kernel_size-1)/2))
-                    self.enc1_finalconv = nn.Conv2d(in_channels=hidden_dims[-1], out_channels=crnn_input_size[1]//16, kernel_size=conv_kernel_size, padding=int((conv_kernel_size-1)/2))
-
-                if self.enc_attn:
-                    self.attn_enc4 = ApplyAtt(attn_type, hidden_dims[-1], d=d_attn_dim, r=r_attn_dim, dk=dk_attn_dim, dv=dv_attn_dim)
-                    self.attn_enc3 = ApplyAtt(attn_type, hidden_dims[-1], d=d_attn_dim, r=r_attn_dim, dk=dk_attn_dim, dv=dv_attn_dim)
-                    self.attn_enc2 = ApplyAtt(attn_type, hidden_dims[-1], d=d_attn_dim, r=r_attn_dim, dk=dk_attn_dim, dv=dv_attn_dim)
-                    self.attn_enc1 = ApplyAtt(attn_type, hidden_dims[-1], d=d_attn_dim, r=r_attn_dim, dk=dk_attn_dim, dv=dv_attn_dim)
-            else:
-                self.crnn_main = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
-                                       conv_kernel_size, lstm_num_layers, num_classes, 
-                                       bidirectional, avg_hidden_states, self.early_feats,
-                                       d_attn_dim, attn_type)
-                self.main_finalconv = nn.Conv2d(in_channels=hidden_dims[-1], out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size-1)/2))
-                
-            
-            self.attn_main = ApplyAtt(attn_type, hidden_dims[-1], d=d_attn_dim, r=r_attn_dim, dk=dk_attn_dim, dv=dv_attn_dim)
-            self.crnns = { 'center1': self.crnn_main, 'enc4': self.crnn_enc4, 'enc3': self.crnn_enc3, 'enc2': self.crnn_enc2, 'enc1': self.crnn_enc1 }
-            self.attns = { 'center1': self.attn_main, 'enc4': self.attn_enc4, 'enc3': self.attn_enc3, 'enc2': self.attn_enc2, 'enc1': self.attn_enc1 } 
-
+        self.logsoftmax = nn.LogSoftmax(dim=1)
 
     def forward(self, input_tensor, hres_inputs=None):
         batch, timestamps, bands, rows, cols = input_tensor.size()
@@ -128,35 +93,110 @@ class FCN_CRNN(nn.Module):
         else: fcn_input_hres = None 
 
         if self.early_feats:
+            # Encode features
             center1_feats, enc4_feats, enc3_feats, enc2_feats, enc1_feats = self.fcn_enc(fcn_input, fcn_input_hres)
-            # Reshape tensors to separate batch and timestamps
-            for cur_feats, cur_enc in zip([center1_feats, enc4_feats, enc3_feats, enc2_feats, enc1_feats], crnns):
+
+            for cur_feats, cur_enc in zip([center1_feats, enc4_feats, enc3_feats, enc2_feats, enc1_feats], self.crnns):
                 if cur_feats is not None:
+                    # Apply CRNN
                     cur_feats = cur_feats.view(batch, timestamps, -1, cur_feats.shape[-2], cur_feats.shape[-1])
-                    cur_fwd_feats, cur_rev_feats = self.crnns[cur_enc](cur_feats) # apply crnn
-                    # attention
+                    cur_feats = self.crnns[cur_enc](cur_feats) 
+                    
+                    # Apply attention
                     if self.attns[cur_enc] is None:
-                        # take mean if avg_hidden_states, or take the last one
                         if not self.avg_hidden_states:
                             last_fwd_feat = cur_feats[:, timestamps-1, :, :, :]
-                            last_rev_feat = cur_feats[:, 2*timestamps-1, :, :, :] if bidirectional else None
+                            last_rev_feat = cur_feats[:, -1, :, :, :] if bidirectional else None
                             reweighted = torch.concat([last_fwd_feat, last_rev_feat], dim=1) if bidirectional else last_fwd_feat
                         else: 
-                            reweighted = torch.mean(torch.concat([cur_fwd_feats, cur_rev_feats], dim=1), dim=1)
+                            reweighted = torch.mean(cur_feats, dim=1)
                     else:
                         reweighted = self.attns[cur_enc](cur_feats)
+                    reweighted = torch.sum(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
+                    
+                    # Apply final conv
+                    final_feats = self.final_convs[cur_enc](reweighted)
+                    self.processed_feats[cur_enc] = final_feats
 
-                    final_feats = self.final_conv(final_state)              
-                
-                self.processed_feats[cur_enc] = final_feats
-
-            preds = self.fcn_dec(self.processed_feats['center1'], self.processed_feats['enc4'], self.processed_feats['enc3'], self.processed_feats['enc2'], self.processed_feats['enc1'])
+            # Decode and predict
+            preds = self.fcn_dec(self.processed_feats['main'], self.processed_feats['enc4'], self.processed_feats['enc3'], self.processed_feats['enc2'], self.processed_feats['enc1'])
+        
         else:
+            # Encode and decode features
             fcn_output = self.fcn(fcn_input, fcn_input_hres)
+            
+            # Apply CRNN
             crnn_input = fcn_output.view(batch, timestamps, -1, fcn_output.shape[-2], fcn_output.shape[-1])
-            preds = self.crnn_main(crnn_input)
+            crnn_output = self.crnn_main(crnn_input)
+            
+            # Apply attention
+            if self.attns['main'](crnn_output) is None:
+                 if not self.avg_hidden_states:
+                     last_fwd_feat = crnn_output[:, timestamps-1, :, :, :]
+                     last_rev_feat = crnn_output[:, -1, :, :, :] if bidirectional else None
+                     reweighted = torch.concat([last_fwd_feat, last_rev_feat], dim=1) if bidirectional else last_fwd_feat
+                     reweighted = torch.mean(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
+                 else: 
+                     reweighted = torch.mean(crnn_output, dim=1)
+            else:
+                reweighted = self.attns['main'](crnn_output)
+                reweighted = torch.sum(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
+                    
+            # Apply final conv
+            scores = self.final_convs['main'](reweighted)
+            preds = self.logsoftmax(scores)            
         
         return preds
+
+    def get_crnns(self):
+        self.crnn_enc4 = self.crnn_enc3 = self.crnn_enc2 = self.crnn_enc1 = None
+        if self.early_feats:
+            self.crnn_main = CLSTMSegmenter(self.crnn_input_size, self.hidden_dims, self.lstm_kernel_sizes, 
+                                   self.conv_kernel_size, self.lstm_num_layers, self.crnn_input_size[1], self.bidirectional) 
+            if self.enc_crnn:
+                crnn_input0, crnn_input1, crnn_input2, crnn_input3 = self.crnn_input_size
+                self.crnn_enc4 = CLSTMSegmenter([crnn_input0, crnn_input1//2, crnn_input2*2, crnn_input3*2], self.hidden_dims, self.lstm_kernel_sizes, 
+                                   self.conv_kernel_size, self.lstm_num_layers, self.crnn_input_size[1]//2, self.bidirectional)
+                self.crnn_enc3 = CLSTMSegmenter([crnn_input0, crnn_input1//4, crnn_input2*4, crnn_input3*4], self.hidden_dims, self.lstm_kernel_sizes, 
+                                   self.conv_kernel_size, self.lstm_num_layers, self.crnn_input_size[1]//4, self.bidirectional)
+                if self.use_planet and not self.resize_planet:
+                    self.crnn_enc2 = CLSTMSegmenter([crnn_input0, crnn_input1//8, crnn_input2*8, crnn_input3*8], self.hidden_dims, self.lstm_kernel_sizes, 
+                                       self.conv_kernel_size, self.lstm_num_layers, self.crnn_input_size[1]//8, self.bidirectional)
+                    self.crnn_enc1 = CLSTMSegmenter([crnn_input0, crnn_input1//16, crnn_input2*16, crnn_input3*16], self.hidden_dims, self.lstm_kernel_sizes, 
+                                       self.conv_kernel_size, self.lstm_num_layers, self.crnn_input_size[1]//16, self.bidirectional)
+        else:
+            self.crnn_main = CLSTMSegmenter(self.crnn_input_size, self.hidden_dims, self.lstm_kernel_sizes, 
+                                   self.conv_kernel_size, self.lstm_num_layers, self.num_classes, self.bidirectional)
+        self.crnns = { 'main': self.crnn_main, 'enc4': self.crnn_enc4, 'enc3': self.crnn_enc3, 'enc2': self.crnn_enc2, 'enc1': self.crnn_enc1 }
+        return self.crnns
+
+    def get_attns(self):
+        self.attn_enc4 = self.attn_enc3 = self.attn_enc2 = self.attn_enc1 = None
+        if self.early_feats:
+            if self.enc_attn:
+                self.attn_enc4 = ApplyAtt(self.attn_type, self.hidden_dims, d=self.d_attn_dim, r=1, dk=64, dv=64)
+                self.attn_enc3 = ApplyAtt(self.attn_type, self.hidden_dims, d=self.d_attn_dim, r=1, dk=64, dv=64)
+                if self.use_planet and not self.resize_planet:
+                    self.attn_enc2 = ApplyAtt(self.attn_type, self.hidden_dims, d=self.d_attn_dim, r=1, dk=64, dv=64)
+                    self.attn_enc1 = ApplyAtt(self.attn_type, self.hidden_dims, d=self.d_attn_dim, r=1, dk=64, dv=64)
+        self.attn_main = ApplyAtt(self.attn_type, self.hidden_dims, d=self.d_attn_dim, r=1, dk=64, dv=64)
+        self.attns = { 'main': self.attn_main, 'enc4': self.attn_enc4, 'enc3': self.attn_enc3, 'enc2': self.attn_enc2, 'enc1': self.attn_enc1 } 
+        return self.attns
+
+    def get_final_convs(self):
+        self.enc4_finalconv = self.enc3_finalconv = self.enc2_finalconv = self.enc1_finalconv = None
+        if self.early_feats:
+            self.main_finalconv = nn.Conv2d(in_channels=self.hidden_dims, out_channels=self.crnn_input_size[1], kernel_size=self.conv_kernel_size, padding=int((self.conv_kernel_size-1)/2))
+            if self.enc_crnn:
+                self.enc4_finalconv = nn.Conv2d(in_channels=self.hidden_dims, out_channels=self.crnn_input_size[1]//2, kernel_size=self.conv_kernel_size, padding=int((self.conv_kernel_size-1)/2))
+                self.enc3_finalconv = nn.Conv2d(in_channels=self.hidden_dims, out_channels=self.crnn_input_size[1]//4, kernel_size=self.conv_kernel_size, padding=int((self.conv_kernel_size-1)/2))
+                if self.use_planet and not self.resize_planet: 
+                    self.enc2_finalconv = nn.Conv2d(in_channels=self.hidden_dims, out_channels=self.crnn_input_size[1]//8, kernel_size=self.conv_kernel_size, padding=int((self.conv_kernel_size-1)/2))
+                    self.enc1_finalconv = nn.Conv2d(in_channels=self.hidden_dims, out_channels=self.crnn_input_size[1]//16, kernel_size=self.conv_kernel_size, padding=int((self.conv_kernel_size-1)/2))
+        else:
+            self.main_finalconv = nn.Conv2d(in_channels=self.hidden_dims, out_channels=self.num_classes, kernel_size=self.conv_kernel_size, padding=int((self.conv_kernel_size-1)/2))
+        self.final_convs = { 'main': self.main_finalconv, 'enc4': self.enc4_finalconv, 'enc3': self.enc3_finalconv, 'enc2': self.enc2_finalconv, 'enc1': self.enc1_finalconv}
+        return self.final_convs
 
 def make_MI_CLSTM_model(s1_input_size, s2_input_size, 
                         unet_out_channels,
@@ -169,7 +209,8 @@ def make_MI_CLSTM_model(s1_input_size, s2_input_size,
                      conv_kernel_size, num_classes, bidirectional)
     return model
 
-def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats, d_attn_dim, attn_type):
+def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, 
+                           bidirectional, avg_hidden_states, attn_type, d, r=1, dk=64, dv=64):
     """ Defines a (bidirectional) CLSTM model 
     Args:
         input_size - (tuple) size of input dimensions 
@@ -184,9 +225,8 @@ def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kern
     Returns:
       returns the model! 
     """
-    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats, d_attn_dim, attn_type)
-
-    return clstm_segmenter
+    model = CLSTMSegmenterWPred(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, attn_type, d, r, dk, dv)
+    return model
 
 
 def make_fcn_model(n_class, n_channel, freeze=True):
@@ -348,9 +388,10 @@ def get_model(model_name, **kwargs):
                                        num_classes=NUM_CLASSES[kwargs.get('country')],
                                        bidirectional=kwargs.get('bidirectional'),
                                        avg_hidden_states=kwargs.get('avg_hidden_states'),
-                                       early_feats=kwargs.get('early_feats'),
-                                       d_attn_dim=kwargs.get('d_attn_dim'),
-                                       attn_type=kwargs.get('attn_type'))
+                                       #early_feats=kwargs.get('early_feats'),
+                                       attn_type=kwargs.get('attn_type'),
+                                       d=kwargs.get('d_attn_dim'))
+
     elif model_name == 'fcn':
         num_bands = get_num_bands(kwargs)['all']
         model = make_fcn_model(n_class=NUM_CLASSES[kwargs.get('country')], n_channel = num_bands, freeze=True)
