@@ -35,7 +35,8 @@ def get_Xy(dl, country):
         if len(hres_inputs.shape) > 1:
             raise ValueError('Planet inputs must be resized to the grid size')
         X, y = get_Xy_batch(inputs, targets, X, y, country)
-        num_samples += y[-1].shape[0]
+        if len(y) > 0:
+            num_samples += y[-1].shape[0]
         if num_samples > 100000:
             break
 
