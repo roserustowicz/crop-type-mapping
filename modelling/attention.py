@@ -1,6 +1,11 @@
 import torch
 import torch.nn as nn
 
+class ApplyAtt(nn.Module):
+    def __init__(self, attn_type, hidden_dim_size, proj_weight1, proj_weight2):
+        if attn
+    def forward(self, hidden_states)
+
 class VectorAtt(nn.Module):
     
     def __init__(self, hidden_dim_size):

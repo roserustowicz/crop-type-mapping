@@ -57,9 +57,6 @@ class CLSTMSegmenter(nn.Module):
             raise ValueError('Specified attention type is not compatible')
         
     def forward(self, inputs):
-        #print('input size: ', self.input_size)
-        #print('hidden dims: ', self.hidden_dims)
-        #print('num classes: ', self.num_classes)
 
         layer_outputs, last_states = self.clstm(inputs)
         # sum across temporal dimension
@@ -70,10 +67,18 @@ class CLSTMSegmenter(nn.Module):
         if self.bidirectional:
             rev_inputs = torch.flip(inputs, dims=[1])
             rev_layer_outputs, rev_last_states = self.clstm_rev(rev_inputs)
+
             final_state_rev = torch.sum(self.att_rev(rev_layer_outputs), dim=1)
             final_state = torch.cat([final_state, final_state_rev], dim=1)
+
         scores = self.conv(final_state)
         
         output = scores if self.early_feats else self.logsoftmax(scores)
         return output
+
+
+def __init__():
+
+def forward():
+
         
