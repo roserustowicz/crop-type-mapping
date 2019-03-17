@@ -14,6 +14,8 @@ import util
 import numpy as np
 import pickle 
 
+from torch import autograd
+
 from constants import *
 from tqdm import tqdm
 from torch import autograd
@@ -24,7 +26,7 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
     total_pixels = 0
     total_cm = np.zeros((num_classes, num_classes)).astype(int) 
     loss_fn = loss_fns.get_loss_fn(model_name)
-    for inputs, targets, cloudmasks in split_loader:
+    for inputs, targets, cloudmasks, hres_inputs in split_loader:
         with torch.set_grad_enabled(False):
             if not var_length:
                 inputs.to(device)
@@ -33,7 +35,10 @@ def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_
                     if "length" not in sat:
                         inputs[sat].to(device)
             targets.to(device)
-            preds = model(inputs)   
+            hres_inputs.to(device)
+            if hres_inputs is not None: hres_inputs.to(device)
+
+            preds = model(inputs, hres_inputs) if model_name in MULTI_RES_MODELS else model(inputs)   
             batch_loss, batch_cm, _, num_pixels, confidence = evaluate(model_name, preds, targets, country, loss_fn=loss_fn, reduction="sum", loss_weight=loss_weight, weight_scale=weight_scale, gamma=gamma)
             total_loss += batch_loss.item()
             total_pixels += num_pixels
@@ -78,10 +83,10 @@ def evaluate(model_name, preds, labels, country, loss_fn=None, reduction=None, l
         else:
             raise ValueError(f"reduction: `{reduction}` not supported")
 
-def train_non_dl_model(model, dataloaders, args, X, y):
+def train_non_dl_model(model, model_name, dataloaders, args, X, y):
     results = {'train_acc': [], 'train_f1': [], 'val_acc': [], 'val_f1': [], 'test_acc': [], 'test_f1': []}
     for rep in range(args.num_repeat):
-        for split in ['train', 'val'] if not args.eval_on_test else ['test']:
+        for split in ['train', 'val', 'test'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             X, y = datasets.get_Xy(dl, args.country)            
 
@@ -106,7 +111,7 @@ def train_non_dl_model(model, dataloaders, args, X, y):
             print('{} cm: {}'.format(split, cm))
             print('{} per class f1 scores: {}'.format(split, metrics.get_f1score(cm, avg=False)))
 
-    for split in ['train', 'val'] if not args.eval_on_test else ['test']: 
+    for split in ['train', 'val', 'test'] if not args.eval_on_test else ['test']: 
         print('\n------------------------\nOverall Results:\n')
         print('{} accuracy: {} +/- {}'.format(split, np.mean(results[f'{split}_acc']), np.std(results[f'{split}_acc'])))
         print('{} f1-score: {} +/- {}'.format(split, np.mean(results[f'{split}_f1']), np.std(results[f'{split}_f1'])))
@@ -115,76 +120,72 @@ def train_dl_model(model, model_name, dataloaders, args):
     splits = ['train', 'val'] if not args.eval_on_test else ['test']
     
     # set up information lists for visdom    
-    vis_data = {}
-    for split in splits:
-        vis_data[f'{split}_loss'] = []
-        vis_data[f'{split}_acc'] = []
-        vis_data[f'{split}_f1'] = []
-        vis_data[f'{split}_classf1'] = None
-        
-    vis_data['train_gradnorm'] = []
-    vis = visualize.setup_visdom(args.env_name, model_name)
+    vis_logger = visualize.VisdomLogger(args.env_name, model_name, args.country, splits)
     loss_fn = loss_fns.get_loss_fn(model_name)
     optimizer = loss_fns.get_optimizer(model.parameters(), args.optimizer, args.lr, args.momentum, args.weight_decay)
     best_val_f1 = 0
     
     for i in range(args.epochs if not args.eval_on_test else 1):
         print('Epoch: {}'.format(i))
-        all_metrics = {}
-        for split in splits:
-            all_metrics[f'{split}_loss'] = 0
-            all_metrics[f'{split}_correct'] = 0
-            all_metrics[f'{split}_pix'] = 0
-            all_metrics[f'{split}_cm'] = np.zeros((NUM_CLASSES[args.country], NUM_CLASSES[args.country])).astype(int)
-
+        
+        vis_logger.reset_epoch_data()
+        
         for split in ['train', 'val'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             model.train() if split == ['train'] else model.eval()
-            # TODO: figure out how to pack inputs from dataloader together in the case of variable length sequences
-            for inputs, targets, cloudmasks in tqdm(dl):
+
+            for inputs, targets, cloudmasks, hres_inputs in tqdm(dl):
                 with torch.set_grad_enabled(True):
                     if not args.var_length:
                         inputs.to(args.device)
+                        if hres_inputs is not None: hres_inputs.to(args.device)
                     else:
                         for sat in inputs:
                             if "length" not in sat:
                                 inputs[sat].to(args.device)
+
                     targets.to(args.device)
-                    preds = model(inputs)
+
+                    preds = model(inputs, hres_inputs) if model_name in MULTI_RES_MODELS else model(inputs)
+
                     loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
-                 
-                    if cm_cur is not None and split == 'train':         
+      
+                    if split == 'train' and loss is not None:         # TODO: not sure if we need this check?
                         # If there are valid pixels, update weights
                         optimizer.zero_grad()
-#                         with autograd.detect_anomaly():
+                        #with autograd.detect_anomaly():
                         loss.backward()
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), 100)
+                        if args.clip_val is not None:
+                            # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_val)
                         optimizer.step()
-#                         print("TEST:", list(model.parameters())[0])
+                       
+                        total_norm = 0 
+                        for p in model.parameters():
+                            if p.grad is not None:
+                                param_norm = p.grad.data.norm(2)
+                                total_norm += param_norm.item() ** 2
+                        gradnorm = total_norm ** (1. / 2)
+                        #gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
 
-                        gradnorm = torch.norm(list(model.parameters())[0].grad).detach().cpu() / torch.prod(torch.tensor(list(model.parameters())[0].shape), dtype=torch.float32)
-                        vis_data['train_gradnorm'].append(gradnorm)
+                        vis_logger.update_progress('train', 'gradnorm', gradnorm)
                     
                     if cm_cur is not None: # TODO: not sure if we need this check?
                         # If there are valid pixels, update metrics
-                        all_metrics[f'{split}_cm'] += cm_cur
-                        all_metrics[f'{split}_loss'] += loss.item()
-                        all_metrics[f'{split}_correct'] += total_correct
-                        all_metrics[f'{split}_pix'] += num_pixels
-
-                visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, 
-                                       NUM_CLASSES[args.country], split, vis_data, vis, 
-                                       args.include_doy, args.use_s1, args.use_s2, model_name, args.time_slice,
-                                       var_length=args.var_length)
-
+                        vis_logger.update_epoch_all(split, cm_cur, loss, total_correct, num_pixels)
+                
+                vis_logger.record_batch(inputs, cloudmasks, targets, preds, confidence, 
+                                        NUM_CLASSES[args.country], split, 
+                                        args.include_doy, args.use_s1, args.use_s2, 
+                                        model_name, args.time_slice)
 
             if split in ['test']:
-                visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country, save=False, save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
+                vis_logger.record_epoch(split, i, args.country, save=False, save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
             else:
-                visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country)
+                vis_logger.record_epoch(split, i, args.country)
 
             if split == 'val':
-                val_f1 = metrics.get_f1score(all_metrics['val_cm'], avg=True)                 
+                val_f1 = metrics.get_f1score(vis_logger.epoch_data['val_cm'], avg=True)                 
 
                 if val_f1 > best_val_f1:
                     torch.save(model.state_dict(), os.path.join(args.save_dir, args.name + "_best"))
@@ -192,16 +193,16 @@ def train_dl_model(model, model_name, dataloaders, args):
                     if args.save_best: 
                         # TODO: Ideally, this would save any batch except the last one so that the saved images
                         #  are not only the remainder from the last batch 
-                        visualize.record_batch(inputs, cloudmasks, targets, preds, confidence, NUM_CLASSES[args.country], 
-                                               split, vis_data, vis, args.include_doy, args.use_s1, 
-                                               args.use_s2, model_name, args.time_slice, save=True, 
-                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"),
-                                               var_length=args.var_length)
+                        vis_logger.record_batch(inputs, cloudmasks, targets, preds, confidence, 
+                                                NUM_CLASSES[args.country], split, 
+                                                args.include_doy, args.use_s1, args.use_s2, 
+                                                model_name, args.time_slice, save=True, 
+                                                save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
 
-                        visualize.record_epoch(all_metrics, split, vis_data, vis, i, args.country, save=True, 
+                        vis_logger.record_epoch(split, i, args.country, save=True, 
                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               
 
-                        visualize.record_epoch(all_metrics, 'train', vis_data, vis, i, args.country, save=True, 
+                        vis_logger.record_epoch('train', i, args.country, save=True, 
                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               
 
             
@@ -220,7 +221,7 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
     if args is None: raise ValueError("Args is NONE")
         
     if model_name in NON_DL_MODELS:
-        train_non_dl_model(model, dataloaders, args, X, y)
+        train_non_dl_model(model, model_name, dataloaders, args, X, y)
     elif model_name in DL_MODELS:
         train_dl_model(model, model_name, dataloaders, args)
     else:

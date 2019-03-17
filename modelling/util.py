@@ -3,6 +3,11 @@ import torch.nn as nn
 
 from constants import *
 
+def set_parameter_requires_grad(model, fix_feats):
+    if fix_feats:
+        for param in model.parameters():
+            param.requires_grad = False
+
 def initialize_weights(*models):
     for model in models:
         for module in model.modules():

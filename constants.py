@@ -10,6 +10,7 @@ Constants for file paths
 SPLITS = ['train', 'val', 'test']
 NON_DL_MODELS = ['logreg', 'random_forest']
 DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm', 'unet3d']
+MULTI_RES_MODELS = ['fcn_crnn']
 
 S1_NUM_BANDS = 3
 PLANET_NUM_BANDS = 4
@@ -23,12 +24,12 @@ NROW = 8
 BASE_DIR = os.getenv("HOME")
 
 GCP_DATA_DIR = BASE_DIR + '/croptype_data/data'
-LOCAL_DATA_DIR = BASE_DIR + '/Documents/robin/crop-type-mapping/data'
+LOCAL_DATA_DIR = BASE_DIR + '/croptype_data_local/data'
 #LOCAL_DATA_DIR = 'data'
 
-HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/data_wplanet_validsubset.hdf5',
-              'southsudan': LOCAL_DATA_DIR + '/southsudan/data_wplanet_validsubset.hdf5',
-              'tanzania': LOCAL_DATA_DIR + '/tanzania/data.hdf5',
+HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/data_wplanet_validsubset_32.hdf5',
+              'southsudan': LOCAL_DATA_DIR + '/southsudan/data_wplanet_validsubset_32.hdf5',
+              'tanzania': LOCAL_DATA_DIR + '/tanzania/data_w_planet.hdf5',
               'germany': LOCAL_DATA_DIR + '/germany/data.hdf5'}
 
 GRID_DIR = { 'ghana': LOCAL_DATA_DIR + "/ghana", 
@@ -40,6 +41,9 @@ GHANA_RASTER_DIR = GCP_DATA_DIR + '/ghana/raster/'
 GHANA_RASTER_NPY_DIR = GCP_DATA_DIR + '/ghana/raster_npy/'
 GHANA_S1_DIR = GCP_DATA_DIR + '/ghana/s1_npy'
 GHANA_S2_DIR = GCP_DATA_DIR + '/ghana/s2_npy'
+
+
+PRETRAINED_GERMANY_PATH = '/home/roserustowicz/crop-type-mapping/runs/20190303_fcncrnn_germany_s2_15dayagg_weightdecay01_noclouds_yesdoy_hiddendims128_avghiddenstatesyes_s2numbands10_yesearlyfeats_yesvegindices_best'
 
 # HYPERPARAMETER SEARCH
 # INT_POWER_EXP = ["hidden_dims"]
@@ -121,7 +125,7 @@ NUM_CLASSES = { 'ghana': 4,
                 'tanzania': 5,
                 'germany': 17 }
 
-GRID_SIZE = { 'ghana': 64, 
+GRID_SIZE = { 'ghana': 32, 
               'southsudan': 32, 
               'tanzania': 32, 
               'germany': 48 }

@@ -35,7 +35,9 @@ def get_Xy(dl, country):
     X = []
     y = []
     num_samples = 0
-    for inputs, targets, cloudmasks in dl:
+    for inputs, targets, cloudmasks, hres_inputs in dl:
+        if len(hres_inputs.shape) > 1:
+            raise ValueError('Planet inputs must be resized to the grid size')
         X, y = get_Xy_batch(inputs, targets, X, y, country)
         num_samples += y[-1].shape[0]
         if num_samples > 100000:
@@ -195,21 +197,23 @@ class CropTypeDS(Dataset):
                                's2': {'data': None, 'doy': None, 'use': self.use_s2, 'agg': self.s2_agg,
                                       'agg_reduction': 'min', 'cloudmasks': None, 'num_bands': self.s2_num_bands },
                                'planet': {'data': None, 'doy': None, 'use': self.use_planet, 'agg': self.planet_agg,
-                                          'agg_reduction': 'median', 'cloudmasks': None } }
+                                          'agg_reduction': 'median', 'cloudmasks': None, 'num_bands': PLANET_NUM_BANDS } }
 
             for sat in ['s1', 's2', 'planet']:
                 sat_properties = self.setup_data(data, idx, sat, sat_properties)
-
+ 
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
         
             if not self.var_length:
-                grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'],
-                                                      sat_properties['s2']['data'], 
-                                                      sat_properties['planet']['data'])
+                grid, highres_grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'], sat_properties['s2']['data'], 
+                                                  sat_properties['planet']['data'], self.resize_planet)
+
                 grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
+                if highres_grid is not None: 
+                    highres_grid = preprocess.preprocess_grid(highres_grid, self.model_name, self.timeslice, transform, rot)           
             else:
                 inputs = {}
                 if self.use_s1:
@@ -226,20 +230,17 @@ class CropTypeDS(Dataset):
             cloudmasks = False
         else:
             cloudmasks = sat_properties['s2']['cloudmasks']
+        if highres_grid is None:
+            highres_grid = False
 
         if self.var_length:
             return inputs, label, cloudmasks
         else:
-            return grid, label, cloudmasks
+            return grid, label, cloudmasks, highres_grid
     
     def setup_planet(self, data, sat, sat_properties): 
         sat_properties[sat]['data'] = sat_properties[sat]['data'][:, :, :, :].astype(np.double)  
-        if self.resize_planet:
-            sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'], 
-                                                  (sat_properties[sat]['data'].shape[0], self.grid_size, self.grid_size, sat_properties[sat]['data'].shape[3]), 
-                                                   anti_aliasing=True, mode='reflect')
         
-                
     def setup_s2(self, data, idx, sat, sat_properties):
         if sat_properties[sat]['num_bands'] == 4:
             sat_properties[sat]['data'] = sat_properties[sat]['data'][[BANDS[sat]['10']['BLUE'], 
@@ -258,7 +259,6 @@ class CropTypeDS(Dataset):
     def setup_data(self, data, idx, sat, sat_properties):
         if sat_properties[sat]['use']:
             sat_properties[sat]['data'] = data[sat][self.grid_list[idx]]       
-                    
             if sat in ['planet']:
                 self.setup_planet(data, sat, sat_properties)
             if sat in ['s2']:
@@ -277,6 +277,19 @@ class CropTypeDS(Dataset):
                         sat_properties[sat]['data'][BANDS[sat]['RATIO'],:,:,:] = sat_properties[sat]['data'][BANDS[sat]['VH'],:,:,:] / sat_properties[sat]['data'][BANDS[sat]['VV'],:,:,:]
                         sat_properties[sat]['data'][BANDS[sat]['RATIO'],:,:,:][sat_properties[sat]['data'][BANDS[sat]['VV'],:,:,:] == 0] = 0
             
+            else:
+                sat_properties[sat]['data'], sat_properties[sat]['doy'], sat_properties[sat]['cloudmasks'] = preprocess.sample_timeseries(sat_properties[sat]['data'],
+                                                                                                               self.num_timesteps, sat_properties[sat]['doy'],
+                                                                                                               cloud_stack = sat_properties[sat]['cloudmasks'],
+                                                                                                               least_cloudy=self.least_cloudy,
+                                                                                                               sample_w_clouds=self.sample_w_clouds, 
+                                                                                                               all_samples=self.all_samples)
+
+            if sat in ['planet'] and self.resize_planet:
+                sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'], 
+                                                       (sat_properties[sat]['data'].shape[0], self.grid_size, self.grid_size, sat_properties[sat]['data'].shape[3]), 
+                                                       anti_aliasing=True, mode='reflect')
+
             # Include NDVI and GCVI for s2 and planet, calculate before normalization and numband selection but AFTER AGGREGATION
             if self.include_indices and sat in ['planet', 's2']:
                 with np.errstate(divide='ignore', invalid='ignore'):
@@ -289,19 +302,13 @@ class CropTypeDS(Dataset):
 
 
             #TODO: Clean this up a bit. No longer include doy/clouds if data is aggregated? 
-                
             if self.normalize:
                 sat_properties[sat]['data'] = preprocess.normalization(sat_properties[sat]['data'], sat, self.country)
             
-            # Concatenate vegetation indices after normalization, before temporal sample
+            # Concatenate vegetation indices after normalization
             if sat in ['planet', 's2'] and self.include_indices:
                 sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(ndvi, axis=0)), 0)
                 sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(gcvi, axis=0)), 0)
-
-            if not sat_properties[sat]['agg']:
-                sat_properties[sat]['data'], sat_properties[sat]['doy'], sat_properties[sat]['cloudmasks'] = preprocess.sample_timeseries(sat_properties[sat]['data'],                                                                                                               self.num_timesteps, sat_properties[sat]['doy'],
-cloud_stack = sat_properties[sat]['cloudmasks'],                                                                                                            least_cloudy=self.least_cloudy,
-sample_w_clouds=self.sample_w_clouds, all_samples=self.all_samples)
 
             # Concatenate cloud mask bands
             if sat_properties[sat]['cloudmasks'] is not None and self.include_clouds:
@@ -312,6 +319,7 @@ sample_w_clouds=self.sample_w_clouds, all_samples=self.all_samples)
             if sat_properties[sat]['doy'] is not None and self.include_doy:
                 doy_stack = preprocess.doy2stack(sat_properties[sat]['doy'], sat_properties[sat]['data'].shape)
                 sat_properties[sat]['data'] = np.concatenate((sat_properties[sat]['data'], doy_stack), 0)
+            
         return sat_properties
 
 
@@ -402,7 +410,7 @@ def collate_var_length(batch):
     else:
         cloudmasks = None
         
-    return inputs, labels, cloudmasks
+    return inputs, labels, cloudmasks, None
         
     
 class GridDataLoader(DataLoader):

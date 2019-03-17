@@ -27,7 +27,7 @@ from modelling.clstm_cell import ConvLSTMCell
 from modelling.clstm import CLSTM
 from modelling.cgru_segmenter import CGRUSegmenter
 from modelling.clstm_segmenter import CLSTMSegmenter
-from modelling.util import initialize_weights, get_num_bands, get_upsampling_weight
+from modelling.util import initialize_weights, get_num_bands, get_upsampling_weight, set_parameter_requires_grad
 from modelling.fcn8 import FCN8
 from modelling.unet import UNet, UNet_Encode, UNet_Decode
 from modelling.unet3d import UNet3D
@@ -36,11 +36,9 @@ from modelling.multi_input_clstm import MI_CLSTM
 
 # TODO: figure out how to decompose this       
 class FCN_CRNN(nn.Module):
-    def __init__(self, fcn_input_size, fcn_model_name, 
-                       crnn_input_size, crnn_model_name, 
-                       hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states, 
-                       num_classes, bidirectional, pretrained, early_feats,
-                       use_planet, resize_planet):
+    def __init__(self, fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, 
+                 hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states, 
+                 num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet, num_bands_dict):
         super(FCN_CRNN, self).__init__()
 
         self.early_feats = early_feats
@@ -51,10 +49,10 @@ class FCN_CRNN(nn.Module):
             self.fcn = make_fcn_model(crnn_input_size[1], fcn_input_size[1], freeze=False)
         elif fcn_model_name == 'unet':
             if not self.early_feats:
-                self.fcn = make_UNet_model(crnn_input_size[1], fcn_input_size[1], late_feats_for_fcn=True, pretrained=pretrained)
+                self.fcn = make_UNet_model(crnn_input_size[1], num_bands_dict, late_feats_for_fcn=True, pretrained=pretrained, use_planet=use_planet, resize_planet=resize_planet)
             else:
-                self.fcn_enc = make_UNetEncoder_model(fcn_input_size[1], use_planet=use_planet, resize_planet=resize_planet, pretrained=pretrained)
-                self.fcn_dec = make_UNetDecoder_model(num_classes, late_feats_for_fcn=False)
+                self.fcn_enc = make_UNetEncoder_model(num_bands_dict, use_planet=use_planet, resize_planet=resize_planet, pretrained=pretrained)
+                self.fcn_dec = make_UNetDecoder_model(num_classes, late_feats_for_fcn=False,  use_planet=use_planet, resize_planet=resize_planet)
         
         if crnn_model_name == "gru":
             if self.early_feats:
@@ -66,30 +64,41 @@ class FCN_CRNN(nn.Module):
         elif crnn_model_name == "clstm":
             if self.early_feats:
                 self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
-                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1], bidirectional, avg_hidden_states)
+                                       conv_kernel_size, lstm_num_layers, crnn_input_size[1], bidirectional, avg_hidden_states, self.early_feats)
             else:
                 self.crnn = CLSTMSegmenter(crnn_input_size, hidden_dims, lstm_kernel_sizes, 
-                                       conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states)
+                                       conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, self.early_feats)
 
-    def forward(self, input_tensor):
+    def forward(self, input_tensor, hres_inputs=None):
         batch, timestamps, bands, rows, cols = input_tensor.size()
         fcn_input = input_tensor.view(batch * timestamps, bands, rows, cols)
-        
+
+        if len(hres_inputs.shape) > 1:
+            _, _, hbands, hrows, hcols = hres_inputs.size()
+            fcn_input_hres = hres_inputs.view(batch * timestamps, hbands, hrows, hcols)  
+        else: fcn_input_hres = None 
+
         if self.early_feats:
-            center1_feats, enc4_feats, enc3_feats = self.fcn_enc(fcn_input)
+            center1_feats, enc4_feats, enc3_feats, enc2_feats, enc1_feats = self.fcn_enc(fcn_input, fcn_input_hres)
 
             # Reshape tensors to separate batch and timestamps
+            # TODO: Use attn weights here instead of averaging??
             crnn_input = center1_feats.view(batch, timestamps, -1, center1_feats.shape[-2], center1_feats.shape[-1])
             enc4_feats = enc4_feats.view(batch, timestamps, -1, enc4_feats.shape[-2], enc4_feats.shape[-1])
-            enc3_feats = enc3_feats.view(batch, timestamps, -1, enc3_feats.shape[-2], enc3_feats.shape[-1])
-
-            enc3_feats = torch.mean(enc3_feats, dim=1, keepdim=False)
             enc4_feats = torch.mean(enc4_feats, dim=1, keepdim=False)
+            enc3_feats = enc3_feats.view(batch, timestamps, -1, enc3_feats.shape[-2], enc3_feats.shape[-1])
+            enc3_feats = torch.mean(enc3_feats, dim=1, keepdim=False)
+
+            if enc2_feats is not None:
+                enc2_feats = enc2_feats.view(batch, timestamps, -1, enc2_feats.shape[-2], enc2_feats.shape[-1])
+                enc2_feats = torch.mean(enc2_feats, dim=1, keepdim=False)
+                enc1_feats = enc1_feats.view(batch, timestamps, -1, enc1_feats.shape[-2], enc1_feats.shape[-1])
+                enc1_feats = torch.mean(enc1_feats, dim=1, keepdim=False)
 
             pred_enc = self.crnn(crnn_input)
-            preds = self.fcn_dec(pred_enc, enc4_feats, enc3_feats)
+            preds = self.fcn_dec(pred_enc, enc4_feats, enc3_feats, enc2_feats, enc1_feats)
         else:
-            fcn_output = self.fcn(fcn_input)
+            fcn_output = self.fcn(fcn_input, fcn_input_hres)
             crnn_input = fcn_output.view(batch, timestamps, -1, fcn_output.shape[-2], fcn_output.shape[-1])
             preds = self.crnn(crnn_input)
         
@@ -128,7 +137,7 @@ def make_MI_CLSTM_model(num_bands,
                      grid_size)
     return model
 
-def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states):
+def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats):
     """ Defines a (bidirectional) CLSTM model 
     Args:
         input_size - (tuple) size of input dimensions 
@@ -143,7 +152,7 @@ def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kern
     Returns:
       returns the model! 
     """
-    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states)
+    clstm_segmenter = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, early_feats)
 
     return clstm_segmenter
 
@@ -171,8 +180,7 @@ def make_fcn_model(n_class, n_channel, freeze=True):
                 param.requires_grad = False
     
     return fcn8s
-
-def make_UNet_model(n_class, n_channel, late_feats_for_fcn=False, pretrained=True, resize_planet=False):
+def make_UNet_model(n_class, num_bands_dict, late_feats_for_fcn=False, pretrained=True, use_planet=False, resize_planet=False):
     """ Defines a U-Net model
     Args:
       n_class - (int) number of classes to predict
@@ -186,11 +194,10 @@ def make_UNet_model(n_class, n_channel, late_feats_for_fcn=False, pretrained=Tru
     Returns: 
       returns the model!
     """
-    model = UNet(n_class, n_channel, late_feats_for_fcn)
+    model = UNet(n_class, num_bands_dict, late_feats_for_fcn, use_planet, resize_planet)
     
     if pretrained:
         # TODO: Why are pretrained weights from vgg13? 
-        # TODO: Adjust these again based on # features we decide to use
         pre_trained = models.vgg13(pretrained=True)
         pre_trained_features = list(pre_trained.features)
 
@@ -202,8 +209,8 @@ def make_UNet_model(n_class, n_channel, late_feats_for_fcn=False, pretrained=Tru
     model = model.cuda()
     return model
 
-def make_UNetEncoder_model(n_channel, use_planet=True, resize_planet=False, pretrained=True):
-    model = UNet_Encode(n_channel, use_planet, resize_planet)
+def make_UNetEncoder_model(num_bands_dict, use_planet=True, resize_planet=False, pretrained=True):
+    model = UNet_Encode(num_bands_dict, use_planet, resize_planet)
     
     if pretrained:
        # TODO: Why are pretrained weights from vgg13? 
@@ -218,15 +225,15 @@ def make_UNetEncoder_model(n_channel, use_planet=True, resize_planet=False, pret
     model = model.cuda()
     return model
 
-def make_UNetDecoder_model(n_class, late_feats_for_fcn):
-    model = UNet_Decode(n_class, late_feats_for_fcn=False)
+def make_UNetDecoder_model(n_class, late_feats_for_fcn, use_planet, resize_planet):
+    model = UNet_Decode(n_class, late_feats_for_fcn, use_planet, resize_planet)
     model = model.cuda()
     return model
 
-def make_fcn_clstm_model(country, fcn_input_size, fcn_model_name, 
-                         crnn_input_size, crnn_model_name, 
+def make_fcn_clstm_model(country, fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, 
                          hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states,
-                         num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet):
+                         num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet,
+                         num_bands_dict):
     """ Defines a fully-convolutional-network + CLSTM model
     Args:
       fcn_input_size - (tuple) input dimensions for FCN model
@@ -250,9 +257,9 @@ def make_fcn_clstm_model(country, fcn_input_size, fcn_model_name,
     else:
         crnn_input_size += (GRID_SIZE[country], GRID_SIZE[country]) 
 
-    model = FCN_CRNN(fcn_input_size, fcn_model_name, 
-                     crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, 
-                     avg_hidden_states, num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet)
+    model = FCN_CRNN(fcn_input_size, fcn_model_name, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, 
+                     conv_kernel_size, lstm_num_layers, avg_hidden_states, num_classes, bidirectional, pretrained, 
+                     early_feats, use_planet, resize_planet, num_bands_dict)
     model = model.cuda()
 
     return model
@@ -307,7 +314,8 @@ def get_model(model_name, **kwargs):
                                        lstm_num_layers=kwargs.get('crnn_num_layers'),
                                        num_classes=NUM_CLASSES[kwargs.get('country')],
                                        bidirectional=kwargs.get('bidirectional'),
-                                       avg_hidden_states=kwargs.get('avg_hidden_states'))
+                                       avg_hidden_states=kwargs.get('avg_hidden_states'),
+                                       early_feats=kwargs.get('early_feats'))
     elif model_name == 'fcn':
         num_bands = get_num_bands(kwargs)['all']
         model = make_fcn_model(n_class=NUM_CLASSES[kwargs.get('country')], n_channel = num_bands, freeze=True)
@@ -322,10 +330,13 @@ def get_model(model_name, **kwargs):
             model = make_UNet_model(n_class=NUM_CLASSES[kwargs.get('country')], n_channel = num_bands)
     
     elif model_name == 'fcn_crnn':
-        num_bands = get_num_bands(kwargs)['all'] 
+        num_bands = get_num_bands(kwargs)
         num_timesteps = kwargs.get('num_timesteps')
+        fix_feats = kwargs.get('fix_feats')
+        pretrained_model_path = kwargs.get('pretrained_model_path')
+
         model = make_fcn_clstm_model(country=kwargs.get('country'),
-                                     fcn_input_size=(num_timesteps, num_bands, GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]), 
+                                     fcn_input_size=(num_timesteps, num_bands['all'], GRID_SIZE[kwargs.get('country')], GRID_SIZE[kwargs.get('country')]), 
                                      fcn_model_name=kwargs.get('fcn_model_name'),
                                      crnn_input_size=(num_timesteps, kwargs.get('fcn_out_feats')), 
                                      crnn_model_name=kwargs.get('crnn_model_name'),
@@ -339,10 +350,30 @@ def get_model(model_name, **kwargs):
                                      pretrained = kwargs.get('pretrained'),
                                      early_feats = kwargs.get('early_feats'),
                                      use_planet = kwargs.get('use_planet'),
-                                     resize_planet = kwargs.get('resize_planet'))
+                                     resize_planet = kwargs.get('resize_planet'), 
+                                     num_bands_dict = num_bands)
+
+        if (pretrained_model_path is not None) and (kwargs.get('pretrained') == True):
+            pre_trained_model=torch.load(pretrained_model_path)
+       
+            # don't set pretrained weights for weights and bias before predictions 
+            #  because number of classes do not agree (i.e. germany has 17 classes)
+            dont_set = ['fcn_dec.final.6.weight', 'fcn_dec.final.6.bias']
+            updated_keys = []
+            for key, value in model.state_dict().items():
+                if key in dont_set: continue
+                elif key in pre_trained_model:
+                    updated_keys.append(key) 
+                    weights = pre_trained_model[key]   
+                    model.state_dict()[key] = weights
+
+            for name, param in model.named_parameters():
+                if name in updated_keys:
+                    param.requires_grad = not fix_feats
+
     elif model_name == 'unet3d':
         num_bands = get_num_bands(kwargs)['all']
-        model = make_UNet3D_model(n_class = NUM_CLASSES[kwargs.get('country')], n_channel = num_bands, timesteps=kwargs.get('num_timesteps'), dropout = kwargs.get('dropout'))
+        model = make_UNet3D_model(n_class=NUM_CLASSES[kwargs.get('country')], n_channel=num_bands, timesteps=kwargs.get('num_timesteps'), dropout=kwargs.get('dropout'))
     elif model_name == 'mi_clstm':
         satellites = {'s1': kwargs.get('use_s1'), 's2': kwargs.get('use_s2'), 'planet': kwargs.get('use_planet')}
         num_bands = {'s1': get_num_bands(kwargs)['s1'], 's2': get_num_bands(kwargs)['s2'], 'planet': get_num_bands(kwargs)['planet']}
