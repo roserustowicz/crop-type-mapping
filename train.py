@@ -21,14 +21,19 @@ from tqdm import tqdm
 from torch import autograd
 import visualize
 
-def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes, country):
+def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes, country, var_length):
     total_loss = 0
     total_pixels = 0
     total_cm = np.zeros((num_classes, num_classes)).astype(int) 
     loss_fn = loss_fns.get_loss_fn(model_name)
     for inputs, targets, cloudmasks, hres_inputs in split_loader:
         with torch.set_grad_enabled(False):
-            inputs.to(device)
+            if not var_length:
+                inputs.to(device)
+            else:
+                for sat in inputs:
+                    if "length" not in sat:
+                        inputs[sat].to(device)
             targets.to(device)
             hres_inputs.to(device)
             if hres_inputs is not None: hres_inputs.to(device)
