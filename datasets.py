@@ -182,7 +182,14 @@ class CropTypeDS(Dataset):
         with h5py.File(self.hdf5_filepath, 'r') as data:
             self.combined_lengths = []
             for grid in self.grid_list:
-                self.combined_lengths.append(data['s1_lengths'][grid][()] + data['s2_lengths'][grid][()])                    
+                total_len = 0
+                if self.use_s1:
+                    total_len += data['s1_lengths'][grid][()]
+                if self.use_s2:
+                    total_len += data['s2_lengths'][grid][()]
+                if self.use_planet:
+                    total_len += data['planet_lengths'][grid][()]
+                self.combined_lengths.append(total_len)                    
 
     def __len__(self):
         return self.num_grids
@@ -331,7 +338,8 @@ class CropTypeBatchSampler(Sampler):
         
         # shuffle the dataset
         shuffle(idxs)
-        lengths = [min(dataset.combined_lengths[i], 2 * max_seq_length) for i in idxs] # 2x since we're measure combined s1 / s2
+        num_sats = sum(dataset.use_s1 + dataset.use_s2 + dataset.use_s3)
+        lengths = [min(dataset.combined_lengths[i], num_sats * max_seq_length) for i in idxs] # 2x since we're measure combined s1 / s2
         
         buckets = defaultdict(list)
         
@@ -347,7 +355,7 @@ class CropTypeBatchSampler(Sampler):
                 if len(batch) == max_batch_size:
                     batches.append(batch)
                     batch = []
-            
+
             if len(batch) > 0:
                 batches.append(batch)
         
