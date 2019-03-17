@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 
-
-
 class VectorAtt(nn.Module):
     
     def __init__(self, hidden_dim_size):
@@ -20,7 +18,6 @@ class VectorAtt(nn.Module):
         hidden_states = hidden_states.permute(0, 1, 3, 4, 2).contiguous() # puts channels last
         reweighted = self.softmax(self.linear(hidden_states)) * hidden_states
         return reweighted.permute(0, 1, 4, 2, 3).contiguous()
-
 
 class TemporalAtt(nn.Module):
 
@@ -45,10 +42,11 @@ class TemporalAtt(nn.Module):
         z1 = self.tanh(self.w_s1(hidden_states))
         attn_weights = self.softmax(self.w_s2(z1))
         reweighted = attn_weights * hidden_states
-        return reweighted.permute(0, 1, 4, 2, 3).contiguous()
+        reweighted = reweighted.permute(0, 1, 4, 2, 3).contiguous()
+        return reweighted
 
 class SelfAtt(nn.Module):
-    def __init__(self, hidden_dim_size, d_k, d_v):
+    def __init__(self, hidden_dim_size, dk, dv):
         """
             Self attention.
             Assumes input will be in the form (batch, time_steps, hidden_dim_size, height, width) 
@@ -57,27 +55,27 @@ class SelfAtt(nn.Module):
             https://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf
         """
         super(SelfAtt, self).__init__()
-        self.d_k = d_k
-        self.d_v = d_v
+        self.dk = dk
+        self.dv = dv
 
-        self.w_q = nn.Linear(in_features=hidden_dim_size, out_features=d_k, bias=False)
-        self.w_k = nn.Linear(in_features=hidden_dim_size, out_features=d_k, bias=False)
-        self.w_v = nn.Linear(in_features=hidden_dim_size, out_features=d_v, bias=False)
+        self.w_q = nn.Linear(in_features=hidden_dim_size, out_features=dk, bias=False)
+        self.w_k = nn.Linear(in_features=hidden_dim_size, out_features=dk, bias=False)
+        self.w_v = nn.Linear(in_features=hidden_dim_size, out_features=dv, bias=False)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, hidden_states):
         hidden_states = hidden_states.permute(0, 1, 3, 4, 2).contiguous()
+        nb, nt, nr, nc, nh = hidden_states.shape
+
         hidden_states = hidden_states.view(-1, hidden_states.shape[-1])
         queries = self.w_q(hidden_states)
         keys = self.w_k(hidden_states)
         values = self.w_v(hidden_states)
-        print('hidden states: ', hidden_states.shape)
-        print('queries: ', queries.shape)
-        print('keys: ', keys.shape)
-        print('values: ', values.shape)
         
-        attn = torch.mm(self.softmax(torch.mm(queries, torch.transpose(keys, 0, 1)) / torch.sqrt(torch.tensor(self.d_k, dtype=torch.float).cuda())), values)      
-        print('attn: ', attn.shape)
+        attn = torch.mm(self.softmax(torch.mm(queries, torch.transpose(keys, 0, 1)) / torch.sqrt(torch.tensor(self.dk, dtype=torch.float).cuda())), values)      
+        attn = attn.view(nb, nt, nr, nc, -1)
+        attn = attn.permute(0, 1, 4, 2, 3).contiguous() 
+        return attn
 
 class ApplyAtt(nn.Module):
     def __init__(self, attn_type, hidden_dim_size, d, r, dk, dv):

@@ -447,9 +447,20 @@ def get_train_parser():
                          help="Fix pretrained features")
     parser.add_argument('--clip_val', type=str2bool, default=True,
                          help="Whether or not to use gradient clipping, value is computed based on the number of parameters")
-    parser.add_argument('--d_attn_dim', type=int, default=10,
-                         help="Number of features in w_s1 output for attention")
-    parser.add_argument('--attn_type', type=str, default='self',
-                         help="Attention type to use, must be 'None', 'temporal', 'self', or 'vector'")
-
+    parser.add_argument('--main_attn_type', type=str, default='self',
+                         help="Attention type to use for main clstm layer, must be 'None', 'temporal', 'self', or 'vector'")
+    parser.add_argument('--enc_attn_type', type=str, default='temporal',
+                         help="Attention type to use for encoder layers, must be 'None', 'temporal', 'self', or 'vector'")
+    parser.add_argument('--d_attn_dim', type=int, default=64,
+                         help="Number of features in w_s1 output for temporal attention")
+    parser.add_argument('--r_attn_dim', type=int, default=1,
+                         help="Number of features in w_s1 output for temporal attention")
+    parser.add_argument('--dk_attn_dim', type=int, default=32,
+                         help="Number of dk features for self attention")
+    parser.add_argument('--dv_attn_dim', type=int, default=32,
+                         help="Number of dv features for self attention")
+    parser.add_argument('--enc_crnn', type=str2bool, default=True,
+                         help="Use crnn for encoder layers in addition to the main encodings")
+    parser.add_argument('--enc_attn', type=str2bool, default=True,
+                         help="Use attn for encoder layers in addition to the main encodings")
     return parser
