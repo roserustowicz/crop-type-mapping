@@ -231,8 +231,8 @@ def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kern
       returns the model! 
     """
     model = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, 
-                           with_pred=True, avg_hidden_states=avg_hidden_states, attn_type=attn_type, d_attn_dim=d_attn_dim, 
-                           r_attn_dim=r_attn_dim, dk_attn_dim=dk_attn_dim, dv_attn_dim=dv_attn_dim)
+                           with_pred=True, avg_hidden_states=avg_hidden_states, attn_type=main_attn_type, d=d_attn_dim, 
+                           r=r_attn_dim, dk=dk_attn_dim, dv=dv_attn_dim)
     return model
 
 

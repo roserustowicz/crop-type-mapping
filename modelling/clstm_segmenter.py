@@ -9,7 +9,7 @@ class CLSTMSegmenter(nn.Module):
     """
 
     def __init__(self, input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, 
-                 lstm_num_layers, num_outputs, bidirectional, with_pred, 
+                 lstm_num_layers, num_outputs, bidirectional, with_pred=False, 
                  avg_hidden_states=None, attn_type=None, d=None, r=None, dk=None, dv=None): 
 
         super(CLSTMSegmenter, self).__init__()
