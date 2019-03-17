@@ -68,7 +68,8 @@ class FCN_CRNN(nn.Module):
 
         # get appropriate encoder / decoder
         if not self.early_feats:
-            self.fcn = make_UNet_model(n_class=crnn_input_size[1], num_bands_dict=num_bands_dict, late_feats_for_fcn=True, pretrained=pretrained, use_planet=use_planet, resize_planet=resize_planet)
+            self.fcn = make_UNet_model(n_class=crnn_input_size[1], num_bands_dict=num_bands_dict, late_feats_for_fcn=True, 
+                                       pretrained=pretrained, use_planet=use_planet, resize_planet=resize_planet)
         else:
             self.fcn_enc = make_UNetEncoder_model(num_bands_dict, use_planet=use_planet, resize_planet=resize_planet, pretrained=pretrained)
             self.fcn_dec = make_UNetDecoder_model(num_classes, late_feats_for_fcn=False,  use_planet=use_planet, resize_planet=resize_planet)
@@ -219,6 +220,7 @@ def make_MI_CLSTM_model(num_bands,
                         resize_planet,
                         grid_size):
     
+    print('num bands: ', num_bands)
     model = MI_CLSTM(num_bands,
                      unet_out_channels,
                      crnn_input_size,

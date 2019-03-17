@@ -442,7 +442,7 @@ class GridDataLoader(DataLoader):
 def get_dataloaders(country, dataset, args):
     dataloaders = {}
     for split in SPLITS:
-        grid_path = os.path.join(GRID_DIR[country], f"{country}_{dataset}_{split}_32")
+        grid_path = os.path.join(GRID_DIR[country], f"{country}_{dataset}_{split}")
         dataloaders[split] = GridDataLoader(args, grid_path, split)
 
     return dataloaders
