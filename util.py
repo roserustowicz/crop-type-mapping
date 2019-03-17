@@ -451,7 +451,7 @@ def get_train_parser():
                          help="Attention type to use for main clstm layer, must be 'None', 'temporal', 'self', or 'vector'")
     parser.add_argument('--enc_attn_type', type=str, default='temporal',
                          help="Attention type to use for encoder layers, must be 'None', 'temporal', 'self', or 'vector'")
-    parser.add_argument('--d_attn_dim', type=int, default=64,
+    parser.add_argument('--d_attn_dim', type=int, default=32,
                          help="Number of features in w_s1 output for temporal attention")
     parser.add_argument('--r_attn_dim', type=int, default=1,
                          help="Number of features in w_s1 output for temporal attention")
