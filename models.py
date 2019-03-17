@@ -26,7 +26,7 @@ from modelling.recurrent_norm import RecurrentNorm2d
 from modelling.clstm_cell import ConvLSTMCell
 from modelling.clstm import CLSTM
 from modelling.cgru_segmenter import CGRUSegmenter
-from modelling.clstm_segmenter import CLSTMSegmenter, CLSTMSegmenterWPred
+from modelling.clstm_segmenter import CLSTMSegmenter
 from modelling.util import initialize_weights, get_num_bands, get_upsampling_weight, set_parameter_requires_grad
 from modelling.fcn8 import FCN8
 from modelling.unet import UNet, UNet_Encode, UNet_Decode
@@ -230,8 +230,9 @@ def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kern
     Returns:
       returns the model! 
     """
-    model = CLSTMSegmenterWPred(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, 
-                                avg_hidden_states, attn_type, d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
+    model = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, 
+                           with_pred=True, avg_hidden_states=avg_hidden_states, attn_type=attn_type, d_attn_dim=d_attn_dim, 
+                           r_attn_dim=r_attn_dim, dk_attn_dim=dk_attn_dim, dv_attn_dim=dv_attn_dim)
     return model
 
 
