@@ -238,7 +238,7 @@ class CropTypeDS(Dataset):
             highres_grid = False
 
         if self.var_length:
-            return inputs, label, cloudmasks, None
+            return inputs, label, cloudmasks, False
         else:
             return grid, label, cloudmasks, highres_grid
     
@@ -415,7 +415,7 @@ def collate_var_length(batch):
     else:
         cloudmasks = None
         
-    return inputs, labels, cloudmasks, None
+    return inputs, labels, cloudmasks, False
         
     
 class GridDataLoader(DataLoader):
