@@ -418,8 +418,8 @@ def get_train_parser():
                          help="Use early features in the CLSTM from center after encoder")
     parser.add_argument('--fcn_out_feats', type=int, default=256,
                          help="Number of output features from fcn to be fed into CLSTM")
-    parser.add_argument('--fcn_model_name', type=str, default='unet', 
-                         help="Model to use for fcn part of fcn + crnn")
+    #parser.add_argument('--fcn_model_name', type=str, default='unet', 
+    #                     help="Model to use for fcn part of fcn + crnn")
     parser.add_argument('--crnn_model_name', type=str, default='clstm',
                          help="Model to use for crnn part of fcn + crnn")
     parser.add_argument('--pretrained', type=str2bool, default=True,
@@ -445,6 +445,22 @@ def get_train_parser():
                          help="Include ndvi and gcvi as input features")
     parser.add_argument('--fix_feats', type=str2bool, default=False,
                          help="Fix pretrained features")
-    parser.add_argument('--clip_val', type=float, default=100,
-                         help="Clip value for gradient norm")
+    parser.add_argument('--clip_val', type=str2bool, default=True,
+                         help="Whether or not to use gradient clipping, value is computed based on the number of parameters")
+    parser.add_argument('--main_attn_type', type=str, default='None',
+                         help="Attention type to use for main clstm layer, must be 'None', 'temporal', 'self', or 'vector'")
+    parser.add_argument('--enc_attn_type', type=str, default='None',
+                         help="Attention type to use for encoder layers, must be 'None', 'temporal', 'self', or 'vector', self may use up too much memory")
+    parser.add_argument('--d_attn_dim', type=int, default=32,
+                         help="Number of features in w_s1 output for temporal attention")
+    parser.add_argument('--r_attn_dim', type=int, default=1,
+                         help="Number of features in w_s1 output for temporal attention")
+    parser.add_argument('--dk_attn_dim', type=int, default=32,
+                         help="Number of dk features for self attention")
+    parser.add_argument('--dv_attn_dim', type=int, default=32,
+                         help="Number of dv features for self attention")
+    parser.add_argument('--enc_crnn', type=str2bool, default=False,
+                         help="Use crnn for encoder layers in addition to the main encodings")
+    parser.add_argument('--enc_attn', type=str2bool, default=False,
+                         help="Use attn for encoder layers in addition to the main encodings")
     return parser

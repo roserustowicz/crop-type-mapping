@@ -18,7 +18,7 @@ PLANET_NUM_BANDS = 4
 LABEL_DIR = "raster_npy"
 S1_DIR = "s1_npy"
 S2_DIR = "s2_npy"
-NROW = 8
+NROW = 5
 
 # FILE PATHS: 
 BASE_DIR = os.getenv("HOME")
