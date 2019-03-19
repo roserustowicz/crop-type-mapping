@@ -82,14 +82,14 @@ class SelfAtt(nn.Module):
         return attn
 
 class ApplyAtt(nn.Module):
-    def __init__(self, attn_type, hidden_dim_size, d, r, dk, dv):
+    def __init__(self, attn_type, hidden_dim_size, attn_dims): #d, r, dk, dv):
         super(ApplyAtt, self).__init__()
         if attn_type == 'vector':
             self.attention = VectorAtt(hidden_dim_size)
         elif attn_type == 'temporal':
-            self.attention = TemporalAtt(hidden_dim_size, d, r)
+            self.attention = TemporalAtt(hidden_dim_size, attn_dims['d'], attn_dims['r'])
         elif attn_type == 'self':
-            self.attention = SelfAtt(hidden_dim_size, dk, dv)
+            self.attention = SelfAtt(hidden_dim_size, attn_dims['dk'], attn_dims['dv'])
         elif attn_type == 'None':
             self.attention = None
         else:

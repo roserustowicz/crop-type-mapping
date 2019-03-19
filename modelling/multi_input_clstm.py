@@ -4,12 +4,12 @@ from modelling.util import initialize_weights
 from modelling.clstm import CLSTM
 from modelling.clstm_segmenter import CLSTMSegmenter
 from modelling.unet import UNet, UNet_Encode, UNet_Decode
+from modelling.attention import ApplyAtt
 from pprint import pprint
 
 class MI_CLSTM(nn.Module):
     """ MI_CLSTM = Multi Input CLSTM 
     """
-
     def __init__(self, 
                  num_bands,
                  unet_out_channels,
@@ -25,7 +25,13 @@ class MI_CLSTM(nn.Module):
                  max_timesteps,
                  satellites,
                  resize_planet,
-                 grid_size):
+                 grid_size,
+                 main_attn_type,
+                 attn_dims):
+                 #d_attn_dim,
+                 #r_attn_dim,
+                 #dk_attn_dim,
+                 #dv_attn_dim):
         """
             input_size - (tuple) should be (time_steps, channels, height, width)
         """
@@ -47,11 +53,14 @@ class MI_CLSTM(nn.Module):
             self.unets = {}
             
         self.clstms = {}
-        
+        self.attention = {}
+        self.finalconv = {}
+ 
         for sat in satellites:
             if satellites[sat]: 
                 cur_num_bands = self.num_bands_empty
                 cur_num_bands[sat] = self.num_bands[sat]       
+                cur_num_bands['all'] = self.num_bands[sat]
                 if not self.early_feats:
                     self.unets[sat] = UNet(num_classes, 
                                            cur_num_bands, 
@@ -64,13 +73,11 @@ class MI_CLSTM(nn.Module):
                                                       lstm_kernel_sizes=lstm_kernel_sizes, 
                                                       conv_kernel_size=conv_kernel_size, 
                                                       lstm_num_layers=lstm_num_layers, 
-                                                      num_classes=num_classes, 
+                                                      num_outputs=num_classes, 
                                                       bidirectional=bidirectional,
-                                                      avg_hidden_states=avg_hidden_states,
-                                                      early_feats=False,
                                                       var_length=True)
 
-                    self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
+                    self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, attn_dims) #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
 
                     self.final_conv[sat] = nn.Conv2d(in_channels=hidden_dims, 
                                                      out_channels=num_classes, 
@@ -78,7 +85,7 @@ class MI_CLSTM(nn.Module):
                                                      padding=int((conv_kernel_size-1)/2))
                 else:
                     self.encs[sat] = UNet_Encode(cur_num_bands,
-                                                 use_planet= sat == "planet",
+                                                 use_planet=(sat == "planet"),
                                                  resize_planet=(sat == "planet" and self.resize_planet)) 
                     
                     self.decs[sat] = UNet_Decode(num_classes, 
@@ -89,15 +96,13 @@ class MI_CLSTM(nn.Module):
                                                       lstm_kernel_sizes=lstm_kernel_sizes, 
                                                       conv_kernel_size=conv_kernel_size, 
                                                       lstm_num_layers=lstm_num_layers, 
-                                                      num_classes=crnn_input_size[1], 
+                                                      num_outputs=crnn_input_size[1], 
                                                       bidirectional=bidirectional,
-                                                      avg_hidden_states=avg_hidden_states,
-                                                      early_feats=True,
                                                       var_length=True)
 
-                    self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
+                    self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, attn_dims) #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
                     
-                    self.finalconv[sat] = nn.Conv2d(in_channels=hidden_dims, 
+                    self.finalconv[sat] = nn.Conv2d(in_channels=hidden_dims[-1], 
                                                     out_channels=crnn_input_size[1], 
                                                     kernel_size=conv_kernel_size, 
                                                     padding=int((conv_kernel_size-1)/2))
@@ -121,7 +126,6 @@ class MI_CLSTM(nn.Module):
         self.logsoftmax = nn.LogSoftmax(dim=1)
                 
     def forward(self, inputs):
-        
         preds = []
         for sat in self.satellites:
             if self.satellites[sat]:
@@ -132,7 +136,7 @@ class MI_CLSTM(nn.Module):
                 
                 if self.early_feats:
                     # Encode features
-                    center1_feats, enc4_feats, enc3_feats = self.encs[sat](fcn_input)
+                    center1_feats, enc4_feats, enc3_feats, _, _ = self.encs[sat](fcn_input, hres=None)
                     # Reshape tensors to separate batch and timestamps
                     crnn_input = center1_feats.view(batch, timestamps, -1, center1_feats.shape[-2], center1_feats.shape[-1])
                     enc4_feats = enc4_feats.view(batch, timestamps, -1, enc4_feats.shape[-2], enc4_feats.shape[-1])

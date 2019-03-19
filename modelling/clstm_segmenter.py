@@ -30,24 +30,23 @@ class CLSTMSegmenter(nn.Module):
             hidden_dims = [hidden_dims]        
 
         self.clstm = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers, var_length=var_length)
-        self.early_feats = early_feats
         self.var_length = var_length
         self.bidirectional = bidirectional
         if self.bidirectional:
             self.clstm_rev = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers, var_length=var_length)
-            self.att_rev = VectorAtt(hidden_dims[-1])
-        self.avg_hidden_states = avg_hidden_states
         
         in_channels = hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
         initialize_weights(self)
        
     def forward(self, inputs, lengths=None):
         layer_outputs, last_states = self.clstm(inputs)
-        b, t, c, h, w = layer_outputs.shape
+        print('layer outputs: ', layer_outputs.shape)        
+        #b, t, c, h, w = layer_outputs.shape
         # layer outputs is size (b, t, c, h, w)
         if self.avg_hidden_states:
             if lengths is not None:
                 final_states = [torch.mean(layer_outputs[i, :length], dim=0) for i, length in enumerate(lengths)]
+                print('final_states: ', final_states
                 final_state = torch.stack(final_states)
             else:
                 final_state = torch.mean(layer_outputs, dim=1)
