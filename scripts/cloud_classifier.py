@@ -43,7 +43,7 @@ def main_cloud_classifier(data_dir, data_fname):
 
     model_name = 'random_forest'
     model = get_model(model_name, random_state=None, n_jobs=-1, n_estimators=50)
-    model = train(model, model_name, X=X_train, y=y_train)
+    model = model.fit(X_train, y_train)
 
     # Get the predictions from the model
     train_pred_lbls = model.predict(X_train)
@@ -130,7 +130,7 @@ def save_cloud_masks(s2_data_dir, model, verbose):
 if __name__ == '__main__':
     data_dir = GCP_DATA_DIR + '/clouds/'
     data_fname = 'clean_samples.csv'
-    s2_data_dir = GCP_DATA_DIR + '/tanzania/s2_npy'
+    s2_data_dir = '/home/roserustowicz/croptype_data_local/data/ghana/s2_npy'
     verbose = 1
     save = 1
 

@@ -23,7 +23,7 @@ def rename(old_fname, tif_content, num_digits, dry_run, ftype, country):
             elif '.json' in fname_split[-1]:
                 fname_split[-1] = fname_split[-1].replace('.json', '').zfill(num_digits) + '.json'
     elif tif_content == 'data':
-        if country in ['tanzania', 'southsudan']:
+        if country in ['tanzania', 'southsudan', 'ghana']:
             assert fname_split[-3].isdigit()
             fname_split[-3] = fname_split[-3].zfill(num_digits)
         elif country == 'ghana':
