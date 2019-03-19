@@ -74,14 +74,13 @@ def create_hdf5(args, groups=None):
     if groups is None:
         if country in ['germany']:
             groups = ['s2', 'labels', 's2_dates']
-        elif country in ['ghana']:
-            groups = ['labels', 's2', 'cloudmasks', 's2_dates']
         else:
             # extremely important to iterate through labels first, allows us to know what 
             # grids to use later
             groups =['labels', 's1', 's2', 'cloudmasks', 's1_dates', 's2_dates']
         if use_planet:
             groups += ['planet', 'planet_dates']
+
     hdf5_file = h5py.File(os.path.join(output_dir, out_fname + "_{}".format(num_pixels)), 'a')
     # subdivide the hdf5 directory into grids and masks
     for group_name in groups:
@@ -101,8 +100,12 @@ def create_hdf5(args, groups=None):
         for filepath in tqdm(os.listdir(os.path.join(data_dir, actual_dir_name))):
             print('filepath: ', filepath)
             filename, ext = filepath.split('.')
+            print('fname: ', filename)
+            print('ext: ', ext)
+            print('group name: ', group_name)
             # get grid num to use as the object's file name
             grid_num = get_grid_num(filename, ext, group_name)
+            print('grid_num: ', grid_num)
             if grid_num is None or grid_num not in all_grids: continue
             # load in data
             if ext == 'npy':
@@ -112,10 +115,11 @@ def create_hdf5(args, groups=None):
                 with open(os.path.join(data_dir, actual_dir_name, filepath)) as f:
                     dates = json.load(f)['dates']
                 data = util.dates2doy(dates)
-            dtype = 'i2' #if group_name not in ['s1', 's2', 'planet'] else 'f8' 
+            dtype = 'i2' if group_name not in ['s1', 's2', 'planet'] else 'f8' 
             for i in range(0, 64 // num_pixels):
                 for j in range(0, 64 // num_pixels):
                     new_grid_name = grid_num + "_{}_{}".format(i, j)
+                    print('new grid name: ', new_grid_name)
                     hdf5_filename = f'/{group_name}/{new_grid_name}'
                     if 'dates' not in group_name:
                         if group_name == "planet":
@@ -170,7 +174,7 @@ if __name__ == '__main__':
     parser.add_argument('--out_fname', type=str, default='data.hdf5')
     args = parser.parse_args()
 
-    groups = None #['planet', 'planet_dates', 'labels']
+    groups = ['labels', 's2', 'cloudmasks', 's2_dates'] #None #['planet', 'planet_dates', 'labels']
 
     create_hdf5(args, groups)
 
