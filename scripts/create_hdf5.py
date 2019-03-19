@@ -68,7 +68,7 @@ def create_hdf5(args, groups=None):
     train, val, test = load_splits(data_dir, country)
     new_splits = {'train': [], 'val': [], 'test': []}
     old_splits = {'train': train, 'val': val, 'test': test}
-    all_grids = set(old_splits['train'] + old_splits['val'] + old_splits['test'])
+    all_grids = set(old_splits['train'] | old_splits['val'] | old_splits['test'])
     all_new_grids = set()
 
     if groups is None:
