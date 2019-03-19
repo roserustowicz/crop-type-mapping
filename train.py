@@ -83,6 +83,7 @@ def evaluate(model_name, preds, labels, country, loss_fn=None, reduction=None, l
         else:
             raise ValueError(f"reduction: `{reduction}` not supported")
 
+
 def train_non_dl_model(model, model_name, dataloaders, args, X, y):
     results = {'train_acc': [], 'train_f1': [], 'val_acc': [], 'val_f1': [], 'test_acc': [], 'test_f1': []}
     for rep in range(args.num_repeat):
@@ -219,8 +220,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         X - (npy arr) data for non-dl models
         y - (npy arr) labels for non-dl models
     """
-    if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
-    if args is None: raise ValueError("Args is NONE")
+    if dataloaders is None and model_name in DL_MODELS: raise ValueError("DATA GENERATOR IS NONE")
+    if args is None and model_name in DL_MODELS: raise ValueError("Args is NONE")
         
     if model_name in NON_DL_MODELS:
         train_non_dl_model(model, model_name, dataloaders, args, X, y)

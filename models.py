@@ -117,7 +117,8 @@ class FCN_CRNN(nn.Module):
                     self.processed_feats[cur_enc] = final_feats
 
             # Decode and predict
-            preds = self.fcn_dec(self.processed_feats['main'], self.processed_feats['enc4'], self.processed_feats['enc3'], self.processed_feats['enc2'], self.processed_feats['enc1'])
+            preds = self.fcn_dec(self.processed_feats['main'], self.processed_feats['enc4'], self.processed_feats['enc3'], 
+                                                               self.processed_feats['enc2'], self.processed_feats['enc1'])
         
         else:
             # Encode and decode features

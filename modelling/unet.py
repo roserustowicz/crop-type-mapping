@@ -88,7 +88,7 @@ class UNet_Encode(nn.Module):
             self.enc1_hres = _EncoderBlock(self.planet_numbands, feats)
             self.enc2_hres = _EncoderBlock(feats, feats*2)
             
-            if self.use_s1 or self.use_s2:
+            if (self.s1_numbands > 0) or (self.s2_numbands > 0):
                 self.enc1_lres = _EncoderBlock(self.s1_numbands + self.s2_numbands, feats)
                 self.enc2_lres = _EncoderBlock(feats, feats*2)
                 enc3_infeats = feats*2 + feats*2
@@ -113,7 +113,7 @@ class UNet_Encode(nn.Module):
         if (self.use_planet and self.resize_planet) or (not self.use_planet):
             enc3 = self.enc3(x)
         else:
-            if hres is None
+            if hres is None:
                 enc1_hres = self.enc1_hres(x)
             else:
                 enc1_lres = self.enc1_lres(x)
@@ -135,20 +135,13 @@ class UNet_Encode(nn.Module):
         center1 = self.center(down4)
 
         if (self.use_planet and self.resize_planet) or (not self.use_planet):
-            enc2_hres = None 
-            enc1_hres = None
+            enc2 = None 
+            enc1 = None
         else:
-            enc2_hres = self.downsample(enc2)
-            enc1_hres = self.downsample(self.downsample(enc1))
+            enc2 = self.downsample(enc2_hres)
+            enc1 = self.downsample(self.downsample(enc1_hres))
 
-        print('center1: ', center1.shape)
-        print('enc4: ', enc4.shape)
-        print('enc3: ', enc3.shape)
-        print('enc2: ', enc2_hres.shape)
-        print('enc1: ', enc1_hres.shape)
-        print('enc2_lres: ', enc2_lres.shape)
-        print('enc1_lres: ', enc1_lres.shape)
-        return center1, enc4, enc3, enc2_hres, enc1_hres, enc2_lres, enc1_lres
+        return center1, enc4, enc3, enc2, enc1
 
 class UNet_Decode(nn.Module):
     """ U-Net architecture definition for decoding (second half of the "U")
@@ -164,7 +157,7 @@ class UNet_Decode(nn.Module):
         if (self.use_planet and self.resize_planet) or (not self.use_planet):
             extra_enc_feats = 0
         elif self.use_planet and not self.resize_planet: # else
-            extra_enc_feats = feats + feats*2
+            extra_enc_feats = + feats + feats*2
 
         self.center_decode = nn.Sequential(
             nn.Conv2d(feats*16, feats*16, kernel_size=3, padding=1),
@@ -185,7 +178,7 @@ class UNet_Decode(nn.Module):
         self.logsoftmax = nn.LogSoftmax(dim=1)
         initialize_weights(self)
 
-    def forward(self, center1, enc4, enc3, enc2=None, enc1=None):
+    def forward(self, center1, enc4, enc3, enc2=None, enc1=None): 
 
         # DECODE
         center2 = self.center_decode(center1)
