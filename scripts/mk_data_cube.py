@@ -157,7 +157,7 @@ if __name__ == '__main__':
 
     home = '/home/roserustowicz/croptype_data_local/data/'
     countries = ['ghana']
-    sources = ['s2']
+    sources = ['s1']
     lbl_dir = 'raster'
     verbose = 1
     out_format = 'npy'

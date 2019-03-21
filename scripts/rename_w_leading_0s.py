@@ -67,16 +67,16 @@ if __name__ == '__main__':
   
     """
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--dir', type=str, default='/home/data/Ghana/s2_64x64',
+    parser.add_argument('--dir', type=str, default='/home/data/Ghana/s1',
         help='Directory in which to replace grid IDs with leading 0''s')
     parser.add_argument('--dry_run', dest='dry_run', action='store_true')
     parser.add_argument('--num_digits', type=int, default=6,
         help='Number of digits that ID should contain (default: 6). Given default of "6", ID "34" --> "000034"')
-    parser.add_argument('--tif_content', type=str, default='mask', 
+    parser.add_argument('--tif_content', type=str, default='data', 
         help='Defines what is contained in the tif (options: "mask", "data")')
     parser.add_argument('--ftype', type=str, default='tif',
         help='Defines type of data you want to rename (options: "tif", "npy")')
-    parser.add_argument('--country', type=str, default='tanzania',
+    parser.add_argument('--country', type=str, default='ghana',
         help='Country data is from (options: "tanzania", "ghana", "southsudan)')
     args = parser.parse_args()
 
