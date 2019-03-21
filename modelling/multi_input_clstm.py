@@ -41,6 +41,8 @@ class MI_CLSTM(nn.Module):
             hidden_dims = [hidden_dims]        
 
         self.early_feats = early_feats
+        self.avg_hidden_states = avg_hidden_states
+        self.bidirectional = bidirectional
         self.satellites = satellites
         self.num_bands = num_bands
         self.num_bands_empty = { 's1': 0, 's2': 0, 'planet': 0, 'all': 0 }
@@ -79,7 +81,7 @@ class MI_CLSTM(nn.Module):
 
                     self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, attn_dims) #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
 
-                    self.final_conv[sat] = nn.Conv2d(in_channels=hidden_dims, 
+                    self.finalconv[sat] = nn.Conv2d(in_channels=hidden_dims[-1], 
                                                      out_channels=num_classes, 
                                                      kernel_size=conv_kernel_size, 
                                                      padding=int((conv_kernel_size-1)/2))
@@ -117,6 +119,8 @@ class MI_CLSTM(nn.Module):
                     self.add_module(sat + "_dec", self.decs[sat])
                 
                 self.add_module(sat + "_clstm", self.clstms[sat])
+                self.add_module(sat + "_finalconv", self.finalconv[sat])
+                self.add_module(sat + "_attention", self.attention[sat])
 
         total_sats = len([sat for sat in self.satellites if self.satellites[sat]])
         self.out_conv = nn.Conv2d(num_classes * total_sats, num_classes, kernel_size=1, stride=1)
@@ -145,31 +149,33 @@ class MI_CLSTM(nn.Module):
                     
                     # Apply CRNN
                     if self.clstms[sat] is not None:
-                        crnn_output_fwd, crnn_output_rev = self.clstms[sat](crnn_input, lengths)
+                        crnn_output_fwd, crnn_output_rev = self.clstms[sat](crnn_input) #, lengths)
                     else:
                         crnn_output_fwd = crnn_input 
                         crnn_output_rev = None
  
                     # Apply attention
-                    reweighted = attn_or_avg(self.attention[sat], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, bidirectional, lengths)
-
-                     # Apply final conv
+                    reweighted = attn_or_avg(self.attention[sat], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, self.bidirectional, lengths)
+                 
+                    # Apply final conv
+                    reweighted = reweighted.cuda()
+                    print(type(reweighted))
                     pred_enc = self.finalconv[sat](reweighted) if self.finalconv[sat] is not None else reweighted
                     preds.append(self.decs[sat](pred_enc, enc4_feats, enc3_feats))
 
                 else:
-                    fcn_output = self.unets[sat](fcn_input)
+                    fcn_output = self.unets[sat](fcn_input, hres=None)
 
                     # Apply CRNN
                     crnn_input = fcn_output.view(batch, timestamps, -1, fcn_output.shape[-2], fcn_output.shape[-1])
                     if self.clstms[sat] is not None:
-                        crnn_output_fwd, crnn_output_rev = self.clstms[sat](crnn_input, lengths)
+                        crnn_output_fwd, crnn_output_rev = self.clstms[sat](crnn_input) #, lengths)
                     else:
                         crnn_output_fwd = crnn_input
                         crnn_output_rev = None
 
                     # Apply attention
-                    reweighted = attn_or_avg(self.attention[sat], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, bidirectional)
+                    reweighted = attn_or_avg(self.attention[sat], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, self.bidirectional, lengths)
 
                     # Apply final conv
                     scores = self.finalconv[sat](reweighted)

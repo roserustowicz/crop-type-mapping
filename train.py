@@ -179,7 +179,7 @@ def train_dl_model(model, model_name, dataloaders, args):
                 vis_logger.record_batch(inputs, cloudmasks, targets, preds, confidence, 
                                         NUM_CLASSES[args.country], split, 
                                         args.include_doy, args.use_s1, args.use_s2, 
-                                        model_name, args.time_slice)
+                                        model_name, args.time_slice, var_length=args.var_length)
 
             if split in ['test']:
                 vis_logger.record_epoch(split, i, args.country, save=False, save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))

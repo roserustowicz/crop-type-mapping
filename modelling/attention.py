@@ -4,18 +4,25 @@ import torch.nn as nn
 def attn_or_avg(attention, avg_hidden_states, layer_outputs, rev_layer_outputs, bidirectional, lengths):
     if (attention is None) or (attention(layer_outputs) is None):
         if not avg_hidden_states:
+            # TODO: want to take the last non-zero padded output here instead!
             last_fwd_feat = layer_outputs[:, -1, :, :, :]
             last_rev_feat = rev_layer_outputs[:, -1, :, :, :] if bidirectional else None
             reweighted = torch.concat([last_fwd_feat, last_rev_feat], dim=1) if bidirectional else last_fwd_feat
             reweighted = torch.mean(reweighted, dim=1)
         else:
             if lengths is not None:
+                print('im here!!!!1')
                 layer_outputs = [torch.mean(layer_outputs[i, :length], dim=0) for i, length in enumerate(lengths)]
-            outputs = torch.cat([layer_outputs, rev_layer_outputs], dim=1) if rev_layer_outputs is not None else layer_outputs
-            reweighted = torch.mean(outputs, dim=1)
+                # TODO: sequences are padded, so you need to reverse only the non-padded inputs
+                if rev_layer_outputs is not None: rev_layer_outputs = [torch.mean(rev_layer_outputs[i, :length], dim=0) for i, length in enumerate(lengths)] 
+                outputs = torch.stack(layer_outputs + rev_layer_outputs) if rev_layer_outputs is not None else torch.stack(layer_outputs)
+                reweighted = outputs #?
+            else:
+                outputs = torch.cat([layer_outputs, rev_layer_outputs], dim=1) if rev_layer_outputs is not None else layer_outputs
+                reweighted = torch.mean(outputs, dim=1)
     else:
         outputs = torch.cat([layer_outputs, rev_layer_outputs], dim=1) if rev_layer_outputs is not None else layer_outputs
-        reweighted = attention(outputs)
+        reweighted = attention(outputs, lengths)
         reweighted = torch.sum(reweighted, dim=1)
     return reweighted
 

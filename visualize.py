@@ -68,7 +68,7 @@ class VisdomLogger:
     def record_batch(self, inputs, clouds, targets, preds, confidence, 
                      num_classes, split, include_doy, use_s1, use_s2, 
                      model_name, time_slice, 
-                     save=False, save_dir=None, show_visdom=True, show_matplot=False):
+                     save=False, save_dir=None, show_visdom=True, show_matplot=False, var_length=False):
         
         label_mask = np.sum(targets.numpy(), axis=1)
         label_mask = np.expand_dims(label_mask, axis=1)
@@ -77,12 +77,14 @@ class VisdomLogger:
             #visdom_plot_images(vis, confidence, 'Confidence')
 
         # TODO: not sure if this is doing anything (since best is set tp zeros_like)
-        
         # Show best inputs judging from cloud masks
-        if torch.sum(clouds) != 0 and len(clouds.shape) > 1: 
+        if clouds is not None and torch.sum(clouds) != 0 and len(clouds.shape) > 1: 
             best = np.argmax(np.mean(np.mean(clouds.numpy()[:, 0, :, :, :], axis=1), axis=1), axis=1)
         else:
-            best = np.random.randint(0, high=inputs.shape[1], size=(inputs.shape[0],))
+            if var_length and 's2' in inputs:
+                best = np.random.randint(0, high=inputs['s2'].shape[1], size=(inputs['s2'].shape[0],))
+            else:
+                best = np.random.randint(0, high=inputs.shape[1], size=(inputs.shape[0],))
         best = np.zeros_like(best)
 
         # Get bands of interest (boi) to show best rgb version of s2 or vv, vh, vv version of s1
@@ -93,7 +95,11 @@ class VisdomLogger:
         end_idx = 5 if use_s2 and use_s1 else 3
         if model_name in ['fcn_crnn', 'bidir_clstm','unet3d', 'mi_clstm']:
             for idx, b in enumerate(best):
-                boi.append(inputs[idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
+                if var_length and 's2' in inputs:
+                    print('boi: ', boi)
+                    boi.append(inputs['s2'][idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
+                else:
+                    boi.append(inputs[idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)
         elif model_name in ['fcn', 'unet'] and time_slice is not None:
             boi = inputs[:, start_idx+add_doy:end_idx+add_doy, :, :]

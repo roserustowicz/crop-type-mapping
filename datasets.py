@@ -410,8 +410,8 @@ def collate_var_length(batch):
         grids = torch.stack(grids)
         inputs[sat] = grids
         inputs[sat + "_lengths"] = lengths
-   
-    if 's2' in sats and batch[0][2]: # batch[0][2] checks if cloudmasks exist
+  
+    if 's2' in sats and not isinstance(batch[0][2], bool): # batch[0][2] checks if cloudmasks exist
         cloudmasks = [batch[i][2].transpose(3, 0, 1, 2) for i in range(batch_size)]
         cloudmasks, lengths = pad_to_equal_length(cloudmasks)
         cloudmasks = torch.tensor(np.stack(cloudmasks).transpose(0, 2, 3, 4, 1))
