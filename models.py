@@ -108,19 +108,14 @@ class FCN_CRNN(nn.Module):
                     # Apply CRNN
                     cur_feats = cur_feats.view(batch, timestamps, -1, cur_feats.shape[-2], cur_feats.shape[-1])
                     if self.crnns[cur_enc] is not None:
-                        cur_feats = self.crnns[cur_enc](cur_feats) 
-                    # Apply attention
-                    if (self.attns[cur_enc] is None) or (self.attns[cur_enc](cur_feats) is None):
-                        if not self.avg_hidden_states:
-                            last_fwd_feat = cur_feats[:, timestamps-1, :, :, :]
-                            last_rev_feat = cur_feats[:, -1, :, :, :] if bidirectional else None
-                            reweighted = torch.concat([last_fwd_feat, last_rev_feat], dim=1) if bidirectional else last_fwd_feat
-                            reweighted = torch.sum(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
-                        else: 
-                            reweighted = torch.mean(cur_feats, dim=1)
+                        cur_feats_fwd, cur_feats_rev = self.crnns[cur_enc](cur_feats) 
                     else:
-                        reweighted = self.attns[cur_enc](cur_feats)
-                        reweighted = torch.sum(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
+                        cur_feats_fwd = cur_feats
+                        cur_feats_rev = None
+
+                    # Apply attention
+                    reweighted = attn_or_avg(self.attns[cur_enc], self.avg_hidden_states, cur_feats_fwd, cur_feats_rev, bidirectional)
+                    
                     # Apply final conv
                     final_feats = self.final_convs[cur_enc](reweighted) if self.final_convs[cur_enc] is not None else reweighted
                     self.processed_feats[cur_enc] = final_feats
@@ -134,20 +129,14 @@ class FCN_CRNN(nn.Module):
             
             # Apply CRNN
             crnn_input = fcn_output.view(batch, timestamps, -1, fcn_output.shape[-2], fcn_output.shape[-1])
-            crnn_output = self.crnn_main(crnn_input)
+            if self.crnn_main(crnn_input) is not None:
+                crnn_output_fwd, crnn_output_rev = self.crnn_main(crnn_input)
+            else:
+                crnn_output_fwd = crnn_input
+                crnn_output_rev = None
             
             # Apply attention
-            if self.attns['main'](crnn_output) is None:
-                 if not self.avg_hidden_states:
-                     last_fwd_feat = crnn_output[:, timestamps-1, :, :, :]
-                     last_rev_feat = crnn_output[:, -1, :, :, :] if bidirectional else None
-                     reweighted = torch.concat([last_fwd_feat, last_rev_feat], dim=1) if bidirectional else last_fwd_feat
-                     reweighted = torch.mean(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
-                 else: 
-                     reweighted = torch.mean(crnn_output, dim=1)
-            else:
-                reweighted = self.attns['main'](crnn_output)
-                reweighted = torch.sum(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
+            reweighted = attn_or_avg(self.attns['main'], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, bidirectional)
                     
             # Apply final conv
             scores = self.final_convs['main'](reweighted)

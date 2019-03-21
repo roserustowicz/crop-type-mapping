@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from modelling.util import initialize_weights
 from modelling.clstm import CLSTM
-from modelling.attention import ApplyAtt
+from modelling.attention import ApplyAtt, attn_or_avg
 
 class CLSTMSegmenter(nn.Module):
     """ CLSTM followed by conv for segmentation output
@@ -10,7 +10,7 @@ class CLSTMSegmenter(nn.Module):
 
     def __init__(self, input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, 
                  lstm_num_layers, num_outputs, bidirectional, with_pred=False, 
-                 avg_hidden_states=None, attn_type=None, d=None, r=None, dk=None, dv=None, var_length=False): 
+                 avg_hidden_states=None, attn_type=None, d=None, r=None, dk=None, dv=None): 
 
         super(CLSTMSegmenter, self).__init__()
         self.input_size = input_size
@@ -29,59 +29,31 @@ class CLSTMSegmenter(nn.Module):
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims]        
 
-        self.clstm = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers, var_length=var_length)
-        self.var_length = var_length
+        self.clstm = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers)
+        
         self.bidirectional = bidirectional
         if self.bidirectional:
-            self.clstm_rev = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers, var_length=var_length)
+            self.clstm_rev = CLSTM(input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers, bidirectional)
         
         in_channels = hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
         initialize_weights(self)
        
-    def forward(self, inputs, lengths=None):
+    def forward(self, inputs):
+
         layer_outputs, last_states = self.clstm(inputs)
-        print('layer outputs: ', layer_outputs.shape)        
-        #b, t, c, h, w = layer_outputs.shape
-        # layer outputs is size (b, t, c, h, w)
-        if self.avg_hidden_states:
-            if lengths is not None:
-                final_states = [torch.mean(layer_outputs[i, :length], dim=0) for i, length in enumerate(lengths)]
-                print('final_states: ', final_states
-                final_state = torch.stack(final_states)
-            else:
-                final_state = torch.mean(layer_outputs, dim=1)
-        else:
-            final_state = torch.sum(self.att1(layer_outputs, lengths), dim=1)
-        
-        rev_layer_outputs = None     
+    
+        rev_layer_outputs = None
         if self.bidirectional:
             rev_inputs = torch.flip(inputs, dims=[1])
             rev_layer_outputs, rev_last_states = self.clstm_rev(rev_inputs)
-            #final_state_rev = torch.sum(self.att_rev(rev_layer_outputs, lengths), dim=1)
-            #final_state = torch.cat([final_state, final_state_rev], dim=1)
-            
-        output = torch.cat([layer_outputs, rev_layer_outputs], dim=1) if rev_layer_outputs is not None else layer_outputs       
-        #scores = self.conv(final_state)
-        # if not self.early_feats
-        #preds = self.softmax(scores)
-        #preds = torch.log(preds)
 
         if self.with_pred:
             # Apply attention
-            if self.attention(output) is None:
-                 if not self.avg_hidden_states:
-                     last_fwd_feat = output[:, timestamps-1, :, :, :]
-                     last_rev_feat = output[:, -1, :, :, :] if self.bidirectional else None
-                     reweighted = torch.concat([last_fwd_feat, last_rev_feat], dim=1) if bidirectional else last_fwd_feat
-                     reweighted = torch.mean(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
-                 else:
-                     reweighted = torch.mean(output, dim=1)
-            else:
-                reweighted = self.attention(output)
-                reweighted = torch.sum(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
+            reweighted = attn_or_avg(self.attention, self.avg_hidden_states, layer_outputs, rev_layer_ouputs, self.bidirectional)
 
             # Apply final conv
             scores = self.final_conv(reweighted)
             output = self.logsoftmax(scores)
-
-        return output
+            return output
+        else:
+            return layer_outputs, rev_layer_outputs

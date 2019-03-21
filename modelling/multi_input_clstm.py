@@ -74,8 +74,8 @@ class MI_CLSTM(nn.Module):
                                                       conv_kernel_size=conv_kernel_size, 
                                                       lstm_num_layers=lstm_num_layers, 
                                                       num_outputs=num_classes, 
-                                                      bidirectional=bidirectional,
-                                                      var_length=True)
+                                                      bidirectional=bidirectional) #,
+                                                      #var_length=True)
 
                     self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, attn_dims) #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
 
@@ -97,8 +97,8 @@ class MI_CLSTM(nn.Module):
                                                       conv_kernel_size=conv_kernel_size, 
                                                       lstm_num_layers=lstm_num_layers, 
                                                       num_outputs=crnn_input_size[1], 
-                                                      bidirectional=bidirectional,
-                                                      var_length=True)
+                                                      bidirectional=bidirectional) #,
+                                                      #var_length=True)
 
                     self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, attn_dims) #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
                     
@@ -121,8 +121,6 @@ class MI_CLSTM(nn.Module):
         total_sats = len([sat for sat in self.satellites if self.satellites[sat]])
         self.out_conv = nn.Conv2d(num_classes * total_sats, num_classes, kernel_size=1, stride=1)
         self.softmax = nn.Softmax2d()
-
-
         self.logsoftmax = nn.LogSoftmax(dim=1)
                 
     def forward(self, inputs):
@@ -146,42 +144,32 @@ class MI_CLSTM(nn.Module):
                     enc4_feats = torch.mean(enc4_feats, dim=1, keepdim=False)
                     
                     # Apply CRNN
-                    crnn_output = self.clstms[sat](crnn_input, lengths)
-                    
-                    # Apply attention
-                    if (self.attention[sat] is None) or (self.attention[sat](crnn_output) is None):
-                        if not self.avg_hidden_states:
-                            last_fwd_feat = crnn_output[:, timestamps-1, :, :, :]
-                            last_rev_feat = crnn_output[:, -1, :, :, :] if bidirectional else None
-                            reweighted = torch.concat([last_fwd_feat, last_rev_feat], dim=1) if bidirectional else last_fwd_feat
-                            reweighted = torch.sum(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
-                        else:
-                            reweighted = torch.mean(crnn_output, dim=1)
+                    if self.clstms[sat] is not None:
+                        crnn_output_fwd, crnn_output_rev = self.clstms[sat](crnn_input, lengths)
                     else:
-                        reweighted = self.attention[sat](crnn_output)
-                        reweighted = torch.sum(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
-                    
+                        crnn_output_fwd = crnn_input 
+                        crnn_output_rev = None
+ 
+                    # Apply attention
+                    reweighted = attn_or_avg(self.attention[sat], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, bidirectional)
+
                      # Apply final conv
                     pred_enc = self.finalconv[sat](reweighted) if self.finalconv[sat] is not None else reweighted
                     preds.append(self.decs[sat](pred_enc, enc4_feats, enc3_feats))
+
                 else:
                     fcn_output = self.unets[sat](fcn_input)
+
                     # Apply CRNN
                     crnn_input = fcn_output.view(batch, timestamps, -1, fcn_output.shape[-2], fcn_output.shape[-1])
-                    crnn_output = self.clstms[sat](crnn_input, lengths)
+                    if self.clstms[sat] is not None:
+                        crnn_output_fwd, crnn_output_rev = self.clstms[sat](crnn_input, lengths)
+                    else:
+                        crnn_output_fwd = crnn_input
+                        crnn_output_rev = None
 
                     # Apply attention
-                    if self.attention[sat](crnn_output) is None:
-                         if not self.avg_hidden_states:
-                             last_fwd_feat = crnn_output[:, timestamps-1, :, :, :]
-                             last_rev_feat = crnn_output[:, -1, :, :, :] if bidirectional else None
-                             reweighted = torch.concat([last_fwd_feat, last_rev_feat], dim=1) if bidirectional else last_fwd_feat
-                             reweighted = torch.mean(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
-                         else:
-                             reweighted = torch.mean(crnn_output, dim=1)
-                    else:
-                        reweighted = self.attention[sat](crnn_output)
-                        reweighted = torch.sum(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
+                    reweighted = attn_or_avg(self.attention[sat], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, bidirectional)
 
                     # Apply final conv
                     scores = self.finalconv[sat](reweighted)
