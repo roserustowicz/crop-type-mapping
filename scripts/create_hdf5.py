@@ -70,6 +70,7 @@ def create_hdf5(args, groups=None):
     old_splits = {'train': train, 'val': val, 'test': test}
     all_grids = set(old_splits['train'] + old_splits['val'] + old_splits['test'])
     all_new_grids = set()
+    print('all grids: ', all_grids)
 
     if groups is None:
         if country in ['germany']:
@@ -98,14 +99,9 @@ def create_hdf5(args, groups=None):
             actual_dir_name = "raster_npy"
 
         for filepath in tqdm(os.listdir(os.path.join(data_dir, actual_dir_name))):
-            print('filepath: ', filepath)
             filename, ext = filepath.split('.')
-            print('fname: ', filename)
-            print('ext: ', ext)
-            print('group name: ', group_name)
             # get grid num to use as the object's file name
             grid_num = get_grid_num(filename, ext, group_name)
-            print('grid_num: ', grid_num)
             if grid_num is None or grid_num not in all_grids: continue
             # load in data
             if ext == 'npy':
@@ -115,11 +111,10 @@ def create_hdf5(args, groups=None):
                 with open(os.path.join(data_dir, actual_dir_name, filepath)) as f:
                     dates = json.load(f)['dates']
                 data = util.dates2doy(dates)
-            dtype = 'i2' if group_name not in ['s1', 's2', 'planet'] else 'f8' 
+            dtype = 'i2' if group_name not in ['s1', 'planet'] else 'f8' 
             for i in range(0, 64 // num_pixels):
                 for j in range(0, 64 // num_pixels):
                     new_grid_name = grid_num + "_{}_{}".format(i, j)
-                    print('new grid name: ', new_grid_name)
                     hdf5_filename = f'/{group_name}/{new_grid_name}'
                     if 'dates' not in group_name:
                         if group_name == "planet":
@@ -146,7 +141,7 @@ def create_hdf5(args, groups=None):
                     else:
                         if new_grid_name in all_new_grids:
                             print(f"Processed {os.path.join(group_name, filepath)} as {hdf5_filename} with dtype: {dtype}")
-                            hdf5_file.create_dataset(hdf5_filename, data=data, chunks=True) 
+                            hdf5_file.create_dataset(hdf5_filename, data=data, dtype=dtype, chunks=True) 
                             if group_name in ['s1', 's2', 'planet']:
                                 _, _, _, l = sub_grid.shape
                                 length_group = group_name + "_length"
@@ -174,7 +169,7 @@ if __name__ == '__main__':
     parser.add_argument('--out_fname', type=str, default='data.hdf5')
     args = parser.parse_args()
 
-    groups = ['labels', 's2', 'cloudmasks', 's2_dates'] #None #['planet', 'planet_dates', 'labels']
+    groups = None
 
     create_hdf5(args, groups)
 
