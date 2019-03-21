@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from modelling.util import initialize_weights
 from modelling.clstm import CLSTM
-from modelling.attention import ApplyAtt
+from modelling.attention import ApplyAtt, attn_or_avg
 
 class CLSTMSegmenter(nn.Module):
     """ CLSTM followed by conv for segmentation output
@@ -46,25 +46,14 @@ class CLSTMSegmenter(nn.Module):
         if self.bidirectional:
             rev_inputs = torch.flip(inputs, dims=[1])
             rev_layer_outputs, rev_last_states = self.clstm_rev(rev_inputs)
-        
-        output = torch.cat([layer_outputs, rev_layer_outputs], dim=1) if rev_layer_outputs is not None else layer_outputs       
 
         if self.with_pred:
             # Apply attention
-            if self.attention(output) is None:
-                 if not self.avg_hidden_states:
-                     last_fwd_feat = output[:, timestamps-1, :, :, :]
-                     last_rev_feat = output[:, -1, :, :, :] if self.bidirectional else None
-                     reweighted = torch.concat([last_fwd_feat, last_rev_feat], dim=1) if bidirectional else last_fwd_feat
-                     reweighted = torch.mean(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
-                 else:
-                     reweighted = torch.mean(output, dim=1)
-            else:
-                reweighted = self.attention(output)
-                reweighted = torch.sum(reweighted, dim=1) #, torch.sum(self.att2(layer_outputs), dim=1), dim=1) 
+            reweighted = attn_or_avg(self.attention, self.avg_hidden_states, layer_outputs, rev_layer_ouputs, self.bidirectional)
 
             # Apply final conv
             scores = self.final_conv(reweighted)
             output = self.logsoftmax(scores)
-
-        return output
+            return output
+        else:
+            return layer_outputs, rev_layer_outputs

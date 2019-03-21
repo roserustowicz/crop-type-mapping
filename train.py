@@ -18,16 +18,22 @@ from torch import autograd
 
 from constants import *
 from tqdm import tqdm
+from torch import autograd
 import visualize
 
-def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes, country):
+def evaluate_split(model, model_name, split_loader, device, loss_weight, weight_scale, gamma, num_classes, country, var_length):
     total_loss = 0
     total_pixels = 0
     total_cm = np.zeros((num_classes, num_classes)).astype(int) 
     loss_fn = loss_fns.get_loss_fn(model_name)
     for inputs, targets, cloudmasks, hres_inputs in split_loader:
         with torch.set_grad_enabled(False):
-            inputs.to(device)
+            if not var_length:
+                inputs.to(device)
+            else:
+                for sat in inputs:
+                    if "length" not in sat:
+                        inputs[sat].to(device)
             targets.to(device)
             hres_inputs.to(device)
             if hres_inputs is not None: hres_inputs.to(device)
@@ -131,14 +137,18 @@ def train_dl_model(model, model_name, dataloaders, args):
         for split in ['train', 'val'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             model.train() if split == ['train'] else model.eval()
+            # TODO: figure out how to pack inputs from dataloader together in the case of variable length sequences
             for inputs, targets, cloudmasks, hres_inputs in tqdm(dl):
                 with torch.set_grad_enabled(True):
-                    inputs.to(args.device)
-                    if hres_inputs is not None: hres_inputs.to(args.device)
+                    if not args.var_length:
+                        inputs.to(args.device)
+                        if hres_inputs is not None: hres_inputs.to(args.device)
+                    else:
+                        for sat in inputs:
+                            if "length" not in sat:
+                                inputs[sat].to(args.device)
                     targets.to(args.device)
-
                     preds = model(inputs, hres_inputs) if model_name in MULTI_RES_MODELS else model(inputs)
-
                     loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, 
                                               reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
  
@@ -162,14 +172,14 @@ def train_dl_model(model, model_name, dataloaders, args):
 
                         vis_logger.update_progress('train', 'gradnorm', gradnorm)
                     
-                    if cm_cur is not None:
+                    if cm_cur is not None: # TODO: not sure if we need this check?
                         # If there are valid pixels, update metrics
                         vis_logger.update_epoch_all(split, cm_cur, loss, total_correct, num_pixels)
                 
                 vis_logger.record_batch(inputs, cloudmasks, targets, preds, confidence, 
                                         NUM_CLASSES[args.country], split, 
                                         args.include_doy, args.use_s1, args.use_s2, 
-                                        model_name, args.time_slice)
+                                        model_name, args.time_slice, var_length=args.var_length)
 
             if split in ['test']:
                 vis_logger.record_epoch(split, i, args.country, save=False, save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))

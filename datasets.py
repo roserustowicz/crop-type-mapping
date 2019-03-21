@@ -16,6 +16,10 @@ from skimage.transform import resize as imresize
 import preprocess
 from constants import *
 from random import shuffle
+from pprint import pprint
+
+import matplotlib.pyplot as plt
+from collections import defaultdict
 
 
 def get_Xy(dl, country):
@@ -169,7 +173,7 @@ class CropTypeDS(Dataset):
         self.include_indices = args.include_indices
         self.num_timesteps = args.num_timesteps
         self.all_samples = args.all_samples
-        
+        self.var_length = args.var_length
         ## Timeslice for FCN
         self.timeslice = args.time_slice
         self.least_cloudy = args.least_cloudy
@@ -177,9 +181,9 @@ class CropTypeDS(Dataset):
         
         
         with h5py.File(self.hdf5_filepath, 'r') as data:
-            if 's1_lengths' in data:
-                self.s1_lengths = data['s1_lengths']
-                self.s2_lengths = data['s2_lengths']
+            self.combined_lengths = []
+            for grid in self.grid_list:
+                self.combined_lengths.append(data['s1_lengths'][grid][()] + data['s2_lengths'][grid][()])                    
 
     def __len__(self):
         return self.num_grids
@@ -198,16 +202,30 @@ class CropTypeDS(Dataset):
  
             transform = self.apply_transforms and np.random.random() < .5 and self.split == 'train'
             rot = np.random.randint(0, 4)
-            grid, highres_grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'], sat_properties['s2']['data'], 
-                                                  sat_properties['planet']['data'], self.resize_planet)
-
-            grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
-            if highres_grid is not None: 
-                highres_grid = preprocess.preprocess_grid(highres_grid, self.model_name, self.timeslice, transform, rot)           
 
             label = data['labels'][self.grid_list[idx]][()]
             label = preprocess.preprocess_label(label, self.model_name, self.num_classes, transform, rot) 
-
+        
+            if not self.var_length:
+                grid, highres_grid = preprocess.concat_s1_s2_planet(sat_properties['s1']['data'],
+                                                      sat_properties['s2']['data'], 
+                                                      sat_properties['planet']['data'], self.resize_planet)
+                grid = preprocess.preprocess_grid(grid, self.model_name, self.timeslice, transform, rot)
+                if highres_grid is not None: 
+                    highres_grid = preprocess.preprocess_grid(highres_grid, self.model_name, self.timeslice, transform, rot)           
+            else:
+                inputs = {}
+                if self.use_s1:
+                    s1 = preprocess.preprocess_grid(sat_properties['s1']['data'], self.model_name, self.timeslice, transform, rot)
+                    inputs['s1'] = s1
+                if self.use_s2:
+                    s2 = preprocess.preprocess_grid(sat_properties['s2']['data'], self.model_name, self.timeslice, transform, rot)
+                    inputs['s2'] = s2
+                if self.use_planet:
+                    planet = preprocess.preprocess_grid(sat_properties['planet']['data'], self.model_name, self.timeslice, transform, rot)
+                    inputs['planet'] = planet
+                highres_grid = None      
+          
         if sat_properties['s2']['cloudmasks'] is None:
             cloudmasks = False
         else:
@@ -215,43 +233,43 @@ class CropTypeDS(Dataset):
         if highres_grid is None:
             highres_grid = False
 
-#         if self.split == 'train':
-#             x_start = np.random.randint(0, 32)
-#             y_start = np.random.randint(0, 32)
-# #             while torch.sum(label[:, x_start:x_start+32, y_start:y_start+32]) == 0:
-# #                 x_start = np.random.randint(0, 32)
-# #                 y_start = np.random.randint(0, 32)
-#             label = label[:, x_start:x_start+32, y_start:y_start+32]
-#             grid = grid[:, :, x_start:x_start+32, y_start:y_start+32]
-
-#             if cloudmasks is not None:
-#                 cloudmasks = cloudmasks[:, x_start:x_start+32, y_start:y_start+32, :]
-        return grid, label, cloudmasks, highres_grid
+        if self.var_length:
+            return inputs, label, cloudmasks, False
+        else:
+            return grid, label, cloudmasks, highres_grid
     
+    def setup_planet(self, data, sat, sat_properties): 
+        sat_properties[sat]['data'] = sat_properties[sat]['data'][:, :, :, :].astype(np.double)  
+        if self.resize_planet:
+            sat_properties[sat]['data'] = imresize(sat_properties[sat]['data'], 
+                                                  (sat_properties[sat]['data'].shape[0], self.grid_size, self.grid_size, sat_properties[sat]['data'].shape[3]), 
+                                                   anti_aliasing=True, mode='reflect')
+                
+    def setup_s2(self, data, idx, sat, sat_properties):
+        if sat_properties[sat]['num_bands'] == 4:
+            sat_properties[sat]['data'] = sat_properties[sat]['data'][[BANDS[sat]['10']['BLUE'], 
+                                                                       BANDS[sat]['10']['GREEN'], 
+                                                                       BANDS[sat]['10']['RED'],
+                                                                       BANDS[sat]['10']['NIR']], 
+                                                                       :, :, :] #B, G, R, NIR
+        elif sat_properties[sat]['num_bands'] == 10:
+            sat_properties[sat]['data'] = sat_properties[sat]['data'][:10, :, :, :]
+        elif sat_properties[sat]['num_bands'] != 10:
+            raise ValueError('s2_num_bands must be 4 or 10')
 
+        if self.include_clouds:
+            sat_properties[sat]['cloudmasks'] = data['cloudmasks'][self.grid_list[idx]][()]
+    
     def setup_data(self, data, idx, sat, sat_properties):
         if sat_properties[sat]['use']:
             sat_properties[sat]['data'] = data[sat][self.grid_list[idx]]       
-            if sat in ['planet']: sat_properties[sat]['data'] = sat_properties[sat]['data'][:, :, :, :].astype(np.double)  
             
+            if sat in ['planet']:
+                self.setup_planet(data, sat, sat_properties)
+            if sat in ['s2']:
+                self.setup_s2(data, idx, sat, sat_properties)
             if self.include_doy:
                 sat_properties[sat]['doy'] = data[f'{sat}_dates'][self.grid_list[idx]][()]
-            
-            if sat in ['s2']:
-                if sat_properties[sat]['num_bands'] == 4:
-                    sat_properties[sat]['data'] = sat_properties[sat]['data'][[BANDS[sat]['10']['BLUE'], 
-                                                                               BANDS[sat]['10']['GREEN'], 
-                                                                               BANDS[sat]['10']['RED'],
-                                                                               BANDS[sat]['10']['NIR']], 
-                                                                               :, :, :] #B, G, R, NIR
-                elif sat_properties[sat]['num_bands'] == 10:
-                    sat_properties[sat]['data'] = sat_properties[sat]['data'][:10, :, :, :]
-                elif sat_properties[sat]['num_bands'] != 10:
-                    raise ValueError('s2_num_bands must be 4 or 10')
-
-                if self.include_clouds:
-                    sat_properties[sat]['cloudmasks'] = data['cloudmasks'][self.grid_list[idx]][()]
-
             if sat_properties[sat]['agg']:
                 sat_properties[sat]['data'], sat_properties[sat]['doy'] = split_and_aggregate(sat_properties[sat]['data'], 
                                                                                           sat_properties[sat]['doy'],
@@ -296,7 +314,7 @@ class CropTypeDS(Dataset):
             if sat in ['planet', 's2'] and self.include_indices:
                 sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(ndvi, axis=0)), 0)
                 sat_properties[sat]['data'] = np.concatenate(( sat_properties[sat]['data'], np.expand_dims(gcvi, axis=0)), 0)
-            
+
             # Concatenate cloud mask bands
             if sat_properties[sat]['cloudmasks'] is not None and self.include_clouds:
                 sat_properties[sat]['cloudmasks'] = preprocess.preprocess_clouds(sat_properties[sat]['cloudmasks'], self.model_name, self.timeslice)
@@ -309,43 +327,38 @@ class CropTypeDS(Dataset):
             
         return sat_properties
 
-    
 
 class CropTypeBatchSampler(Sampler):
     """
         Groups sequences of similiar length into the same batch to prevent unnecessary computation.
     """
-    def __init__(self, dataset, batch_size):
+    def __init__(self, dataset, max_batch_size, max_seq_length):
         super(CropTypeBatchSampler, self).__init__(dataset)
         batches = []
-        count = 1
-        cur_list = []
+        idxs = list(range(len(dataset)))
+        
+        # shuffle the dataset
+        shuffle(idxs)
+        lengths = [min(dataset.combined_lengths[i], 2 * max_seq_length) for i in idxs] # 2x since we're measure combined s1 / s2
         
         buckets = defaultdict(list)
         
-        grid_lengths = dataset.grid_lengths
+        for i in idxs:
+            buckets[lengths[i] // 10].append(i)
         
-        # shuffle dataset
+        for bucket_length, bucket in buckets.items():
+            batch = []
+            # TODO: why are grids of length ~60 being grouped with grids of length 100+?
+            while len(bucket) > 0:
+                grid = bucket.pop()
+                batch.append(grid)
+                if len(batch) == max_batch_size:
+                    batches.append(batch)
+                    batch = []
+            
+            if len(batch) > 0:
+                batches.append(batch)
         
-        # create buckets for grid lengths (maybe %10) 
-        
-        # for each grid, add it to the a0ppropriate bucket 
-        
-        # if a bucket is too large, trim to max_batch_size length
-        
-        # later need to pad to the same length
-        
-        for i in range(len(dataset)):
-            if count % batch_size != 0:
-                cur_list.append(i)
-            else:
-                batches.append(cur_list)
-                cur_list = []
-            count += 1
-#           for i in range(len(dataset)):
-#             grid, label, cloudmasks = dataset[i]
-#             batches.append(dataset[i])
-        print(len(batches))
         self.batches = batches
         
     def __iter__(self):
@@ -356,17 +369,74 @@ class CropTypeBatchSampler(Sampler):
         return len(self.batches)
 
 
-
+def pad_to_equal_length(grids):
+    # time first
+    _, c, h, w = grids[0].shape
+    lengths = [grid.shape[0] for grid in grids]
+    max_len = np.max(lengths)
+    min_len = np.min(lengths)
+    
+    for i, grid in enumerate(grids):
+        t, _, _, _ = grid.shape
+        if t < max_len:
+            padded = np.zeros((max_len, c, h, w))
+            padded[:lengths[i], :, :, :] = grid
+            grids[i] = torch.tensor(padded, dtype=torch.float32)
+    return grids, lengths
+    
+    
+def collate_var_length(batch):
+    """ Collates batch into inputs, label, cloudmasks.
+    Batch structured as [(inputs_0, label_0, cloudmasks_0), ..., (inputs_n, label_n, cloudmasks_n)]
+    
+    Returns:
+        inputs, label, cloudmasks
+        
+        where s1 has all same length (padded to max len)
+              s2 has all same length (padded to max len)
+              planet has all same length (paddedd to max len)
+    """
+    batch_size = len(batch)
+    labels = [batch[i][1] for i in range(batch_size)]
+    labels = torch.stack(labels)
+    inputs = {}
+    sats = batch[0][0].keys()
+    for sat in sats:
+        grids = [batch[i][0][sat] for i in range(batch_size)]
+        grids, lengths = pad_to_equal_length(grids)
+        grids = torch.stack(grids)
+        inputs[sat] = grids
+        inputs[sat + "_lengths"] = lengths
+  
+    if 's2' in sats and not isinstance(batch[0][2], bool): # batch[0][2] checks if cloudmasks exist
+        cloudmasks = [batch[i][2].transpose(3, 0, 1, 2) for i in range(batch_size)]
+        cloudmasks, lengths = pad_to_equal_length(cloudmasks)
+        cloudmasks = torch.tensor(np.stack(cloudmasks).transpose(0, 2, 3, 4, 1))
+    else:
+        cloudmasks = None
+        
+    return inputs, labels, cloudmasks, False
+        
+    
 class GridDataLoader(DataLoader):
 
     def __init__(self, args, grid_path, split):
         dataset = CropTypeDS(args, grid_path, split)
-        super(GridDataLoader, self).__init__(dataset,
-                                             batch_size=args.batch_size,
-                                             shuffle=args.shuffle,
-                                             num_workers=args.num_workers,
-                                             pin_memory=True)
+        if args.var_length:
+            sampler = CropTypeBatchSampler(dataset, max_batch_size=args.batch_size, max_seq_length=args.num_timesteps)
+            super(GridDataLoader, self).__init__(dataset,
+                                                 batch_sampler=sampler,
+                                                 num_workers=args.num_workers,
+                                                 collate_fn=collate_var_length,
+                                                 pin_memory=True)
+        else:
+            super(GridDataLoader, self).__init__(dataset,
+                                                 batch_size=args.batch_size,
+                                                 shuffle=args.shuffle,
+                                                 num_workers=args.num_workers,
+                                                 pin_memory=True)
 
+            
 def get_dataloaders(country, dataset, args):
     dataloaders = {}
     for split in SPLITS:

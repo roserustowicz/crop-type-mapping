@@ -1,8 +1,32 @@
 import torch
 import torch.nn as nn
 
+def attn_or_avg(attention, avg_hidden_states, layer_outputs, rev_layer_outputs, bidirectional, lengths):
+    if (attention is None) or (attention(layer_outputs) is None):
+        if not avg_hidden_states:
+            # TODO: want to take the last non-zero padded output here instead!
+            last_fwd_feat = layer_outputs[:, -1, :, :, :]
+            last_rev_feat = rev_layer_outputs[:, -1, :, :, :] if bidirectional else None
+            reweighted = torch.concat([last_fwd_feat, last_rev_feat], dim=1) if bidirectional else last_fwd_feat
+            reweighted = torch.mean(reweighted, dim=1)
+        else:
+            if lengths is not None:
+                layer_outputs = [torch.mean(layer_outputs[i, :length], dim=0) for i, length in enumerate(lengths)]
+                # TODO: sequences are padded, so you need to reverse only the non-padded inputs
+                if rev_layer_outputs is not None: rev_layer_outputs = [torch.mean(rev_layer_outputs[i, :length], dim=0) for i, length in enumerate(lengths)] 
+                outputs = torch.stack(layer_outputs + rev_layer_outputs) if rev_layer_outputs is not None else torch.stack(layer_outputs)
+                reweighted = outputs #?
+            else:
+                outputs = torch.cat([layer_outputs, rev_layer_outputs], dim=1) if rev_layer_outputs is not None else layer_outputs
+                reweighted = torch.mean(outputs, dim=1)
+    else:
+        outputs = torch.cat([layer_outputs, rev_layer_outputs], dim=1) if rev_layer_outputs is not None else layer_outputs
+        reweighted = attention(outputs, lengths)
+        reweighted = torch.sum(reweighted, dim=1)
+    return reweighted
+
 class VectorAtt(nn.Module):
-    
+
     def __init__(self, hidden_dim_size):
         """
             Assumes input will be in the form (batch, time_steps, hidden_dim_size, height, width)
@@ -12,11 +36,15 @@ class VectorAtt(nn.Module):
         self.linear = nn.Linear(hidden_dim_size, 1, bias=False)
         nn.init.constant_(self.linear.weight, 1)
         self.softmax = nn.Softmax(dim=1)
-        
-    def forward(self, hidden_states):
-        print(self.linear.weight)
+
+    def forward(self, hidden_states, lengths=None):
         hidden_states = hidden_states.permute(0, 1, 3, 4, 2).contiguous() # puts channels last
-        reweighted = self.softmax(self.linear(hidden_states)) * hidden_states
+        weights = self.softmax(self.linear(hidden_states))
+        b, t, c, h, w = weights.shape
+        if lengths is not None: #TODO: gives backprop bug
+            for i, length in enumerate(lengths):
+                weights[i, t:] *= 0
+        reweighted = weights * hidden_states
         return reweighted.permute(0, 1, 4, 2, 3).contiguous()
 
 class TemporalAtt(nn.Module):
@@ -78,14 +106,14 @@ class SelfAtt(nn.Module):
         return attn
 
 class ApplyAtt(nn.Module):
-    def __init__(self, attn_type, hidden_dim_size, d, r, dk, dv):
+    def __init__(self, attn_type, hidden_dim_size, attn_dims):
         super(ApplyAtt, self).__init__()
         if attn_type == 'vector':
             self.attention = VectorAtt(hidden_dim_size)
         elif attn_type == 'temporal':
-            self.attention = TemporalAtt(hidden_dim_size, d, r)
+            self.attention = TemporalAtt(hidden_dim_size, attn_dims['d'], attn_dims['r'])
         elif attn_type == 'self':
-            self.attention = SelfAtt(hidden_dim_size, dk, dv)
+            self.attention = SelfAtt(hidden_dim_size, attn_dims['dk'], attn_dims['dv'])
         elif attn_type == 'None':
             self.attention = None
         else:

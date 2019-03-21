@@ -2,16 +2,36 @@ import torch
 import torch.nn as nn
 from modelling.util import initialize_weights
 from modelling.clstm import CLSTM
-from modelling.unet import UNet
+from modelling.clstm_segmenter import CLSTMSegmenter
+from modelling.unet import UNet, UNet_Encode, UNet_Decode
+from modelling.attention import ApplyAtt, attn_or_avg
+from pprint import pprint
 
 class MI_CLSTM(nn.Module):
     """ MI_CLSTM = Multi Input CLSTM 
     """
-
-    def __init__(self, s1_input_size, s2_input_size,
+    def __init__(self, 
+                 num_bands,
                  unet_out_channels,
-                 hidden_dims, lstm_kernel_sizes, lstm_num_layers, 
-                 conv_kernel_size, num_classes, bidirectional):
+                 crnn_input_size,
+                 hidden_dims, 
+                 lstm_kernel_sizes, 
+                 conv_kernel_size, 
+                 lstm_num_layers, 
+                 avg_hidden_states, 
+                 num_classes,
+                 early_feats,
+                 bidirectional,
+                 max_timesteps,
+                 satellites,
+                 resize_planet,
+                 grid_size,
+                 main_attn_type,
+                 attn_dims):
+                 #d_attn_dim,
+                 #r_attn_dim,
+                 #dk_attn_dim,
+                 #dv_attn_dim):
         """
             input_size - (tuple) should be (time_steps, channels, height, width)
         """
@@ -20,83 +40,148 @@ class MI_CLSTM(nn.Module):
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims]        
 
-        self.s1_channels, self.s2_channels = s1_input_size[1], s2_input_size[1]
-        
-        # TODO: switch over to a better feature extractor, maybe small pretrained resnet
-        self.s1_unet = UNet(unet_out_channels, s1_input_size[1], True)
-        self.s2_unet = UNet(unet_out_channels, s2_input_size[1], True)
-        
-        # TODO: remove once we can make a fair comparison
-        
-        time_steps, channels, height, width = s1_input_size
-        s1_input_size = (time_steps, unet_out_channels, height, width)
-        time_steps, channels, height, width = s2_input_size
-        s2_input_size = (time_steps, unet_out_channels, height, width)
-        
-        self.s1_clstm = CLSTM(s1_input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers)
-        self.s2_clstm = CLSTM(s2_input_size, hidden_dims, lstm_kernel_sizes, lstm_num_layers)
-
-#         self.s1_weights = nn.Linear(s1_input_size[0], 1)
-#         self.s2_weights = nn.Linear(s2_input_size[0], 1)
-        
+        self.early_feats = early_feats
+        self.avg_hidden_states = avg_hidden_states
         self.bidirectional = bidirectional
+        self.satellites = satellites
+        self.num_bands = num_bands
+        self.num_bands_empty = { 's1': 0, 's2': 0, 'planet': 0, 'all': 0 }
+        self.resize_planet = resize_planet
         
-        # TODO: adjust the number of in channels in case where bidirectional is true
-        in_channels = 2 * hidden_dims[-1] if not self.bidirectional else hidden_dims[-1] * 2
-        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=num_classes, kernel_size=conv_kernel_size, padding=int((conv_kernel_size - 1) / 2))
-        self.softmax = nn.Softmax2d()
-        initialize_weights(self)
-
-    def forward(self, inputs):
+        if early_feats:
+            self.encs = {}
+            self.decs = {}
+        else:
+            self.unets = {}
+            
+        self.clstms = {}
+        self.attention = {}
+        self.finalconv = {}
  
-        # assumes s1 is first
-        s1_inputs = inputs[:, :, :self.s1_channels, :, :]
-        s2_inputs = inputs[:, :, self.s1_channels:, :, :]
+        for sat in satellites:
+            if satellites[sat]: 
+                cur_num_bands = self.num_bands_empty
+                cur_num_bands[sat] = self.num_bands[sat]       
+                cur_num_bands['all'] = self.num_bands[sat]
+                if not self.early_feats:
+                    self.unets[sat] = UNet(num_classes, 
+                                           cur_num_bands, 
+                                           late_feats_for_fcn=True,
+                                           use_planet= sat == "planet",
+                                           resize_planet=(sat == "planet" and self.resize_planet))
+                    
+                    self.clstms[sat] = CLSTMSegmenter(input_size=crnn_input_size,
+                                                      hidden_dims=hidden_dims, 
+                                                      lstm_kernel_sizes=lstm_kernel_sizes, 
+                                                      conv_kernel_size=conv_kernel_size, 
+                                                      lstm_num_layers=lstm_num_layers, 
+                                                      num_outputs=num_classes, 
+                                                      bidirectional=bidirectional) #,
+                                                      #var_length=True)
 
-        batch, timestamps, s1_bands, rows, cols = s1_inputs.shape
-        batch, timestamps, s2_bands, rows, cols = s2_inputs.shape
-        
-        unet_s1_input = s1_inputs.view(batch * timestamps, s1_bands, rows, cols)
-        unet_s2_input = s2_inputs.view(batch * timestamps, s2_bands, rows, cols)
+                    self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, attn_dims) #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
 
-        s1_unet_output = self.s1_unet(unet_s1_input)
-        s2_unet_output = self.s2_unet(unet_s2_input)
+                    self.finalconv[sat] = nn.Conv2d(in_channels=hidden_dims[-1], 
+                                                     out_channels=num_classes, 
+                                                     kernel_size=conv_kernel_size, 
+                                                     padding=int((conv_kernel_size-1)/2))
+                else:
+                    self.encs[sat] = UNet_Encode(cur_num_bands,
+                                                 use_planet=(sat == "planet"),
+                                                 resize_planet=(sat == "planet" and self.resize_planet)) 
+                    
+                    self.decs[sat] = UNet_Decode(num_classes, 
+                                                 late_feats_for_fcn= not early_feats)
+                
+                    self.clstms[sat] = CLSTMSegmenter(input_size=crnn_input_size, 
+                                                      hidden_dims=hidden_dims, 
+                                                      lstm_kernel_sizes=lstm_kernel_sizes, 
+                                                      conv_kernel_size=conv_kernel_size, 
+                                                      lstm_num_layers=lstm_num_layers, 
+                                                      num_outputs=crnn_input_size[1], 
+                                                      bidirectional=bidirectional) #,
+                                                      #var_length=True)
 
-        clstm_s1_input = s1_unet_output.view(batch, timestamps, -1, rows, cols)
-        clstm_s2_input = s2_unet_output.view(batch, timestamps, -1, rows, cols)
+                    self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, attn_dims) #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
+                    
+                    self.finalconv[sat] = nn.Conv2d(in_channels=hidden_dims[-1], 
+                                                    out_channels=crnn_input_size[1], 
+                                                    kernel_size=conv_kernel_size, 
+                                                    padding=int((conv_kernel_size-1)/2))
+                # input size should be (time_steps, channels, height, width)
         
-        # TODO: figure out dims of these outputs
-        s1_layer_output_list, s1_last_state_list = self.s1_clstm(clstm_s1_input)
-        s2_layer_output_list, s2_last_state_list = self.s2_clstm(clstm_s2_input)
+        for sat in satellites:
+            if satellites[sat]:
+                if not self.early_feats:
+                    self.add_module(sat + "_unet", self.unets[sat])
+                else:
+                    self.add_module(sat + "_enc", self.encs[sat])
+                    self.add_module(sat + "_dec", self.decs[sat])
+                
+                self.add_module(sat + "_clstm", self.clstms[sat])
+                self.add_module(sat + "_finalconv", self.finalconv[sat])
+                self.add_module(sat + "_attention", self.attention[sat])
+
+        total_sats = len([sat for sat in self.satellites if self.satellites[sat]])
+        self.out_conv = nn.Conv2d(num_classes * total_sats, num_classes, kernel_size=1, stride=1)
+        self.softmax = nn.Softmax2d()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+                
+    def forward(self, inputs):
+        preds = []
+        for sat in self.satellites:
+            if self.satellites[sat]:
+                sat_data = inputs[sat]
+                lengths = inputs[sat + "_lengths"]
+                batch, timestamps, bands, rows, cols = sat_data.size()
+                fcn_input = sat_data.view(batch * timestamps, bands, rows, cols)
+                
+                if self.early_feats:
+                    # Encode features
+                    center1_feats, enc4_feats, enc3_feats, _, _ = self.encs[sat](fcn_input, hres=None)
+                    # Reshape tensors to separate batch and timestamps
+                    crnn_input = center1_feats.view(batch, timestamps, -1, center1_feats.shape[-2], center1_feats.shape[-1])
+                    enc4_feats = enc4_feats.view(batch, timestamps, -1, enc4_feats.shape[-2], enc4_feats.shape[-1])
+                    enc3_feats = enc3_feats.view(batch, timestamps, -1, enc3_feats.shape[-2], enc3_feats.shape[-1])
+
+                    enc3_feats = torch.mean(enc3_feats, dim=1, keepdim=False)
+                    enc4_feats = torch.mean(enc4_feats, dim=1, keepdim=False)
+                    
+                    # Apply CRNN
+                    if self.clstms[sat] is not None:
+                        crnn_output_fwd, crnn_output_rev = self.clstms[sat](crnn_input) #, lengths)
+                    else:
+                        crnn_output_fwd = crnn_input 
+                        crnn_output_rev = None
+ 
+                    # Apply attention
+                    reweighted = attn_or_avg(self.attention[sat], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, self.bidirectional, lengths)
+                 
+                    # Apply final conv
+                    reweighted = reweighted.cuda()
+                    pred_enc = self.finalconv[sat](reweighted) if self.finalconv[sat] is not None else reweighted
+                    preds.append(self.decs[sat](pred_enc, enc4_feats, enc3_feats))
+
+                else:
+                    fcn_output = self.unets[sat](fcn_input, hres=None)
+
+                    # Apply CRNN
+                    crnn_input = fcn_output.view(batch, timestamps, -1, fcn_output.shape[-2], fcn_output.shape[-1])
+                    if self.clstms[sat] is not None:
+                        crnn_output_fwd, crnn_output_rev = self.clstms[sat](crnn_input) #, lengths)
+                    else:
+                        crnn_output_fwd = crnn_input
+                        crnn_output_rev = None
+
+                    # Apply attention
+                    reweighted = attn_or_avg(self.attention[sat], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, self.bidirectional, lengths)
+
+                    # Apply final conv
+                    scores = self.finalconv[sat](reweighted)
+                    sat_preds = self.logsoftmax(scores)
+                    preds.append(sat_preds)
         
-        # gets last hidden state 
-#         s1_final_state = s1_last_state_list[0][0]
-#         s2_final_state = s2_last_state_list[0][0]
-        
-        s1_final_state = torch.mean(s1_layer_output_list[0], dim=1)
-        s2_final_state = torch.mean(s2_layer_output_list[0], dim=1)
-    
-        final_state = torch.cat((s1_final_state, s2_final_state), dim=1)
-        
-#         assert False
-    
-        
-#         timesteps, s1_channels, s1_height, s1_width = s1_layer_output_list[0].shape
-#         s1_h_output = torch.sum(s1_layer_output_list[0], dim=1)
-#         s1_c_output = torch.sum(s1_layer_output_list[1], dim=1)
-        
-#         s2_h_output = torch.sum(s2_layer_output_list[0], dim=1)
-#         s2_c_output = torch.sum(s2_layer_output_list[1], dim=1)
-        
-      
-        
-#         if self.bidirectional:
-#             rev_inputs = torch.tensor(inputs.cpu().detach().numpy()[::-1].copy(), dtype=torch.float32).cuda()
-#             rev_layer_output_list, rev_last_state_list = self.clstm(rev_inputs)
-#             final_state = torch.cat([final_state, rev_last_state_list[0][0]], dim=1)
-        
-        scores = self.conv(final_state)
-        preds = self.softmax(scores)
-        preds = torch.log(preds)
-        
+        all_preds = torch.cat(preds, dim=1)
+        preds = self.out_conv(all_preds)
+        preds = torch.log(self.softmax(preds))
         return preds

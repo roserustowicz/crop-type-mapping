@@ -76,7 +76,7 @@ class UNet_Encode(nn.Module):
         self.downsample = _DownSample() 
         self.use_planet = use_planet
         self.resize_planet = resize_planet      
-
+ 
         self.planet_numbands = num_bands_dict['planet']
         self.s1_numbands = num_bands_dict['s1']
         self.s2_numbands = num_bands_dict['s2']

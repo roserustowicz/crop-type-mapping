@@ -463,4 +463,6 @@ def get_train_parser():
                          help="Use crnn for encoder layers in addition to the main encodings")
     parser.add_argument('--enc_attn', type=str2bool, default=False,
                          help="Use attn for encoder layers in addition to the main encodings")
+    parser.add_argument('--var_length', action="store_true", default=False,
+                         help="use variable length sequences")
     return parser

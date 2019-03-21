@@ -449,6 +449,12 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
     """
     timestamps = img_stack.shape[0] if timestamps_first else img_stack.shape[3]
    
+    if timestamps < num_samples:
+        if isinstance(cloud_stack, np.ndarray):
+            return img_stack, dates, cloud_stack
+        else:
+            return img_stack, dates, None 
+        
     # Given a stack of cloud masks, remap it and use to compute scores
     if isinstance(cloud_stack,np.ndarray):
         remapped_cloud_stack = remap_cloud_stack(cloud_stack)
@@ -461,7 +467,6 @@ def sample_timeseries(img_stack, num_samples, dates=None, cloud_stack=None, rema
 
     if reverse:
         scores = 3 - scores
-
     if least_cloudy:
         samples = scores.argsort()[-num_samples:]
     else:
