@@ -96,7 +96,6 @@ class VisdomLogger:
         if model_name in ['fcn_crnn', 'bidir_clstm','unet3d', 'mi_clstm']:
             for idx, b in enumerate(best):
                 if var_length and 's2' in inputs:
-                    print('boi: ', boi)
                     boi.append(inputs['s2'][idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
                 else:
                     boi.append(inputs[idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))

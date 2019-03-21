@@ -184,9 +184,6 @@ class CropTypeDS(Dataset):
             self.combined_lengths = []
             for grid in self.grid_list:
                 self.combined_lengths.append(data['s1_lengths'][grid][()] + data['s2_lengths'][grid][()])                    
-            plt.hist(self.combined_lengths)
-            plt.savefig(fname="southsudan_lengths_dist.png")
-            plt.close()
 
     def __len__(self):
         return self.num_grids

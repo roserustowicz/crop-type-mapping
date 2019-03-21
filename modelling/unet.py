@@ -80,7 +80,6 @@ class UNet_Encode(nn.Module):
         self.planet_numbands = num_bands_dict['planet']
         self.s1_numbands = num_bands_dict['s1']
         self.s2_numbands = num_bands_dict['s2']
-        print('num bands dict: ', num_bands_dict)
 
         feats = 16
         if (self.use_planet and self.resize_planet) or (not self.use_planet):

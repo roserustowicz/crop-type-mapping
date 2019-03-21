@@ -11,7 +11,6 @@ def attn_or_avg(attention, avg_hidden_states, layer_outputs, rev_layer_outputs, 
             reweighted = torch.mean(reweighted, dim=1)
         else:
             if lengths is not None:
-                print('im here!!!!1')
                 layer_outputs = [torch.mean(layer_outputs[i, :length], dim=0) for i, length in enumerate(lengths)]
                 # TODO: sequences are padded, so you need to reverse only the non-padded inputs
                 if rev_layer_outputs is not None: rev_layer_outputs = [torch.mean(rev_layer_outputs[i, :length], dim=0) for i, length in enumerate(lengths)] 
@@ -107,7 +106,7 @@ class SelfAtt(nn.Module):
         return attn
 
 class ApplyAtt(nn.Module):
-    def __init__(self, attn_type, hidden_dim_size, attn_dims): #d, r, dk, dv):
+    def __init__(self, attn_type, hidden_dim_size, attn_dims):
         super(ApplyAtt, self).__init__()
         if attn_type == 'vector':
             self.attention = VectorAtt(hidden_dim_size)

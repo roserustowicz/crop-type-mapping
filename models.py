@@ -39,7 +39,7 @@ class FCN_CRNN(nn.Module):
     def __init__(self, fcn_input_size, crnn_input_size, crnn_model_name, 
                  hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states, 
                  num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet, 
-                 num_bands_dict, main_attn_type, attn_dims, #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim, 
+                 num_bands_dict, main_attn_type, attn_dims, 
                  enc_crnn, enc_attn, enc_attn_type):
         super(FCN_CRNN, self).__init__()
 
@@ -58,10 +58,6 @@ class FCN_CRNN(nn.Module):
         self.num_bands_dict = num_bands_dict       
         self.main_attn_type = main_attn_type
         self.attn_dims = attn_dims
-        #self.d_attn_dim = attn_dims['d']
-        #self.r_attn_dim = attn_dims['r']
-        #self.dk_attn_dim = attn_dims['dk']
-        #self.dv_attn_dim = attn_dims['dv']
         self.enc_crnn = enc_crnn
         self.enc_attn = enc_attn
         self.enc_attn_type = enc_attn_type
@@ -170,12 +166,12 @@ class FCN_CRNN(nn.Module):
         self.attn_enc4 = self.attn_enc3 = self.attn_enc2 = self.attn_enc1 = None
         if self.early_feats:
             if self.enc_attn:
-                self.attn_enc4 = ApplyAtt(self.enc_attn_type, self.hidden_dims, self.attn_dims) #d=self.d_attn_dim, r=self.r_attn_dim, dk=self.dk_attn_dim, dv=self.dv_attn_dim)
-                self.attn_enc3 = ApplyAtt(self.enc_attn_type, self.hidden_dims, self.attn_dims) #d=self.d_attn_dim, r=self.r_attn_dim, dk=self.dk_attn_dim, dv=self.dv_attn_dim)
+                self.attn_enc4 = ApplyAtt(self.enc_attn_type, self.hidden_dims, self.attn_dims) 
+                self.attn_enc3 = ApplyAtt(self.enc_attn_type, self.hidden_dims, self.attn_dims)
                 if self.use_planet and not self.resize_planet:
-                    self.attn_enc2 = ApplyAtt(self.enc_attn_type, self.hidden_dims, self.attn_dims) #d=self.d_attn_dim, r=self.r_attn_dim, dk=self.dk_attn_dim, dv=self.dv_attn_dim)
-                    self.attn_enc1 = ApplyAtt(self.enc_attn_type, self.hidden_dims, self.attn_dims) #d=self.d_attn_dim, r=self.r_attn_dim, dk=self.dk_attn_dim, dv=self.dv_attn_dim)
-        self.attn_main = ApplyAtt(self.main_attn_type, self.hidden_dims, self.attn_dims) #d=self.d_attn_dim, r=self.r_attn_dim, dk=self.dk_attn_dim, dv=self.dv_attn_dim)
+                    self.attn_enc2 = ApplyAtt(self.enc_attn_type, self.hidden_dims, self.attn_dims)
+                    self.attn_enc1 = ApplyAtt(self.enc_attn_type, self.hidden_dims, self.attn_dims)
+        self.attn_main = ApplyAtt(self.main_attn_type, self.hidden_dims, self.attn_dims)
         self.attns = { 'main': self.attn_main, 'enc4': self.attn_enc4, 'enc3': self.attn_enc3, 'enc2': self.attn_enc2, 'enc1': self.attn_enc1 } 
         return self.attns
 
@@ -232,7 +228,7 @@ def make_MI_CLSTM_model(num_bands,
     return model
 
 def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, 
-                           bidirectional, avg_hidden_states, main_attn_type, attn_dims): #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim):
+                           bidirectional, avg_hidden_states, main_attn_type, attn_dims):
     """ Defines a (bidirectional) CLSTM model 
     Args:
         input_size - (tuple) size of input dimensions 
@@ -249,7 +245,6 @@ def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kern
     """
     model = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, 
                            with_pred=True, avg_hidden_states=avg_hidden_states, attn_type=main_attn_type, attn_dims=attn_dims) 
-                           #d=d_attn_dim, r=r_attn_dim, dk=dk_attn_dim, dv=dv_attn_dim)
     return model
 
 
@@ -330,7 +325,7 @@ def make_UNetDecoder_model(n_class, late_feats_for_fcn, use_planet, resize_plane
 def make_fcn_clstm_model(country, fcn_input_size, crnn_input_size, crnn_model_name, 
                          hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states,
                          num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet,
-                         num_bands_dict, main_attn_type, attn_dims, #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim,
+                         num_bands_dict, main_attn_type, attn_dims,
                          enc_crnn, enc_attn, enc_attn_type):
     """ Defines a fully-convolutional-network + CLSTM model
     Args:
@@ -357,8 +352,7 @@ def make_fcn_clstm_model(country, fcn_input_size, crnn_input_size, crnn_model_na
 
     model = FCN_CRNN(fcn_input_size, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, 
                      conv_kernel_size, lstm_num_layers, avg_hidden_states, num_classes, bidirectional, pretrained, 
-                     early_feats, use_planet, resize_planet, num_bands_dict, main_attn_type, attn_dims, #d_attn_dim, 
-                     #r_attn_dim, dk_attn_dim, dv_attn_dim, 
+                     early_feats, use_planet, resize_planet, num_bands_dict, main_attn_type, attn_dims, 
                      enc_crnn, enc_attn, enc_attn_type)
     model = model.cuda()
 
