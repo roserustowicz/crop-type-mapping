@@ -159,7 +159,6 @@ class MI_CLSTM(nn.Module):
                  
                     # Apply final conv
                     reweighted = reweighted.cuda()
-                    print(type(reweighted))
                     pred_enc = self.finalconv[sat](reweighted) if self.finalconv[sat] is not None else reweighted
                     preds.append(self.decs[sat](pred_enc, enc4_feats, enc3_feats))
 
