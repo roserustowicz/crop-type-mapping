@@ -58,6 +58,7 @@ class FCN_CRNN(nn.Module):
         self.num_bands_dict = num_bands_dict       
         self.main_attn_type = main_attn_type
         self.attn_dims = attn_dims
+        self.main_crnn = main_crnn
         self.enc_crnn = enc_crnn
         self.enc_attn = enc_attn
         self.enc_attn_type = enc_attn_type
@@ -103,6 +104,7 @@ class FCN_CRNN(nn.Module):
                 if cur_feats is not None:
                     # Apply CRNN
                     cur_feats = cur_feats.view(batch, timestamps, -1, cur_feats.shape[-2], cur_feats.shape[-1])
+                    #print('cur feats: ', cur_feats.shape)
                     if self.crnns[cur_enc] is not None:
                         cur_feats_fwd, cur_feats_rev = self.crnns[cur_enc](cur_feats) 
                     else:
@@ -111,9 +113,9 @@ class FCN_CRNN(nn.Module):
 
                     # Apply attention
                     reweighted = attn_or_avg(self.attns[cur_enc], self.avg_hidden_states, cur_feats_fwd, cur_feats_rev, bidirectional)
-                    
                     # Apply final conv
                     final_feats = self.final_convs[cur_enc](reweighted) if self.final_convs[cur_enc] is not None else reweighted
+                    #print('final feas: ', final_feats.shape)
                     self.processed_feats[cur_enc] = final_feats
 
             # Decode and predict
@@ -142,9 +144,10 @@ class FCN_CRNN(nn.Module):
         return preds
 
     def get_crnns(self):
-        self.crnn_enc4 = self.crnn_enc3 = self.crnn_enc2 = self.crnn_enc1 = None
+        self.crnn_main = self.crnn_enc4 = self.crnn_enc3 = self.crnn_enc2 = self.crnn_enc1 = None
         if self.early_feats:
-            self.crnn_main = CLSTMSegmenter(self.crnn_input_size, self.hidden_dims, self.lstm_kernel_sizes, 
+            if self.main_crnn:
+                self.crnn_main = CLSTMSegmenter(self.crnn_input_size, self.hidden_dims, self.lstm_kernel_sizes, 
                                    self.conv_kernel_size, self.lstm_num_layers, self.crnn_input_size[1], self.bidirectional) 
             if self.enc_crnn:
                 crnn_input0, crnn_input1, crnn_input2, crnn_input3 = self.crnn_input_size
@@ -326,7 +329,7 @@ def make_UNetDecoder_model(n_class, late_feats_for_fcn, use_planet, resize_plane
 def make_fcn_clstm_model(country, fcn_input_size, crnn_input_size, crnn_model_name, 
                          hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states,
                          num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet,
-                         num_bands_dict, main_attn_type, attn_dims,
+                         num_bands_dict, main_crnn, main_attn_type, attn_dims,
                          enc_crnn, enc_attn, enc_attn_type):
     """ Defines a fully-convolutional-network + CLSTM model
     Args:
@@ -355,6 +358,7 @@ def make_fcn_clstm_model(country, fcn_input_size, crnn_input_size, crnn_model_na
                      conv_kernel_size, lstm_num_layers, avg_hidden_states, num_classes, bidirectional, pretrained, 
                      early_feats, use_planet, resize_planet, num_bands_dict, main_attn_type, attn_dims, 
                      enc_crnn, enc_attn, enc_attn_type)
+                     early_feats, use_planet, resize_planet, num_bands_dict, main_crnn, main_attn_type, attn_dims,
     model = model.cuda()
 
     return model
@@ -449,6 +453,7 @@ def get_model(model_name, **kwargs):
                                      use_planet=kwargs.get('use_planet'),
                                      resize_planet=kwargs.get('resize_planet'), 
                                      num_bands_dict=num_bands,
+                                     main_crnn=kwargs.get('main_crnn'),
                                      main_attn_type=kwargs.get('main_attn_type'),
                                      attn_dims = {'d': kwargs.get('d_attn_dim'), 'r': kwargs.get('r_attn_dim'),
                                                   'dk': kwargs.get('dk_attn_dim'), 'dv': kwargs.get('dv_attn_dim')},

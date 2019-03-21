@@ -447,6 +447,8 @@ def get_train_parser():
                          help="Fix pretrained features")
     parser.add_argument('--clip_val', type=str2bool, default=True,
                          help="Whether or not to use gradient clipping, value is computed based on the number of parameters")
+    parser.add_argument('--main_crnn', type=str2bool, default=True,
+                         help="Whether or not to use a CRNN in the main encoder at the bottom of the U of the UNet model")
     parser.add_argument('--main_attn_type', type=str, default='None',
                          help="Attention type to use for main clstm layer, must be 'None', 'temporal', 'self', or 'vector'")
     parser.add_argument('--enc_attn_type', type=str, default='None',
@@ -455,9 +457,9 @@ def get_train_parser():
                          help="Number of features in w_s1 output for temporal attention")
     parser.add_argument('--r_attn_dim', type=int, default=1,
                          help="Number of features in w_s1 output for temporal attention")
-    parser.add_argument('--dk_attn_dim', type=int, default=32,
+    parser.add_argument('--dk_attn_dim', type=int, default=256,
                          help="Number of dk features for self attention")
-    parser.add_argument('--dv_attn_dim', type=int, default=32,
+    parser.add_argument('--dv_attn_dim', type=int, default=256,
                          help="Number of dv features for self attention")
     parser.add_argument('--enc_crnn', type=str2bool, default=False,
                          help="Use crnn for encoder layers in addition to the main encodings")
