@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-def attn_or_avg(attention, avg_hidden_states, layer_outputs, rev_layer_outputs, bidirectional):
+def attn_or_avg(attention, avg_hidden_states, layer_outputs, rev_layer_outputs, bidirectional, lengths):
     if (attention is None) or (attention(layer_outputs) is None):
         if not avg_hidden_states:
             last_fwd_feat = layer_outputs[:, -1, :, :, :]
@@ -9,6 +9,8 @@ def attn_or_avg(attention, avg_hidden_states, layer_outputs, rev_layer_outputs, 
             reweighted = torch.concat([last_fwd_feat, last_rev_feat], dim=1) if bidirectional else last_fwd_feat
             reweighted = torch.mean(reweighted, dim=1)
         else:
+            if lengths is not None:
+                layer_outputs = [torch.mean(layer_outputs[i, :length], dim=0) for i, length in enumerate(lengths)]
             outputs = torch.cat([layer_outputs, rev_layer_outputs], dim=1) if rev_layer_outputs is not None else layer_outputs
             reweighted = torch.mean(outputs, dim=1)
     else:

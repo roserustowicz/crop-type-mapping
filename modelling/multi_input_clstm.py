@@ -4,7 +4,7 @@ from modelling.util import initialize_weights
 from modelling.clstm import CLSTM
 from modelling.clstm_segmenter import CLSTMSegmenter
 from modelling.unet import UNet, UNet_Encode, UNet_Decode
-from modelling.attention import ApplyAtt
+from modelling.attention import ApplyAtt, attn_or_avg
 from pprint import pprint
 
 class MI_CLSTM(nn.Module):
@@ -151,7 +151,7 @@ class MI_CLSTM(nn.Module):
                         crnn_output_rev = None
  
                     # Apply attention
-                    reweighted = attn_or_avg(self.attention[sat], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, bidirectional)
+                    reweighted = attn_or_avg(self.attention[sat], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, bidirectional, lengths)
 
                      # Apply final conv
                     pred_enc = self.finalconv[sat](reweighted) if self.finalconv[sat] is not None else reweighted
