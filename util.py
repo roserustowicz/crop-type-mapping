@@ -448,7 +448,7 @@ def get_train_parser():
     parser.add_argument('--clip_val', type=str2bool, default=True,
                          help="Whether or not to use gradient clipping, value is computed based on the number of parameters")
     parser.add_argument('--main_crnn', type=str2bool, default=True,
-                         help="Whether or not to use a CRNN in the main encoder at the bottom of the U of the UNet model")
+                         help="Whether or not to use a CRNN in the main encoder at the bottom of the U of the UNet model (for early feats) or just before the prediction (for not early feats)")
     parser.add_argument('--main_attn_type', type=str, default='None',
                          help="Attention type to use for main clstm layer, must be 'None', 'temporal', 'self', or 'vector'")
     parser.add_argument('--enc_attn_type', type=str, default='None',
