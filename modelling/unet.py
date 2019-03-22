@@ -70,7 +70,7 @@ class UNet(nn.Module):
 class UNet_Encode(nn.Module):
     """ U-Net architecture definition for encoding (first half of the "U")
     """
-    def __init__(self, num_bands_dict, use_planet=False, resize_planet=False, model_name='mi_clstm'):
+    def __init__(self, num_bands_dict, use_planet=False, resize_planet=False):
         super(UNet_Encode, self).__init__()
 
         self.downsample = _DownSample() 
@@ -80,7 +80,6 @@ class UNet_Encode(nn.Module):
         self.planet_numbands = num_bands_dict['planet']
         self.s1_numbands = num_bands_dict['s1']
         self.s2_numbands = num_bands_dict['s2']
-        print(num_bands_dict)
 
         feats = 16
         if (self.use_planet and self.resize_planet) or (not self.use_planet):
@@ -88,8 +87,6 @@ class UNet_Encode(nn.Module):
         elif self.use_planet and not self.resize_planet:
             self.enc1_hres = _EncoderBlock(self.planet_numbands, feats)
             self.enc2_hres = _EncoderBlock(feats, feats*2)
-            print('s1 nums: ', self.s1_numbands) 
-            print('s2 nums: ', self.s2_numbands) 
             if (self.s1_numbands > 0) or (self.s2_numbands > 0):# and model_name not in ['mi_clstm']:
                 self.enc1_lres = _EncoderBlock(self.s1_numbands + self.s2_numbands, feats)
                 self.enc2_lres = _EncoderBlock(feats, feats*2)
@@ -97,7 +94,6 @@ class UNet_Encode(nn.Module):
             else: 
                 enc3_infeats = feats*2
        
-        print('e3 ins: ', enc3_infeats)
         self.enc3 = _EncoderBlock(enc3_infeats, feats*4)
         self.enc4 = _EncoderBlock(feats*4, feats*8)
 
@@ -116,29 +112,21 @@ class UNet_Encode(nn.Module):
         if (self.use_planet and self.resize_planet) or (not self.use_planet):
             enc3 = self.enc3(x)
         else:
-            print('1 use planet, no resize!')
             if hres is None:
                 enc1_hres = self.enc1_hres(x)
-                print('enc1 hes: ', enc1_hres.shape)
             else:
                 enc1_lres = self.enc1_lres(x)
                 enc2_lres = self.enc2_lres(enc1_lres)
                 enc1_hres = self.enc1_hres(hres)
  
             down1_hres = self.downsample(enc1_hres)
-            print('down1 hres: ', down1_hres.shape)
             enc2_hres = self.enc2_hres(down1_hres)
-            print('enc2 hres: ', enc2_hres.shape)
             down2 = self.downsample(enc2_hres)
-            print('down 2: ', down2.shape)
 
-            print('hres: ', hres)
             if hres is not None: 
                 down2 = torch.cat((enc2_lres, down2), 1)
-                print('down 2: ', down2.shape)
 
             enc3 = self.enc3(down2)
-            print('enc3: ', enc3.shape)
 
         down3 = self.downsample(enc3)
         enc4 = self.enc4(down3)
