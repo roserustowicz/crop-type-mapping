@@ -83,7 +83,6 @@ def evaluate(model_name, preds, labels, country, loss_fn=None, reduction=None, l
         else:
             raise ValueError(f"reduction: `{reduction}` not supported")
 
-
 def train_non_dl_model(model, model_name, dataloaders, args, X, y):
     results = {'train_acc': [], 'train_f1': [], 'val_acc': [], 'val_f1': [], 'test_acc': [], 'test_f1': []}
     for rep in range(args.num_repeat):
