@@ -32,14 +32,14 @@ from modelling.fcn8 import FCN8
 from modelling.unet import UNet, UNet_Encode, UNet_Decode
 from modelling.unet3d import UNet3D
 from modelling.multi_input_clstm import MI_CLSTM
-from modelling.attention import ApplyAtt
+from modelling.attention import ApplyAtt, attn_or_avg
 
 # TODO: figure out how to decompose this       
 class FCN_CRNN(nn.Module):
     def __init__(self, fcn_input_size, crnn_input_size, crnn_model_name, 
                  hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, avg_hidden_states, 
                  num_classes, bidirectional, pretrained, early_feats, use_planet, resize_planet, 
-                 num_bands_dict, main_attn_type, attn_dims, 
+                 num_bands_dict, main_crnn, main_attn_type, attn_dims, 
                  enc_crnn, enc_attn, enc_attn_type):
         super(FCN_CRNN, self).__init__()
 
@@ -111,7 +111,7 @@ class FCN_CRNN(nn.Module):
                         cur_feats_rev = None
 
                     # Apply attention
-                    reweighted = attn_or_avg(self.attns[cur_enc], self.avg_hidden_states, cur_feats_fwd, cur_feats_rev, bidirectional)
+                    reweighted = attn_or_avg(self.attns[cur_enc], self.avg_hidden_states, cur_feats_fwd, cur_feats_rev, self.bidirectional)
                     # Apply final conv
                     final_feats = self.final_convs[cur_enc](reweighted) if self.final_convs[cur_enc] is not None else reweighted
                     self.processed_feats[cur_enc] = final_feats
