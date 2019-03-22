@@ -102,6 +102,7 @@ class MI_CLSTM(nn.Module):
                                                     out_channels=crnn_input_size[1], 
                                                     kernel_size=conv_kernel_size, 
                                                     padding=int((conv_kernel_size-1)/2))
+                    # input size should be (time_steps, channels, height, width)
         
         for sat in satellites:
             if satellites[sat]:
