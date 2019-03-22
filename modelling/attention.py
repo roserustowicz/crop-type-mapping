@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-def attn_or_avg(attention, avg_hidden_states, layer_outputs, rev_layer_outputs, bidirectional, lengths):
+def attn_or_avg(attention, avg_hidden_states, layer_outputs, rev_layer_outputs, bidirectional, lengths=None):
     if (attention is None) or (attention(layer_outputs) is None):
         if not avg_hidden_states:
             # TODO: want to take the last non-zero padded output here instead!
