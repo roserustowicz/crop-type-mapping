@@ -89,7 +89,6 @@ class VisdomLogger:
                 best = np.random.randint(0, high=inputs['s1'].shape[1], size=(inputs['s1'].shape[0],))
             else:
                 best = np.random.randint(0, high=inputs.shape[1], size=(inputs.shape[0],))
-        print('best: ', best.shape)
         best = np.zeros_like(best)
 
         # Get bands of interest (boi) to show best rgb version of s2 or vv, vh, vv version of s1
