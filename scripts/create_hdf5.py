@@ -111,7 +111,7 @@ def create_hdf5(args, groups=None):
                 with open(os.path.join(data_dir, actual_dir_name, filepath)) as f:
                     dates = json.load(f)['dates']
                 data = util.dates2doy(dates)
-            dtype = 'i2' if group_name not in ['s1', 'planet'] else 'f8' 
+            dtype = 'i2' if group_name not in ['s1'] else 'f8' 
             for i in range(0, 64 // num_pixels):
                 for j in range(0, 64 // num_pixels):
                     new_grid_name = grid_num + "_{}_{}".format(i, j)
@@ -163,7 +163,7 @@ if __name__ == '__main__':
     parser.add_argument('--country', type=str,
                         help='Country to output the hdf5 file for.',
                         default='ghana')
-    parser.add_argument('--use_planet', type=util.str2bool, default=False,
+    parser.add_argument('--use_planet', type=util.str2bool, default=True,
                         help='Include Planet in hdf5 file')
     parser.add_argument('--num_pixels', type=int, default=32)
     parser.add_argument('--out_fname', type=str, default='data.hdf5')
