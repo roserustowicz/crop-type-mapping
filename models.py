@@ -354,9 +354,8 @@ def make_fcn_clstm_model(country, fcn_input_size, crnn_input_size, crnn_model_na
 
     model = FCN_CRNN(fcn_input_size, crnn_input_size, crnn_model_name, hidden_dims, lstm_kernel_sizes, 
                      conv_kernel_size, lstm_num_layers, avg_hidden_states, num_classes, bidirectional, pretrained, 
-                     early_feats, use_planet, resize_planet, num_bands_dict, main_attn_type, attn_dims, 
+                     early_feats, use_planet, resize_planet, num_bands_dict, main_crnn, main_attn_type, attn_dims, 
                      enc_crnn, enc_attn, enc_attn_type)
-                     early_feats, use_planet, resize_planet, num_bands_dict, main_crnn, main_attn_type, attn_dims,
     model = model.cuda()
 
     return model
