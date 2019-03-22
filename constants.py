@@ -24,8 +24,8 @@ NROW = 5
 BASE_DIR = os.getenv("HOME")
 
 GCP_DATA_DIR = BASE_DIR + '/croptype_data/data'
-LOCAL_DATA_DIR = BASE_DIR + '/croptype_data_local/data'
-#LOCAL_DATA_DIR = 'data'
+#LOCAL_DATA_DIR = BASE_DIR + '/croptype_data_local/data'
+LOCAL_DATA_DIR = 'data'
 
 HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/data_wplanet_validsubset_32.hdf5',
               'southsudan': LOCAL_DATA_DIR + '/southsudan/data_wplanet_validsubset_32.hdf5',
@@ -46,23 +46,23 @@ GHANA_S2_DIR = GCP_DATA_DIR + '/ghana/s2_npy'
 PRETRAINED_GERMANY_PATH = '/home/roserustowicz/crop-type-mapping/runs/20190303_fcncrnn_germany_s2_15dayagg_weightdecay01_noclouds_yesdoy_hiddendims128_avghiddenstatesyes_s2numbands10_yesearlyfeats_yesvegindices_best'
 
 # HYPERPARAMETER SEARCH
-# INT_POWER_EXP = ["hidden_dims"]
-# REAL_POWER_EXP = ["weight_decay", "lr"]
-# INT_HP = ['batch_size', 'crnn_num_layers']
-# FLOAT_HP = ['weight_scale', 'percent_of_dataset']
-# STRING_HP = ['crnn_model_name']
-# BOOL_HP = ['use_s1', 'use_s2', 'include_clouds', 'bidirectional', 'least_cloudy',
-#            'avg_hidden_states']
-# INT_CHOICE_HP = ['num_timesteps', 's2_num_bands']
-
-
-INT_POWER_EXP = []
+INT_POWER_EXP = ["hidden_dims"]
 REAL_POWER_EXP = ["weight_decay", "lr"]
-INT_HP = ['batch_size']
-FLOAT_HP = ['weight_scale', 'dropout']
-STRING_HP = []
-BOOL_HP = ['use_s1', 'use_s2', 'include_clouds']
-INT_CHOICE_HP = ['s2_num_bands', 'num_timesteps']
+INT_HP = ['batch_size', 'crnn_num_layers']
+FLOAT_HP = ['weight_scale', 'percent_of_dataset']
+STRING_HP = ['crnn_model_name']
+BOOL_HP = ['use_s1', 'use_s2', 'include_clouds', 'bidirectional', 'least_cloudy',
+           'avg_hidden_states', 'early_feats']
+INT_CHOICE_HP = ['num_timesteps', 's2_num_bands']
+
+
+# INT_POWER_EXP = []
+# REAL_POWER_EXP = ["weight_decay", "lr"]
+# INT_HP = ['batch_size']
+# FLOAT_HP = ['weight_scale', 'dropout']
+# STRING_HP = []
+# BOOL_HP = ['use_s1', 'use_s2', 'include_clouds']
+# INT_CHOICE_HP = ['s2_num_bands', 'num_timesteps']
 
 HPS = [INT_POWER_EXP, REAL_POWER_EXP, INT_HP, FLOAT_HP, STRING_HP, BOOL_HP, INT_CHOICE_HP]
 
