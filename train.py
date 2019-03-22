@@ -198,7 +198,7 @@ def train_dl_model(model, model_name, dataloaders, args):
                         vis_logger.record_batch(inputs, cloudmasks, targets, preds, confidence, 
                                                 NUM_CLASSES[args.country], split, 
                                                 args.include_doy, args.use_s1, args.use_s2, 
-                                                model_name, args.time_slice, save=True, var_length=args.var_length,
+                                                model_name, args.time_slice, save=True, var_length=args.var_length, 
                                                 save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
 
                         vis_logger.record_epoch(split, i, args.country, save=True, 
@@ -219,8 +219,8 @@ def train(model, model_name, args=None, dataloaders=None, X=None, y=None):
         X - (npy arr) data for non-dl models
         y - (npy arr) labels for non-dl models
     """
-    if dataloaders is None: raise ValueError("DATA GENERATOR IS NONE")
-    if args is None: raise ValueError("Args is NONE")
+    if dataloaders is None and model_name in DL_MODELS: raise ValueError("DATA GENERATOR IS NONE")
+    if args is None and model_name in DL_MODELS: raise ValueError("Args is NONE")
         
     if model_name in NON_DL_MODELS:
         train_non_dl_model(model, model_name, dataloaders, args, X, y)

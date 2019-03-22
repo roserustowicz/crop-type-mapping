@@ -301,7 +301,7 @@ def get_train_parser():
     parser.add_argument('--country', type=str,
                         help="country to predict over",
                         default="ghana")
-    parser.add_argument('--epochs', type=int, default=40,
+    parser.add_argument('--epochs', type=int, default=130,
                         help="# of times to train over the dataset")
     parser.add_argument('--batch_size', type=int, default=5,
                         help="batch size to use")
@@ -309,7 +309,7 @@ def get_train_parser():
                         help="Optimizer to use for training",
                         default="adam",
                         choices=('sgd', 'adam'))
-    parser.add_argument('--lr', type=float, default=0.001,
+    parser.add_argument('--lr', type=float, default=0.003,
                         help="Initial learning rate to use")
     parser.add_argument('--momentum', type=float,
                         help="Momentum to use when training",
@@ -380,7 +380,7 @@ def get_train_parser():
                         default=3)
     parser.add_argument('--env_name', type=str, default=None,
                          help="Environment name for visdom visualization")
-    parser.add_argument('--seed', type=int, default=None,
+    parser.add_argument('--seed', type=int, default=1,
                          help="Random seed to use for reproducability")
     parser.add_argument('--sample_w_clouds', type=str2bool, default=False,
                          help="Use clouds for sampling Sentinel-2 dates")
@@ -395,7 +395,7 @@ def get_train_parser():
     # Args for CLSTM model
     parser.add_argument('--hidden_dims', type=int, 
                         help="Number of channels in hidden state used in convolutional RNN",
-                        default=32)
+                        default=128)
     parser.add_argument('--crnn_kernel_sizes', type=int,
                         help="Convolutional kernel size used within a recurrent cell",
                         default=3)
@@ -447,6 +447,8 @@ def get_train_parser():
                          help="Fix pretrained features")
     parser.add_argument('--clip_val', type=str2bool, default=True,
                          help="Whether or not to use gradient clipping, value is computed based on the number of parameters")
+    parser.add_argument('--main_crnn', type=str2bool, default=True,
+                         help="Whether or not to use a CRNN in the main encoder at the bottom of the U of the UNet model (for early feats) or just before the prediction (for not early feats)")
     parser.add_argument('--main_attn_type', type=str, default='None',
                          help="Attention type to use for main clstm layer, must be 'None', 'temporal', 'self', or 'vector'")
     parser.add_argument('--enc_attn_type', type=str, default='None',
@@ -455,9 +457,9 @@ def get_train_parser():
                          help="Number of features in w_s1 output for temporal attention")
     parser.add_argument('--r_attn_dim', type=int, default=1,
                          help="Number of features in w_s1 output for temporal attention")
-    parser.add_argument('--dk_attn_dim', type=int, default=32,
+    parser.add_argument('--dk_attn_dim', type=int, default=256,
                          help="Number of dk features for self attention")
-    parser.add_argument('--dv_attn_dim', type=int, default=32,
+    parser.add_argument('--dv_attn_dim', type=int, default=256,
                          help="Number of dv features for self attention")
     parser.add_argument('--enc_crnn', type=str2bool, default=False,
                          help="Use crnn for encoder layers in addition to the main encodings")

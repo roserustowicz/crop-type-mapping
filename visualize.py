@@ -83,6 +83,10 @@ class VisdomLogger:
         else:
             if var_length and 's2' in inputs:
                 best = np.random.randint(0, high=inputs['s2'].shape[1], size=(inputs['s2'].shape[0],))
+            elif var_length and 'planet' in inputs:
+                best = np.random.randint(0, high=inputs['planet'].shape[1], size=(inputs['planet'].shape[0],))
+            elif var_length and 's1' in inputs:
+                best = np.random.randint(0, high=inputs['s1'].shape[1], size=(inputs['s1'].shape[0],))
             else:
                 best = np.random.randint(0, high=inputs.shape[1], size=(inputs.shape[0],))
         best = np.zeros_like(best)
@@ -97,6 +101,10 @@ class VisdomLogger:
             for idx, b in enumerate(best):
                 if var_length and 's2' in inputs:
                     boi.append(inputs['s2'][idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
+                elif var_length and 'planet' in inputs:
+                    boi.append(inputs['planet'][idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
+                elif var_length and 's1' in inputs:
+                    boi.append(inputs['s1'][idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
                 else:
                     boi.append(inputs[idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
             boi = torch.cat(boi, dim=0)

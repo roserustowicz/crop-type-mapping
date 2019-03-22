@@ -27,7 +27,7 @@ GCP_DATA_DIR = BASE_DIR + '/croptype_data/data'
 #LOCAL_DATA_DIR = BASE_DIR + '/croptype_data_local/data'
 LOCAL_DATA_DIR = 'data'
 
-HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/data_wplanet_validsubset_32.hdf5',
+HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/data_32_2016.hdf5', #data_wplanet_validsubset_32.hdf5',
               'southsudan': LOCAL_DATA_DIR + '/southsudan/data_wplanet_validsubset_32.hdf5',
               'tanzania': LOCAL_DATA_DIR + '/tanzania/data_w_planet.hdf5',
               'germany': LOCAL_DATA_DIR + '/germany/data.hdf5'}

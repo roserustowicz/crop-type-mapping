@@ -28,10 +28,6 @@ class MI_CLSTM(nn.Module):
                  grid_size,
                  main_attn_type,
                  attn_dims):
-                 #d_attn_dim,
-                 #r_attn_dim,
-                 #dk_attn_dim,
-                 #dv_attn_dim):
         """
             input_size - (tuple) should be (time_steps, channels, height, width)
         """
@@ -60,7 +56,7 @@ class MI_CLSTM(nn.Module):
  
         for sat in satellites:
             if satellites[sat]: 
-                cur_num_bands = self.num_bands_empty
+                cur_num_bands = self.num_bands_empty.copy()
                 cur_num_bands[sat] = self.num_bands[sat]       
                 cur_num_bands['all'] = self.num_bands[sat]
                 if not self.early_feats:
@@ -76,10 +72,9 @@ class MI_CLSTM(nn.Module):
                                                       conv_kernel_size=conv_kernel_size, 
                                                       lstm_num_layers=lstm_num_layers, 
                                                       num_outputs=num_classes, 
-                                                      bidirectional=bidirectional) #,
-                                                      #var_length=True)
+                                                      bidirectional=bidirectional) 
 
-                    self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, attn_dims) #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
+                    self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, attn_dims)
 
                     self.finalconv[sat] = nn.Conv2d(in_channels=hidden_dims[-1], 
                                                      out_channels=num_classes, 
@@ -99,16 +94,15 @@ class MI_CLSTM(nn.Module):
                                                       conv_kernel_size=conv_kernel_size, 
                                                       lstm_num_layers=lstm_num_layers, 
                                                       num_outputs=crnn_input_size[1], 
-                                                      bidirectional=bidirectional) #,
-                                                      #var_length=True)
+                                                      bidirectional=bidirectional)
 
-                    self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, attn_dims) #d_attn_dim, r_attn_dim, dk_attn_dim, dv_attn_dim)
+                    self.attention[sat] = ApplyAtt(main_attn_type, hidden_dims, attn_dims)
                     
                     self.finalconv[sat] = nn.Conv2d(in_channels=hidden_dims[-1], 
                                                     out_channels=crnn_input_size[1], 
                                                     kernel_size=conv_kernel_size, 
                                                     padding=int((conv_kernel_size-1)/2))
-                # input size should be (time_steps, channels, height, width)
+                    # input size should be (time_steps, channels, height, width)
         
         for sat in satellites:
             if satellites[sat]:
@@ -149,7 +143,7 @@ class MI_CLSTM(nn.Module):
                     
                     # Apply CRNN
                     if self.clstms[sat] is not None:
-                        crnn_output_fwd, crnn_output_rev = self.clstms[sat](crnn_input) #, lengths)
+                        crnn_output_fwd, crnn_output_rev = self.clstms[sat](crnn_input) 
                     else:
                         crnn_output_fwd = crnn_input 
                         crnn_output_rev = None
