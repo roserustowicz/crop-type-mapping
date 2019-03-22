@@ -157,7 +157,7 @@ class UNet_Decode(nn.Module):
         if (self.use_planet and self.resize_planet) or (not self.use_planet):
             extra_enc_feats = 0
         elif self.use_planet and not self.resize_planet: # else
-            extra_enc_feats = + feats + feats*2
+            extra_enc_feats = feats + feats*2
 
         self.center_decode = nn.Sequential(
             nn.Conv2d(feats*16, feats*16, kernel_size=3, padding=1),
@@ -178,7 +178,7 @@ class UNet_Decode(nn.Module):
         self.logsoftmax = nn.LogSoftmax(dim=1)
         initialize_weights(self)
 
-    def forward(self, center1, enc4, enc3, enc2=None, enc1=None): 
+    def forward(self, center1, enc4, enc3, enc2=None, enc1=None):
 
         # DECODE
         center2 = self.center_decode(center1)

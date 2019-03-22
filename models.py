@@ -104,7 +104,6 @@ class FCN_CRNN(nn.Module):
                 if cur_feats is not None:
                     # Apply CRNN
                     cur_feats = cur_feats.view(batch, timestamps, -1, cur_feats.shape[-2], cur_feats.shape[-1])
-                    #print('cur feats: ', cur_feats.shape)
                     if self.crnns[cur_enc] is not None:
                         cur_feats_fwd, cur_feats_rev = self.crnns[cur_enc](cur_feats) 
                     else:
@@ -115,7 +114,6 @@ class FCN_CRNN(nn.Module):
                     reweighted = attn_or_avg(self.attns[cur_enc], self.avg_hidden_states, cur_feats_fwd, cur_feats_rev, bidirectional)
                     # Apply final conv
                     final_feats = self.final_convs[cur_enc](reweighted) if self.final_convs[cur_enc] is not None else reweighted
-                    #print('final feas: ', final_feats.shape)
                     self.processed_feats[cur_enc] = final_feats
 
             # Decode and predict
