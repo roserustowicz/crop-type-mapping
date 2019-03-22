@@ -133,7 +133,7 @@ class FCN_CRNN(nn.Module):
                 crnn_output_rev = None
             
             # Apply attention
-            reweighted = attn_or_avg(self.attns['main'], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, bidirectional)
+            reweighted = attn_or_avg(self.attns['main'], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, self.bidirectional)
                     
             # Apply final conv
             scores = self.final_convs['main'](reweighted)
