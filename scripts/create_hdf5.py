@@ -70,7 +70,6 @@ def create_hdf5(args, groups=None):
     old_splits = {'train': train, 'val': val, 'test': test}
     all_grids = set(old_splits['train'] + old_splits['val'] + old_splits['test'])
     all_new_grids = set()
-    print('all grids: ', all_grids)
 
     if groups is None:
         if country in ['germany']:
@@ -81,7 +80,6 @@ def create_hdf5(args, groups=None):
             groups =['labels', 's1', 's2', 'cloudmasks', 's1_dates', 's2_dates']
         if use_planet:
             groups += ['planet', 'planet_dates']
-
     hdf5_file = h5py.File(os.path.join(output_dir, out_fname + "_{}".format(num_pixels)), 'a')
     # subdivide the hdf5 directory into grids and masks
     for group_name in groups:

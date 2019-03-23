@@ -60,9 +60,6 @@ def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_
         for source in sources:
             cur_path = os.path.join(home, country, source)
             files = [os.path.join(cur_path, f) for f in os.listdir(cur_path) if f.endswith('.tif')]
-            #if country == 'None':
-            #    grid_numbers = [f.split('_')[-2] for f in files]
-            #elif country in ['tanzania', 'southsudan', 'ghana']:
             grid_numbers = [f.split('_')[-3] for f in files]
             grid_numbers.sort()
  
@@ -113,9 +110,6 @@ def get_img_cube(home, countries, sources, verbose, out_format, lbl_dir, filter_
                                 data_array[2, :, :, idx] = s1_subset[1,:, :] / s1_subset[0,:, :]
                             else:
                                 data_array[:, :, :, idx] = src.read()
-                            #if country == 'ghana':
-                            #    dates.append(fname.split('/')[-1][-14:-4])
-                            #elif country in ['tanzania', 'southsudan']:
                             tmp = fname.split('/')[-1].split('_')[:-1]+['.tif']
                             dates.append(tmp[-2])
                             if 's1' in source: 
