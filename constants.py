@@ -24,8 +24,8 @@ NROW = 5
 BASE_DIR = os.getenv("HOME")
 
 GCP_DATA_DIR = BASE_DIR + '/croptype_data/data'
-#LOCAL_DATA_DIR = BASE_DIR + '/croptype_data_local/data'
-LOCAL_DATA_DIR = 'data'
+LOCAL_DATA_DIR = BASE_DIR + '/croptype_data_local/data'
+#LOCAL_DATA_DIR = 'data'
 
 HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/data_32_2016.hdf5', #data_wplanet_validsubset_32.hdf5',
               'southsudan': LOCAL_DATA_DIR + '/southsudan/data_wplanet_validsubset_32.hdf5',
