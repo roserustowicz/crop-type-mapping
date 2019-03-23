@@ -177,5 +177,5 @@ class MI_CLSTM(nn.Module):
         
         all_preds = torch.cat(preds, dim=1)
         preds = self.out_conv(all_preds)
-        preds = torch.log(self.softmax(preds))
+        preds = self.logsoftmax(preds)
         return preds
