@@ -117,7 +117,7 @@ def train_non_dl_model(model, model_name, dataloaders, args, X, y):
         print('{} f1-score: {} +/- {}'.format(split, np.mean(results[f'{split}_f1']), np.std(results[f'{split}_f1'])))
 
 def train_dl_model(model, model_name, dataloaders, args):
-    splits = ['train', 'val'] if not args.eval_on_test else ['test']
+    splits = ['train', 'val', 'test'] if not args.eval_on_test else ['test']
     
     if args.clip_val:
         clip_val = sum(p.numel() for p in model.parameters() if p.requires_grad) // 20000
@@ -134,7 +134,7 @@ def train_dl_model(model, model_name, dataloaders, args):
         
         vis_logger.reset_epoch_data()
         
-        for split in ['train', 'val'] if not args.eval_on_test else ['test']:
+        for split in ['train', 'val', 'test'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             model.train() if split == ['train'] else model.eval()
             # TODO: figure out how to pack inputs from dataloader together in the case of variable length sequences
@@ -205,6 +205,8 @@ def train_dl_model(model, model_name, dataloaders, args):
                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               
 
                         vis_logger.record_epoch('train', i, args.country, save=True, 
+                                              save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               
+                        vis_logger.record_epoch('test', i, args.country, save=True, 
                                               save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))               
 
             
