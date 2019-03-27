@@ -35,11 +35,11 @@ def get_grid_num(filename, ext, group_name):
 
 
 def load_splits(data_dir, country):
-    with open(os.path.join(data_dir, f'{country}_full_train'), 'rb') as f:
+    with open(os.path.join(data_dir, f'{country}_full_final_train'), 'rb') as f:
         train = pickle.load(f)
-    with open(os.path.join(data_dir, f'{country}_full_val'), 'rb') as f:
+    with open(os.path.join(data_dir, f'{country}_full_final_val'), 'rb') as f:
         val = pickle.load(f)
-    with open(os.path.join(data_dir, f'{country}_full_test'), 'rb') as f:
+    with open(os.path.join(data_dir, f'{country}_full_final_test'), 'rb') as f:
         test = pickle.load(f)
     return train, val, test
 
@@ -69,7 +69,7 @@ def create_hdf5(args, groups=None):
     assert 64 % num_pixels == 0, "NUM PIXELS SHOULD DIVIDE 64 EVENLY"
     train, val, test = load_splits(data_dir, country)
     new_splits = {'train': [], 'val': [], 'test': []}
-    old_splits = {'train': train, 'val': val, 'test': test}
+    old_splits = {'train': set(train), 'val': set(val), 'test': set(test)}
     all_grids = set(old_splits['train'] |  old_splits['val'] | old_splits['test'])
     all_new_grids = set()
 
@@ -122,12 +122,16 @@ def create_hdf5(args, groups=None):
                     hdf5_filename = f'/{group_name}/{new_grid_name}'
                     if 'dates' not in group_name:
                         if group_name == "planet":
-                            sub_grid = data[i*num_planet_pixels: (i+1)*num_planet_pixels, j*num_planet_pixels: (j+1) * num_planet_pixels]
+                            sub_grid = data[:, i*num_planet_pixels: (i+1)*num_planet_pixels, j*num_planet_pixels: (j+1) * num_planet_pixels, :]
                         else:
-                            sub_grid = data[i*num_pixels: (i+1)*num_pixels, j*num_pixels: (j+1)*num_pixels]
+                            if group_name == "labels":
+                                sub_grid = data[i*num_pixels: (i+1)*num_pixels, j*num_pixels: (j+1)*num_pixels]
+                            else:
+                                sub_grid = data[:, i*num_pixels: (i+1)*num_pixels, j*num_pixels: (j+1)*num_pixels, :]
                     else:
                         sub_grid = data
-
+                    print(sub_grid.shape)
+                    assert np.prod(sub_grid.shape) != 0, "Sub grid shape has a 0!"
                     if group_name == 'labels':
                         if np.sum(sub_grid) > 0:
                             all_new_grids.add(new_grid_name)
@@ -158,13 +162,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,
                         help='Path to directory containing data.',
-                        default='/home/robincheong/croptype_data_local/data/southsudan/')
+                        default='/home/robincheong/croptype_data_local/data/ghana/')
     parser.add_argument('--output_dir', type=str,
                         help='Path to directory to output the hdf5 file.',
-                        default='/home/robincheong/croptype_data_local/data/southsudan/')
+                        default='/home/robincheong/croptype_data_local/data/ghana/')
     parser.add_argument('--country', type=str,
                         help='Country to output the hdf5 file for.',
-                        default='southsudan')
+                        default='ghana')
     parser.add_argument('--use_planet', type=util.str2bool, default=True,
                         help='Include Planet in hdf5 file')
     parser.add_argument('--num_pixels', type=int, default=32)
