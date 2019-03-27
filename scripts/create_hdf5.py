@@ -131,7 +131,6 @@ def create_hdf5(args, groups=None):
                             sub_grid = data[:, i*num_pixels: (i+1)*num_pixels, j*num_pixels: (j+1)*num_pixels, :]
                     else:
                         sub_grid = data
-                    print(sub_grid.shape)
                     assert np.prod(sub_grid.shape) != 0, "Sub grid shape has a 0!"
                     if group_name == 'labels':
                         if np.sum(sub_grid) > 0:
@@ -143,7 +142,7 @@ def create_hdf5(args, groups=None):
                                     found = True
                                     break
                             assert found, "Grid num {} not found in any split".format(grid_num)
-                            hdf5_file.create_dataset(hdf5_filename, data=data, dtype='i1', chunks=True)
+                            hdf5_file.create_dataset(hdf5_filename, data=sub_grid, dtype='i1', chunks=True)
                             print(f"Processed {os.path.join(group_name, filepath)} as {hdf5_filename}")
                     else:
                         if new_grid_name in all_new_grids:
@@ -163,13 +162,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,
                         help='Path to directory containing data.',
-                        default='/home/robincheong/croptype_data_local/data/ghana/')
+                        default='/home/robincheong/croptype_data_local/data/southsudan/')
     parser.add_argument('--output_dir', type=str,
                         help='Path to directory to output the hdf5 file.',
-                        default='/home/robincheong/croptype_data_local/data/ghana/')
+                        default='/home/robincheong/croptype_data_local/data/southsudan/')
     parser.add_argument('--country', type=str,
                         help='Country to output the hdf5 file for.',
-                        default='ghana')
+                        default='southsudan')
     parser.add_argument('--use_planet', type=util.str2bool, default=True,
                         help='Include Planet in hdf5 file')
     parser.add_argument('--num_pixels', type=int, default=32)
