@@ -303,7 +303,7 @@ def get_train_parser():
                         default="ghana")
     parser.add_argument('--epochs', type=int, default=130,
                         help="# of times to train over the dataset")
-    parser.add_argument('--batch_size', type=int, default=5,
+    parser.add_argument('--batch_size', type=int, default=15,
                         help="batch size to use")
     parser.add_argument('--optimizer', type=str,
                         help="Optimizer to use for training",
@@ -322,7 +322,7 @@ def get_train_parser():
                         default=True)
     parser.add_argument('--use_s1', type=str2bool,
                         help="use s1 data?",
-                        default=True)
+                        default=False)
     parser.add_argument('--use_s2', type=str2bool,
                         help="use s2 data?",
                         default=True)
@@ -382,15 +382,15 @@ def get_train_parser():
                          help="Environment name for visdom visualization")
     parser.add_argument('--seed', type=int, default=1,
                          help="Random seed to use for reproducability")
-    parser.add_argument('--sample_w_clouds', type=str2bool, default=True,
+    parser.add_argument('--sample_w_clouds', type=str2bool, default=False,
                          help="Use clouds for sampling Sentinel-2 dates")
-    parser.add_argument('--include_clouds', type=str2bool, default=True,
+    parser.add_argument('--include_clouds', type=str2bool, default=False,
                          help="Include clouds as input feature")
-    parser.add_argument('--least_cloudy', type=str2bool, default=True,
+    parser.add_argument('--least_cloudy', type=str2bool, default=False,
                          help="Whether to use least cloudy samples (True) or sample from cloudiness (False)")
-    parser.add_argument('--include_doy', type=str2bool, default=True,
+    parser.add_argument('--include_doy', type=str2bool, default=False,
                          help="Include day of year as input feature")
-    parser.add_argument('--num_timesteps', type=int, default=25,
+    parser.add_argument('--num_timesteps', type=int, default=40,
                         help="Number of timesteps to include")
     # Args for CLSTM model
     parser.add_argument('--hidden_dims', type=int, 
@@ -414,7 +414,7 @@ def get_train_parser():
     parser.add_argument('--s2_num_bands', type=int, default=10,
                          help="Number of bands to use from Sentinel-2")
     # Args for FCN CRNN model
-    parser.add_argument('--early_feats', type=str2bool, default=True,
+    parser.add_argument('--early_feats', type=str2bool, default=False,
                          help="Use early features in the CLSTM from center after encoder")
     parser.add_argument('--fcn_out_feats', type=int, default=256,
                          help="Number of output features from fcn to be fed into CLSTM")
@@ -434,20 +434,20 @@ def get_train_parser():
     parser.add_argument('--percent_of_dataset', type=float, default=1)
     parser.add_argument('--all_samples', type=str2bool, default=False)
     parser.add_argument('--num_repeat', type=int, default=1)
-    parser.add_argument('--use_planet', type=str2bool, default=True,   
+    parser.add_argument('--use_planet', type=str2bool, default=False,   
                         help="use planet data?")
     parser.add_argument('--resize_planet', type=str2bool, default=True,   
                         help="Whether to resize planet to grid_size to correspond with other inputs")
     parser.add_argument('--planet_agg', type=str2bool,
                         help="aggregate planet data across time?",
                         default=False)
-    parser.add_argument('--include_indices', type=str2bool, default=True,
+    parser.add_argument('--include_indices', type=str2bool, default=False,
                          help="Include ndvi and gcvi as input features")
     parser.add_argument('--fix_feats', type=str2bool, default=False,
                          help="Fix pretrained features")
     parser.add_argument('--clip_val', type=str2bool, default=True,
                          help="Whether or not to use gradient clipping, value is computed based on the number of parameters")
-    parser.add_argument('--main_crnn', type=str2bool, default=True,
+    parser.add_argument('--main_crnn', type=str2bool, default=False,
                          help="Whether or not to use a CRNN in the main encoder at the bottom of the U of the UNet model (for early feats) or just before the prediction (for not early feats)")
     parser.add_argument('--main_attn_type', type=str, default='None',
                          help="Attention type to use for main clstm layer, must be 'None', 'temporal', 'self', or 'vector'")
