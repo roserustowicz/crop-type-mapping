@@ -298,7 +298,7 @@ def visdom_save_many_metrics(metric_name, split, title, x_label, y_label, legend
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.legend(legend_lbls)
-    plt.savefig(os.path.join(save_dir, title + '.png'))
+    plt.savefig(os.path.join(save_dir, title + split + '.png'))
     plt.close()
 
 def visdom_plot_metric(metric_name, split, title, x_label, y_label, vis_data, vis):
