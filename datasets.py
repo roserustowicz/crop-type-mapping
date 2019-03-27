@@ -179,18 +179,17 @@ class CropTypeDS(Dataset):
         self.least_cloudy = args.least_cloudy
         self.s2_num_bands = args.s2_num_bands
         
-        if any(key in data for key in ['s1_lengths', 's2_lengths', 'planet_lengths']):
-            with h5py.File(self.hdf5_filepath, 'r') as data:
-                self.combined_lengths = []
-                for grid in self.grid_list:
-                    total_len = 0
-                    if self.use_s1:
-                        total_len += data['s1_lengths'][grid][()]
-                    if self.use_s2:
-                        total_len += data['s2_lengths'][grid][()]
-                    if self.use_planet:
-                        total_len += data['planet_lengths'][grid][()]
-                    self.combined_lengths.append(total_len)                    
+        with h5py.File(self.hdf5_filepath, 'r') as data:
+            self.combined_lengths = []
+            for grid in self.grid_list:
+                total_len = 0
+                if self.use_s1:
+                    total_len += data['s1_length'][grid][()]
+                if self.use_s2:
+                    total_len += data['s2_length'][grid][()]
+                if self.use_planet:
+                    total_len += data['planet_length'][grid][()]
+                self.combined_lengths.append(total_len)                    
 
     def __len__(self):
         return self.num_grids
@@ -269,7 +268,7 @@ class CropTypeDS(Dataset):
     
     def setup_data(self, data, idx, sat, sat_properties):
         if sat_properties[sat]['use']:
-            sat_properties[sat]['data'] = data[sat][self.grid_list[idx]]       
+            sat_properties[sat]['data'] = data[sat][self.grid_list[idx]] 
             
             if sat in ['planet']:
                 self.setup_planet(data, sat, sat_properties)
@@ -448,9 +447,9 @@ def get_dataloaders(country, dataset, args):
     dataloaders = {}
     for split in SPLITS:
         if country in ['southsudan', 'ghana']:
-            grid_path = os.path.join(GRID_DIR[country], f"{country}_{dataset}_{split}_final_32")
+            grid_path = os.path.join(GRID_DIR[country], f"{country}_{dataset}_final_{split}_32")
         else:
-            grid_path = os.path.join(GRID_DIR[country], f"{country}_{dataset}_{split}_final")
+            grid_path = os.path.join(GRID_DIR[country], f"{country}_{dataset}_final_{split}")
         dataloaders[split] = GridDataLoader(args, grid_path, split)
 
     return dataloaders
