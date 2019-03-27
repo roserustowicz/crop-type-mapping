@@ -123,11 +123,12 @@ def create_hdf5(args, groups=None):
                     if 'dates' not in group_name:
                         if group_name == "planet":
                             sub_grid = data[:, i*num_planet_pixels: (i+1)*num_planet_pixels, j*num_planet_pixels: (j+1) * num_planet_pixels, :]
+                        elif group_name == "labels":
+                            sub_grid = data[i*num_pixels: (i+1)*num_pixels, j*num_pixels: (j+1)*num_pixels]
+                        elif group_name == "cloudmasks":
+                            sub_grid = data[i*num_pixels: (i+1)*num_pixels, j*num_pixels: (j+1)*num_pixels, :]
                         else:
-                            if group_name == "labels":
-                                sub_grid = data[i*num_pixels: (i+1)*num_pixels, j*num_pixels: (j+1)*num_pixels]
-                            else:
-                                sub_grid = data[:, i*num_pixels: (i+1)*num_pixels, j*num_pixels: (j+1)*num_pixels, :]
+                            sub_grid = data[:, i*num_pixels: (i+1)*num_pixels, j*num_pixels: (j+1)*num_pixels, :]
                     else:
                         sub_grid = data
                     print(sub_grid.shape)
