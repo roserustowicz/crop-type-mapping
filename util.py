@@ -382,11 +382,11 @@ def get_train_parser():
                          help="Environment name for visdom visualization")
     parser.add_argument('--seed', type=int, default=1,
                          help="Random seed to use for reproducability")
-    parser.add_argument('--sample_w_clouds', type=str2bool, default=False,
+    parser.add_argument('--sample_w_clouds', type=str2bool, default=True,
                          help="Use clouds for sampling Sentinel-2 dates")
     parser.add_argument('--include_clouds', type=str2bool, default=True,
                          help="Include clouds as input feature")
-    parser.add_argument('--least_cloudy', type=str2bool, default=False,
+    parser.add_argument('--least_cloudy', type=str2bool, default=True,
                          help="Whether to use least cloudy samples (True) or sample from cloudiness (False)")
     parser.add_argument('--include_doy', type=str2bool, default=True,
                          help="Include day of year as input feature")
