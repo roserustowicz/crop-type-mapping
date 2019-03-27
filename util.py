@@ -434,14 +434,14 @@ def get_train_parser():
     parser.add_argument('--percent_of_dataset', type=float, default=1)
     parser.add_argument('--all_samples', type=str2bool, default=False)
     parser.add_argument('--num_repeat', type=int, default=1)
-    parser.add_argument('--use_planet', type=str2bool, default=False,   
+    parser.add_argument('--use_planet', type=str2bool, default=True,   
                         help="use planet data?")
-    parser.add_argument('--resize_planet', type=str2bool, default=False,   
+    parser.add_argument('--resize_planet', type=str2bool, default=True,   
                         help="Whether to resize planet to grid_size to correspond with other inputs")
     parser.add_argument('--planet_agg', type=str2bool,
                         help="aggregate planet data across time?",
                         default=False)
-    parser.add_argument('--include_indices', type=str2bool, default=False,
+    parser.add_argument('--include_indices', type=str2bool, default=True,
                          help="Include ndvi and gcvi as input features")
     parser.add_argument('--fix_feats', type=str2bool, default=False,
                          help="Fix pretrained features")
