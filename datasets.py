@@ -183,7 +183,8 @@ class CropTypeDS(Dataset):
         with h5py.File(self.hdf5_filepath, 'r') as data:
             self.combined_lengths = []
             for grid in self.grid_list:
-                self.combined_lengths.append(data['s1_lengths'][grid][()] + data['s2_lengths'][grid][()])                    
+                if 's1_lengths' in data:
+                    self.combined_lengths.append(data['s1_lengths'][grid][()] + data['s2_lengths'][grid][()])                    
 
     def __len__(self):
         return self.num_grids
