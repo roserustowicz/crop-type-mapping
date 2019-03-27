@@ -134,7 +134,7 @@ def train_dl_model(model, model_name, dataloaders, args):
         
         vis_logger.reset_epoch_data()
         
-        for split in ['train', 'val', 'test'] if not args.eval_on_test else ['test']:
+        for split in ['train', 'val'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             model.train() if split == ['train'] else model.eval()
             # TODO: figure out how to pack inputs from dataloader together in the case of variable length sequences
