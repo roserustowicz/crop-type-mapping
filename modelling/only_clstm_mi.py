@@ -35,7 +35,6 @@ class ONLY_CLSTM_MI(nn.Module):
         self.bidirectional = bidirectional
         self.satellites = satellites
         self.num_bands = num_bands
-        self.num_bands_empty = { 's1': 0, 's2': 0, 'planet': 0, 'all': 0 }
         
         self.clstms = {}
         self.attention = {}
@@ -45,13 +44,8 @@ class ONLY_CLSTM_MI(nn.Module):
 
         for sat in satellites:
             if satellites[sat]: 
-                cur_num_bands = self.num_bands_empty.copy()
-                cur_num_bands[sat] = self.num_bands[sat]       
-                cur_num_bands['all'] = self.num_bands[sat]
-
-                #crnn_input_size = (max_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE[country] // 4, GRID_SIZE[country] // 4)
                 crnn_input_size = list(crnn_input_size)
-                crnn_input_size[1] = cur_num_bands[sat]
+                crnn_input_size[1] = self.num_bands[sat]
                 crnn_input_size = tuple(crnn_input_size)
 
                 self.clstms[sat] = CLSTMSegmenter(input_size=crnn_input_size,
@@ -76,7 +70,7 @@ class ONLY_CLSTM_MI(nn.Module):
                 self.add_module(sat + "_attention", self.attention[sat])
 
         total_sats = len([sat for sat in self.satellites if self.satellites[sat]])
-        self.out_conv = nn.Conv2d(num_classes * total_sats, num_classes, kernel_size=1, stride=1)
+        self.out_linear = nn.Linear(num_classes * total_sats, num_classes)
         self.softmax = nn.Softmax2d()
         self.logsoftmax = nn.LogSoftmax(dim=1)
                 
@@ -103,7 +97,7 @@ class ONLY_CLSTM_MI(nn.Module):
                 sat_preds = self.logsoftmax(scores)
                 preds.append(sat_preds)
         
-        all_preds = torch.cat(preds, dim=1)
-        preds = self.out_conv(all_preds)
+        all_preds = torch.cat(preds, dim=1).permute(0, 2, 3, 1).contiguous()
+        preds = self.out_linear(all_preds).permute(0, 3, 1, 2).contiguous()
         preds = self.logsoftmax(preds)
         return preds
