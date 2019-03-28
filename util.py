@@ -303,7 +303,7 @@ def get_train_parser():
                         default="ghana")
     parser.add_argument('--epochs', type=int, default=130,
                         help="# of times to train over the dataset")
-    parser.add_argument('--batch_size', type=int, default=8,
+    parser.add_argument('--batch_size', type=int, default=5,
                         help="batch size to use")
     parser.add_argument('--optimizer', type=str,
                         help="Optimizer to use for training",
