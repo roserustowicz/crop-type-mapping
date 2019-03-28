@@ -97,7 +97,7 @@ class VisdomLogger:
         # TODO: change these to be constants in constants.py eventually
         start_idx = 2 if use_s2 and use_s1 else 0
         end_idx = 5 if use_s2 and use_s1 else 3
-        if model_name in ['fcn_crnn', 'bidir_clstm','unet3d', 'mi_clstm']:
+        if model_name in ['fcn_crnn', 'bidir_clstm','unet3d', 'mi_clstm', 'only_clstm_mi']:
             for idx, b in enumerate(best):
                 if var_length and 's2' in inputs:
                     boi.append(inputs['s2'][idx, b, start_idx+add_doy:end_idx+add_doy, :, :].unsqueeze(0))
