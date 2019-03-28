@@ -530,7 +530,7 @@ def get_model(model_name, **kwargs):
         max_timesteps = kwargs.get('num_timesteps')
         country = kwargs.get('country')
             
-        crnn_input_size = (max_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE[country] // 4, GRID_SIZE[country] // 4)
+        crnn_input_size = (max_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE[country], GRID_SIZE[country])
 
         model = make_MI_only_CLSTM_model(num_bands=num_bands, 
                                          crnn_input_size=crnn_input_size, 

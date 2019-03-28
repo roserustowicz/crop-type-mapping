@@ -65,6 +65,8 @@ class ConvLSTMCell(nn.Module):
         
         h_cur, c_cur = cur_state
         # BN over the outputs of these convs
+        print('hcur: ', h_cur.shape)
+        print('input: ', input_tensor.shape)
         combined_conv = self.h_norm(self.h_conv(h_cur), timestep) + self.input_norm(self.input_conv(input_tensor.cuda()), timestep)
  
         cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1) 
