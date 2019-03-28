@@ -9,7 +9,7 @@ Constants for file paths
 
 SPLITS = ['train', 'val', 'test']
 NON_DL_MODELS = ['logreg', 'random_forest']
-DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm', 'unet3d']
+DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm', 'unet3d', 'only_clstm_mi']
 MULTI_RES_MODELS = ['fcn_crnn']
 
 S1_NUM_BANDS = 3
@@ -27,8 +27,8 @@ GCP_DATA_DIR = BASE_DIR + '/croptype_data/data'
 LOCAL_DATA_DIR = BASE_DIR + '/croptype_data_local/data'
 #LOCAL_DATA_DIR = 'data'
 
-HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/data_32_2016.hdf5', #data_wplanet_validsubset_32.hdf5',
-              'southsudan': LOCAL_DATA_DIR + '/southsudan/data_wplanet_validsubset_32.hdf5',
+HDF5_PATH = { 'ghana': LOCAL_DATA_DIR + '/ghana/final_data.hdf5_32',
+              'southsudan': LOCAL_DATA_DIR + '/southsudan/final_data.hdf5_32',
               'tanzania': LOCAL_DATA_DIR + '/tanzania/data_w_planet.hdf5',
               'germany': LOCAL_DATA_DIR + '/germany/data.hdf5'}
 
