@@ -9,7 +9,7 @@ Constants for file paths
 
 SPLITS = ['train', 'val', 'test']
 NON_DL_MODELS = ['logreg', 'random_forest']
-DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm', 'unet3d']
+DL_MODELS = ['bidir_clstm','fcn', 'unet', 'fcn_crnn', 'mi_clstm', 'unet3d', 'only_clstm_mi']
 MULTI_RES_MODELS = ['fcn_crnn']
 
 S1_NUM_BANDS = 3

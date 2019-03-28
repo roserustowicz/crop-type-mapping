@@ -32,6 +32,7 @@ from modelling.fcn8 import FCN8
 from modelling.unet import UNet, UNet_Encode, UNet_Decode
 from modelling.unet3d import UNet3D
 from modelling.multi_input_clstm import MI_CLSTM
+from modelling.only_clstm_mi import ONLY_CLSTM_MI
 from modelling.attention import ApplyAtt, attn_or_avg
 
 # TODO: figure out how to decompose this       
@@ -229,8 +230,16 @@ def make_MI_CLSTM_model(num_bands,
                      attn_dims)
     return model
 
-def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, 
-                           bidirectional, avg_hidden_states, main_attn_type, attn_dims):
+def make_MI_only_CLSTM_model(num_bands, crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, 
+                             lstm_num_layers, avg_hidden_states, num_classes, bidirectional, max_timesteps,
+                             satellites, main_attn_type, attn_dims):
+
+    model = ONLY_CLSTM_MI(num_bands, crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size,
+                          lstm_num_layers, avg_hidden_states, num_classes, bidirectional, max_timesteps,
+                          satellites, main_attn_type, attn_dims)
+    return model
+
+def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, main_attn_type, attn_dims):
     """ Defines a (bidirectional) CLSTM model 
     Args:
         input_size - (tuple) size of input dimensions 
@@ -512,6 +521,32 @@ def get_model(model_name, **kwargs):
                                     main_attn_type=kwargs.get('main_attn_type'), 
                                     attn_dims={'d': kwargs.get('d_attn_dim'), 'r': kwargs.get('r_attn_dim'), 
                                                'dv': kwargs.get('dv_attn_dim'), 'dk':kwargs.get('dk_attn_dim')})
+    elif model_name == 'only_clstm_mi':
+        satellites = {'s1': kwargs.get('use_s1'), 's2': kwargs.get('use_s2'), 'planet': kwargs.get('use_planet')}
+   
+        all_bands = get_num_bands(kwargs)['s1'] + get_num_bands(kwargs)['s2'] + get_num_bands(kwargs)['planet']
+        num_bands = {'s1': get_num_bands(kwargs)['s1'], 's2': get_num_bands(kwargs)['s2'], 'planet': get_num_bands(kwargs)['planet'], 'all': all_bands }
+
+        max_timesteps = kwargs.get('num_timesteps')
+        country = kwargs.get('country')
+            
+        crnn_input_size = (max_timesteps, kwargs.get('fcn_out_feats'), GRID_SIZE[country] // 4, GRID_SIZE[country] // 4)
+
+        model = make_MI_only_CLSTM_model(num_bands=num_bands, 
+                                         crnn_input_size=crnn_input_size, 
+                                         hidden_dims=kwargs.get('hidden_dims'), 
+                                         lstm_kernel_sizes=(kwargs.get('crnn_kernel_sizes'), kwargs.get('crnn_kernel_sizes')), 
+                                         conv_kernel_size=kwargs.get('conv_kernel_size'), 
+                                         lstm_num_layers=kwargs.get('crnn_num_layers'), 
+                                         avg_hidden_states=kwargs.get('avg_hidden_states'), 
+                                         num_classes=NUM_CLASSES[kwargs.get('country')],
+                                         bidirectional=kwargs.get('bidirectional'),
+                                         max_timesteps = kwargs.get('num_timesteps'),
+                                         satellites=satellites,
+                                         main_attn_type=kwargs.get('main_attn_type'), 
+                                         attn_dims={'d': kwargs.get('d_attn_dim'), 'r': kwargs.get('r_attn_dim'), 
+                                                    'dv': kwargs.get('dv_attn_dim'), 'dk':kwargs.get('dk_attn_dim')})
+
     else:
         raise ValueError(f"Model {model_name} unsupported, check `model_name` arg") 
         
