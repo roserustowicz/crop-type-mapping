@@ -1,6 +1,6 @@
 # crop-type-mapping
 
-** NOTE: We are in the process of cleaning the code base! ** 
+** NOTE: We are in the process of cleaning the code base! The dataset associated with this project will be released soon. Details to follow. ** 
 
 Crop type mapping of small holder farms in Ghana and South Sudan
 
