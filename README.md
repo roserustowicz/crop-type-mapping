@@ -1,4 +1,7 @@
 # crop-type-mapping
+
+** NOTE: We are in the process of cleaning the code base! ** 
+
 Crop type mapping of small holder farms in Ghana and South Sudan
 
 ##### INSTALLATION INSTRUCTIONS #####
