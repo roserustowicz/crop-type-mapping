@@ -14,11 +14,12 @@ Install conda and build the environment with the following command:
 
 ##### DATASET / ENVIRONMENT SETUP #####
 
-To install and format data, follow instructions in environment_setup.txt
+These datasets are now available for free on Radiant Earth's MLHub. 
 
-Data directories should be stored in the root /home folder. 
+The dataset for Ghana is here: http://registry.mlhub.earth/10.34911/rdnt.ry138p/
+The dataset for South Sudan is here: http://registry.mlhub.earth/10.34911/rdnt.v6kx6n/
 
-For example, the folder `/home/data/ghana/` should house all the split information, data.hdf5 files, original data files, etc. for ghana. 
+The dataset files are saved as tifs, and will need to be restructured to work as input to the model.
 
 ##### RUN INSTRUCTIONS #####
 
