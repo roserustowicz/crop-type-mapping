@@ -1,7 +1,5 @@
 # crop-type-mapping
 
-** NOTE: We are in the process of cleaning the code base! The dataset associated with this project will be released soon. Details to follow. ** 
-
 Crop type mapping of small holder farms in Ghana and South Sudan
 
 ##### INSTALLATION INSTRUCTIONS #####
@@ -19,7 +17,7 @@ These datasets are now available for free on Radiant Earth's MLHub. 
 The dataset for Ghana is here: http://registry.mlhub.earth/10.34911/rdnt.ry138p/
 The dataset for South Sudan is here: http://registry.mlhub.earth/10.34911/rdnt.v6kx6n/
 
-The dataset files are saved as tifs, and will need to be restructured to work as input to the model.
+The dataset files are saved as tifs, and will need to be restructured to work as input to the model, which initially used an hdf5 file. We plan to do this at some point, but the timeline is unknown and this project is not currently active.
 
 ##### RUN INSTRUCTIONS #####
 
