@@ -137,8 +137,11 @@ def train_dl_model(model, model_name, dataloaders, args):
         for split in ['train', 'val'] if not args.eval_on_test else ['test']:
             dl = dataloaders[split]
             model.train() if split == ['train'] else model.eval()
-            # TODO: figure out how to pack inputs from dataloader together in the case of variable length sequences
-            for inputs, targets, cloudmasks, hres_inputs in tqdm(dl):
+            
+            # maintain lists of correct / incorrect grids for future plotting
+            perf_by_grid = {}
+            
+            for inputs, targets, cloudmasks, hres_inputs, grid_ids in tqdm(dl):
                 with torch.set_grad_enabled(True):
                     if not args.var_length:
                         inputs.to(args.device)
@@ -149,8 +152,31 @@ def train_dl_model(model, model_name, dataloaders, args):
                                 inputs[sat].to(args.device)
                     targets.to(args.device)
                     preds = model(inputs, hres_inputs) if model_name in MULTI_RES_MODELS else model(inputs)
-                    loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, preds, targets, args.country, loss_fn=loss_fn, 
-                                              reduction="sum", loss_weight=args.loss_weight, weight_scale=args.weight_scale, gamma=args.gamma)
+                    
+                    # batch, classes, h, w
+                    for grid_id, pred, target in zip(grid_ids, preds, targets):
+                        grid_id = grid_id[:-4]
+                        pred_classes = torch.max(pred, 0)[1]
+                        mask = torch.sum(target, dim=0).cuda()
+                        target_classes = torch.max(target, 0)[1].cuda()
+                        assert pred_classes.shape == target_classes.shape, f"{pred_classes.shape}, {target_classes.shape}"
+                        comparison = (pred_classes == target_classes).float() * mask
+                        if grid_id in perf_by_grid:
+                            perf_by_grid[grid_id]['correct'] += torch.sum(comparison)
+                            perf_by_grid[grid_id]['incorrect'] += torch.sum(mask) - torch.sum(comparison)
+                        else:
+                            perf_by_grid[grid_id] = {'correct': torch.sum(comparison),
+                                                     'incorrect': torch.sum(mask) - torch.sum(comparison)}
+                        
+                    loss, cm_cur, total_correct, num_pixels, confidence = evaluate(model_name, 
+                                                                                   preds, 
+                                                                                   targets, 
+                                                                                   args.country, 
+                                                                                   loss_fn=loss_fn, 
+                                                                                   reduction="sum", 
+                                                                                   loss_weight=args.loss_weight,
+                                                                                   weight_scale=args.weight_scale, 
+                                                                                   gamma=args.gamma)
  
                     if split == 'train' and loss is not None:         # TODO: not sure if we need this check?
                         # If there are valid pixels, update weights
@@ -181,6 +207,9 @@ def train_dl_model(model, model_name, dataloaders, args):
                                         args.include_doy, args.use_s1, args.use_s2, 
                                         model_name, args.time_slice, var_length=args.var_length)
 
+            
+            with open("perf_by_grid.pkl", "wb") as f:
+                pickle.dump(perf_by_grid, f)
             if split in ['test']:
                 vis_logger.record_epoch(split, i, args.country, save=False, save_dir=os.path.join(args.save_dir, args.name + "_best_dir"))
             else:

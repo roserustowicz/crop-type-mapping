@@ -240,7 +240,7 @@ class CropTypeDS(Dataset):
             highres_grid = False
 
         if self.var_length:
-            return inputs, label, cloudmasks, False
+            return inputs, label, cloudmasks, False, self.grid_list[idx]
         else:
             return grid, label, cloudmasks, highres_grid
     
@@ -403,6 +403,7 @@ def collate_var_length(batch):
               planet has all same length (paddedd to max len)
     """
     batch_size = len(batch)
+    grid_ids = [batch[i][4] for i in range(batch_size)]
     labels = [batch[i][1] for i in range(batch_size)]
     labels = torch.stack(labels)
     inputs = {}
@@ -420,8 +421,7 @@ def collate_var_length(batch):
         cloudmasks = torch.tensor(np.stack(cloudmasks).transpose(0, 2, 3, 4, 1))
     else:
         cloudmasks = None
-        
-    return inputs, labels, cloudmasks, False
+        return inputs, labels, cloudmasks, False, grid_ids
         
     
 class GridDataLoader(DataLoader):
