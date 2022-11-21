@@ -12,13 +12,15 @@ Install conda and build the environment with the following command:
 
 ##### DATASET / ENVIRONMENT SETUP #####
 
-These datasets are now available for free on Radiant Earth's MLHub. 
+These datasets are now available for free on Radiant Earth's MLHub, and through Sustain Bench.
 
-The dataset for Ghana is here: http://registry.mlhub.earth/10.34911/rdnt.ry138p/
+###### Radiant Earth MLHub
+- The dataset for Ghana is here: http://registry.mlhub.earth/10.34911/rdnt.ry138p/
+- The dataset for South Sudan is here: http://registry.mlhub.earth/10.34911/rdnt.v6kx6n/
+- The dataset files are saved as tifs, and will need to be restructured to work as input to the model, which initially used an hdf5 file. 
 
-The dataset for South Sudan is here: http://registry.mlhub.earth/10.34911/rdnt.v6kx6n/
-
-The dataset files are saved as tifs, and will need to be restructured to work as input to the model, which initially used an hdf5 file. 
+###### Sustain Bench
+- See more information here: https://sustainlab-group.github.io/sustainbench/docs/datasets/sdg2/crop_type_mapping_ghana-ss.html
 
 ##### RUN INSTRUCTIONS #####
 
