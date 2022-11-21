@@ -18,7 +18,7 @@ The dataset for Ghana is here: http://registry.mlhub.earth/10.34911/rdnt.ry138p
 
 The dataset for South Sudan is here: http://registry.mlhub.earth/10.34911/rdnt.v6kx6n/
 
-The dataset files are saved as tifs, and will need to be restructured to work as input to the model, which initially used an hdf5 file. We plan to do this at some point, but the timeline is unknown and this project is not currently active.
+The dataset files are saved as tifs, and will need to be restructured to work as input to the model, which initially used an hdf5 file. 
 
 ##### RUN INSTRUCTIONS #####
 
