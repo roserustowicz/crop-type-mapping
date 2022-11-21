@@ -20,6 +20,7 @@ These datasets are now available for free on Radiant Earth's MLHub, and through 
 - The dataset files are saved as tifs, and will need to be restructured to work as input to the model, which initially used an hdf5 file. 
 
 ###### Sustain Bench
+- Both dataset are available via pytorch data loaders
 - See more information here: https://sustainlab-group.github.io/sustainbench/docs/datasets/sdg2/crop_type_mapping_ghana-ss.html
 
 ##### RUN INSTRUCTIONS #####
