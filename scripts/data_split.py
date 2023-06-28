@@ -17,6 +17,8 @@ from queue import Queue
 from collections import defaultdict
 from shutil import copyfile
 
+from pprint import pprint
+from tqdm import tqdm
 
 def correctSouthSudanLabels(crop):
     if '/' in crop:
@@ -86,7 +88,7 @@ def get_field_grid_mappings(raster_dir, npy_dir, country):
     field_to_grids = defaultdict(set)
     grid_to_fields = defaultdict(set)
     # iterate through the npy files
-    for mask_name in os.listdir(raster_dir):
+    for mask_name in tqdm(os.listdir(raster_dir)):
         grid_no, ext = mask_name.split('_')[-1].split('.')
         with rasterio.open(os.path.join(raster_dir, mask_name)) as mask_data:
             mask = mask_data.read()
@@ -112,12 +114,12 @@ def create_clusters_simple(mask_dir, unlabeled=0):
         grid_no = grid_fn.split('_')[2]
         cluster = {'grids': set(),
                    'crop_counts': defaultdict(float)} # technically a cluster of just one grid, but defined in this way to use existing code
-        cluster['grids'].add(grid_no)
         grid = np.load(os.path.join(mask_dir, grid_fn))
         crops, counts = np.unique(grid, return_counts=True)
         for i, crop in enumerate(crops):
-            if crop == unlabeled: continue
+            if crop == unlabeled or crop >= 6: continue
             cluster['crop_counts'][crop] += counts[i]
+            cluster['grids'].add(grid_no)
             unique_crops.add(crop)
         clusters.append(cluster)
     
@@ -431,7 +433,13 @@ def check_pixel_counts(mask_dir, country, csv, grid_splits):
             print(f"\tCROP: {crop} has {pixels} pixels ")
 
 
-
+def get_used_fields(grid_to_fields, splits):
+    used_fields = set()
+    for split in splits:
+        for grid in splits[split]:
+            print(grid)
+            used_fields = used_fields | set(grid_to_fields[grid])
+    return used_fields   
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -468,6 +476,8 @@ if __name__ == '__main__':
     parser.add_argument('--unlabeled', type=int,
                         help='Integer that represents an unlabeled pixel',
                         default=0)
+    parser.add_argument('--split_dir', type=str)
+    parser.add_argument('--split_name', type=str)
 
     args = parser.parse_args()
 
@@ -478,13 +488,25 @@ if __name__ == '__main__':
     out_dir = args.out_dir
     unlabeled = args.unlabeled
 
+    if args.split_dir is not None:
+        splits = {}
+        for split in ['train', 'val', 'test']:    
+            with open(os.path.join(args.split_dir, country + "_full_final_" + split), 'rb') as f:
+                splits[split] = pickle.load(f)
+        field_to_grids, grid_to_fields = get_field_grid_mappings(raster_dir, npy_dir, country)
+        used_fields = get_used_fields(grid_to_fields, splits)
+        print(len(used_fields))
+        with open(country + "_used_fields.pkl", 'wb') as f:
+            pickle.dump(used_fields, f)
+        assert False 
+
     if country in ['germany', 'southsudan']:
         clusters = create_clusters_simple(mask_dir, unlabeled)
         dist_targets = create_dist_split_targets(clusters)
         dist_cluster_splits = dist_split(args.full_seed, clusters, dist_targets, verbose=args.verbose)
         dist_grid_splits = create_grid_splits(dist_cluster_splits)
         if args.save:
-            save_grid_splits(dist_grid_splits, out_dir=out_dir, prefix=f"{country}_full_v2_")
+            save_grid_splits(dist_grid_splits, out_dir=out_dir, prefix=f"{country}_full_final_")
     else:
         crop_mapping = np.load(f'/home/data/{country}/{country}_crop_dict.npy').item()
         crop_mapping = {v.lower(): k for k, v in crop_mapping.items()}
